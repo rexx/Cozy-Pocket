@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { 
   format, 
   endOfMonth, 
@@ -20,9 +20,6 @@ interface CalendarProps {
 }
 
 const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transactions }) => {
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  
-  // 安全日期
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
   
   const monthStart = new Date(safeDate.getFullYear(), safeDate.getMonth(), 1);
@@ -65,21 +62,6 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transac
     }
   };
 
-  const triggerDatePicker = () => {
-    if (dateInputRef.current) {
-      try {
-        if ('showPicker' in HTMLInputElement.prototype) {
-          dateInputRef.current.showPicker();
-        } else {
-          dateInputRef.current.click();
-        }
-      } catch (e) {
-        console.warn("Header Picker failed", e);
-        dateInputRef.current.click();
-      }
-    }
-  };
-
   return (
     <div className="bg-[#1a1c2c] p-4 pb-4 select-none">
       <div className="flex justify-between items-center mb-6 px-2">
@@ -87,26 +69,23 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transac
           <ChevronLeft size={24} />
         </button>
         
-        {/* Date Display Pill */}
-        <div 
-          onClick={triggerDatePicker}
-          className="relative flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 active:bg-white/10 transition-colors cursor-pointer"
-        >
+        <div className="flex flex-col items-center gap-2">
+          {/* 直接顯示原生日期選擇器 */}
           <input 
             type="date"
-            ref={dateInputRef}
-            className="absolute inset-0 opacity-0 z-0"
-            style={{ colorScheme: 'dark', pointerEvents: 'none' }}
+            className="bg-[#252538] text-white text-xs p-1 rounded border border-white/10"
+            style={{ colorScheme: 'dark' }}
             value={format(safeDate, 'yyyy-MM-dd')}
             onChange={handleHeaderDateChange}
           />
-          <h2 className="text-xl font-bold tracking-tight text-white">
-            {format(safeDate, 'yyyy / MM / dd')}
-          </h2>
-          <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+          <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5">
+            <h2 className="text-xl font-bold tracking-tight text-white">
+              {format(safeDate, 'yyyy / MM / dd')}
+            </h2>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button className="text-gray-500 p-2 hover:text-white"><Search size={22} /></button>
           <button onClick={nextMonth} className="text-gray-500 p-2 active:scale-75 transition-transform">
             <ChevronRight size={24} />

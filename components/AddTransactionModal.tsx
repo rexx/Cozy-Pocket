@@ -1,9 +1,9 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   X, Check, Camera, Star, Sparkles, Loader2, Trash2,
   Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2,
-  Hash, Calendar as CalIcon, Clock
+  Hash
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { Transaction } from '../types';
@@ -32,8 +32,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   editingTransaction 
 }) => {
   const isEditing = !!editingTransaction;
-  
-  // 安全地格式化初始日期
   const safeInitialDate = (initialDate && isValid(initialDate)) ? initialDate : new Date();
   
   const [activeTab, setActiveTab] = useState('支出');
@@ -48,39 +46,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [currentDateStr, setCurrentDateStr] = useState(editingTransaction?.date || format(safeInitialDate, 'yyyy-MM-dd'));
   const [currentTime, setCurrentTime] = useState(editingTransaction?.time || format(new Date(), 'HH:mm'));
-  
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const timeInputRef = useRef<HTMLInputElement>(null);
-
-  const triggerDatePicker = () => {
-    if (dateInputRef.current) {
-      try {
-        if ('showPicker' in HTMLInputElement.prototype) {
-          dateInputRef.current.showPicker();
-        } else {
-          dateInputRef.current.click();
-        }
-      } catch (e) {
-        console.warn("Picker failed, fallback to click", e);
-        dateInputRef.current.click();
-      }
-    }
-  };
-
-  const triggerTimePicker = () => {
-    if (timeInputRef.current) {
-      try {
-        if ('showPicker' in HTMLInputElement.prototype) {
-          timeInputRef.current.showPicker();
-        } else {
-          timeInputRef.current.click();
-        }
-      } catch (e) {
-        console.warn("Picker failed, fallback to click", e);
-        timeInputRef.current.click();
-      }
-    }
-  };
 
   const handleSubmit = () => {
     try {
@@ -152,14 +117,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   };
 
   const tabs = ['支出', '收入', '轉帳', '應收', '應付'];
-  
-  const [y, m, d] = currentDateStr.split('-').map(Number);
-  const displayDate = new Date(y, m - 1, d);
-  const weekDayStr = `週${['日','一','二','三','四','五','六'][displayDate.getDay()]}`;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
         <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform">
           <X size={26} strokeWidth={2} />
@@ -170,7 +130,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </button>
       </div>
 
-      {/* Tabs */}
       {!isEditing && (
         <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
           {tabs.map(tab => (
@@ -191,7 +150,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       )}
 
       <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c]">
-        {/* Categories Grid */}
         <div className="grid grid-cols-5 gap-x-2 gap-y-6">
           {CATEGORIES.map(cat => {
             const IconComp = IconMap[cat.icon];
@@ -218,11 +176,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           })}
         </div>
 
-        {/* Input Rows Area */}
         <div className="space-y-4">
           <div className="flex gap-4 items-end">
              <div className="flex-1 space-y-4">
-                {/* Amount Input */}
                 <div className="relative group">
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600 tracking-tighter bg-white/5 px-2 py-1 rounded">TWD</div>
                   <input 
@@ -237,7 +193,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   />
                 </div>
 
-                {/* Name Input */}
                 <div className="flex items-center gap-3 border-b border-white/5 py-2 group focus-within:border-cyan-500/50 transition-colors">
                   <Star size={18} className="text-gray-600 group-focus-within:text-cyan-500" />
                   <input 
@@ -256,7 +211,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         </div>
 
-        {/* Buttons Grid */}
         <div className="grid grid-cols-2 gap-3">
           <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-xl py-4 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e]">
             <span className="opacity-50">付款</span>
@@ -268,46 +222,31 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <span className="text-white truncate max-w-[60px]">{projectName}</span>
           </button>
 
-          {/* Date Picker Button Container */}
-          <div 
-            onClick={triggerDatePicker}
-            className="relative overflow-hidden bg-[#252538] rounded-xl border border-white/5 active:bg-[#2a2a3e] cursor-pointer"
-          >
+          {/* 直接顯示原生日期選擇器 */}
+          <div className="flex flex-col gap-1 bg-[#252538] p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-gray-500 font-bold uppercase">日期</span>
             <input 
               type="date" 
-              ref={dateInputRef}
               value={currentDateStr}
               onChange={(e) => setCurrentDateStr(e.target.value)}
-              className="absolute inset-0 opacity-0 z-0"
-              style={{ colorScheme: 'dark', pointerEvents: 'none' }}
+              className="bg-transparent text-white text-sm focus:outline-none w-full"
+              style={{ colorScheme: 'dark' }}
             />
-            <div className="py-4 px-4 flex items-center justify-between text-xs font-bold">
-              <CalIcon size={14} className="text-cyan-500" />
-              <span className="text-white">{format(displayDate, 'MM/dd')} ({weekDayStr})</span>
-            </div>
           </div>
 
-          {/* Time Picker Button Container */}
-          <div 
-            onClick={triggerTimePicker}
-            className="relative overflow-hidden bg-[#252538] rounded-xl border border-white/5 active:bg-[#2a2a3e] cursor-pointer"
-          >
+          {/* 直接顯示原生時間選擇器 */}
+          <div className="flex flex-col gap-1 bg-[#252538] p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-gray-500 font-bold uppercase">時間</span>
             <input 
               type="time" 
-              ref={timeInputRef}
               value={currentTime}
               onChange={(e) => setCurrentTime(e.target.value)}
-              className="absolute inset-0 opacity-0 z-0"
-              style={{ colorScheme: 'dark', pointerEvents: 'none' }}
+              className="bg-transparent text-white text-sm focus:outline-none w-full"
+              style={{ colorScheme: 'dark' }}
             />
-            <div className="py-4 px-4 flex items-center justify-between text-xs font-bold">
-              <Clock size={14} className="text-cyan-500" />
-              <span className="text-white">{currentTime}</span>
-            </div>
           </div>
         </div>
 
-        {/* Note Area */}
         <div className="relative bg-[#252538] rounded-2xl p-4 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all">
           <textarea
             placeholder="點擊此處輸入備註，或使用 AI 助手解析..."
@@ -326,7 +265,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </button>
         </div>
 
-        {/* Tags */}
         <div className="flex items-center gap-3 px-2">
            <Hash size={16} className="text-gray-600" />
            <input 
