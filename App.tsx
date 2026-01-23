@@ -30,7 +30,9 @@ const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ err
 };
 
 const App: React.FC = () => {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(2026, 0, 17));
+  // 修改處：將初始日期改為 new Date()
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem('cozy-pocket-tx');
