@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isSameDay, endOfMonth, isWithinInterval } from 'date-fns';
 import { Plus, Calendar as CalendarIcon, AlertCircle, X } from 'lucide-react';
@@ -8,7 +7,6 @@ import AddTransactionModal from './components/AddTransactionModal';
 import { Transaction } from './types';
 import { INITIAL_TRANSACTIONS } from './constants';
 
-// 錯誤顯示組件：用於偵錯 iOS/Preview 的 Uncaught Error
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
   if (errors.length === 0) return null;
   return (
@@ -30,7 +28,6 @@ const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ err
 };
 
 const App: React.FC = () => {
-  // 修改處：將初始日期改為 new Date()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
@@ -46,7 +43,6 @@ const App: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
 
-  // 錯誤擷取邏輯
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       const msg = `Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`;
@@ -119,10 +115,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen max-w-lg mx-auto bg-[#1a1c2c] overflow-hidden relative font-sans">
+    <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       
-      <div className="sticky top-0 z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
+      {/* 頂部固定區域 (不得滑動) */}
+      <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         <Calendar 
           selectedDate={selectedDate} 
           onDateSelect={setSelectedDate}
@@ -130,7 +127,8 @@ const App: React.FC = () => {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-32 no-scrollbar">
+      {/* 底部滑動區域 (只能上下滑動) */}
+      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
         <div className="px-4 py-2 mt-4">
           <div className="bg-[#24273c] border border-white/5 rounded-2xl p-4 flex justify-between items-center shadow-xl">
             <div className="flex items-center gap-3">
@@ -145,7 +143,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-1 pb-32">
           {dailyTransactions.length > 0 ? (
             dailyTransactions.map(tx => (
               <TransactionItem 
@@ -164,16 +162,18 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40">
+      {/* 懸浮按鈕固定在畫面最下方 */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
         <button 
           onClick={handleOpenModal}
-          className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] active:scale-95 transition-transform hover:brightness-110"
+          className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] active:scale-95 transition-transform hover:brightness-110 pointer-events-auto"
         >
           <Plus size={36} strokeWidth={2.5} />
         </button>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none"></div>
+      {/* 底部漸層遮罩 */}
+      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-30"></div>
 
       {isModalOpen && (
         <AddTransactionModal 

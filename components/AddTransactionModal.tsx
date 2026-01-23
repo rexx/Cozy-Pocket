@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   X, Check, Camera, Star, Trash2,
@@ -95,39 +94,41 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
-        <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform">
-          <X size={26} strokeWidth={2} />
-        </button>
-        <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? '修改紀錄' : '新增支出'}</h1>
-        <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform">
-          <Check size={26} strokeWidth={2.5} />
-        </button>
+      {/* Header (不得滑動) */}
+      <div className="flex-none">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
+          <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform">
+            <X size={26} strokeWidth={2} />
+          </button>
+          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? '修改紀錄' : '新增支出'}</h1>
+          <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform">
+            <Check size={26} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* Tabs (不得滑動) */}
+        {!isEditing && (
+          <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
+            {tabs.map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${
+                  activeTab === tab ? 'text-white' : 'text-gray-500'
+                }`}
+              >
+                {tab}
+                {activeTab === tab && (
+                  <div className="absolute bottom-0 left-4 right-4 h-1 bg-cyan-500 rounded-t-full shadow-[0_-2px_10px_rgba(34,211,238,0.3)]"></div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
-      {!isEditing && (
-        <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
-          {tabs.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${
-                activeTab === tab ? 'text-white' : 'text-gray-500'
-              }`}
-            >
-              {tab}
-              {activeTab === tab && (
-                <div className="absolute bottom-0 left-4 right-4 h-1 bg-cyan-500 rounded-t-full shadow-[0_-2px_10px_rgba(34,211,238,0.3)]"></div>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c]">
+      {/* Content (只能上下滑動) */}
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         {/* Category Grid */}
         <div className="grid grid-cols-5 gap-x-2 gap-y-6">
           {CATEGORIES.map(cat => {
@@ -232,7 +233,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         </div>
 
-        {/* 標籤輸入區移動至備註框上方 */}
+        {/* 標籤輸入區 */}
         <div className="flex items-center gap-3 px-2 py-1">
            <Hash size={18} className="text-cyan-500/60" />
            <input 

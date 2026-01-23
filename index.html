@@ -6,47 +6,47 @@
     <meta name="theme-color" content="#1a1c2c" />
     <title>Cozy Pocket</title>
     
-    <!-- PWA & Icons - Using absolute-style paths for assets and relative for manifest -->
+    <!-- PWA & Icons -->
     <link rel="apple-touch-icon" sizes="180x180" href="/public/Cozy-Pocket/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/public/Cozy-Pocket/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/public/Cozy-Pocket/favicon-16x16.png">
     <link rel="manifest" href="./manifest.json">
 
     <script>
-      // Global shim for process.env to prevent ReferenceErrors in imported modules
       window.process = { env: { API_KEY: "" } };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-color: #1a1c2c;
+      }
+      html, body {
+        height: 100%;
+        width: 100%;
+        overflow: hidden; /* 禁止整體滾動 */
+        position: fixed; /* 徹底鎖定背景 */
+        background-color: var(--bg-color);
+      }
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #1a1c2c;
         color: #e2e8f0;
-        overscroll-behavior-y: contain;
         margin: 0;
         padding: 0;
-        /* 防止雙擊縮放，但允許正常滾動 */
         touch-action: manipulation;
-        /* 禁止頁面被選取，增加 App 感 */
         -webkit-user-select: none;
         user-select: none;
+        overscroll-behavior: none; /* 防止橡皮筋效果 */
       }
-      /* 允許輸入框選取文字 */
+      #root {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+      }
       input, textarea {
         -webkit-user-select: text;
         user-select: text;
-      }
-      ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
-      }
-      @keyframes slide-up {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
-      }
-      .animate-slide-up {
-        animation: slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .no-scrollbar::-webkit-scrollbar {
         display: none;
@@ -54,6 +54,13 @@
       .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
+      }
+      @keyframes slide-up {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+      .animate-slide-up {
+        animation: slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
     </style>
     <script type="importmap">
