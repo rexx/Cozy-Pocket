@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#1a1c2c" />
     <title>Cozy Pocket</title>
     
@@ -26,6 +26,16 @@
         overscroll-behavior-y: contain;
         margin: 0;
         padding: 0;
+        /* 防止雙擊縮放，但允許正常滾動 */
+        touch-action: manipulation;
+        /* 禁止頁面被選取，增加 App 感 */
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      /* 允許輸入框選取文字 */
+      input, textarea {
+        -webkit-user-select: text;
+        user-select: text;
       }
       ::-webkit-scrollbar {
         width: 0px;

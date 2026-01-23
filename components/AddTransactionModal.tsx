@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   X, Check, Camera, Star, Sparkles, Loader2, Trash2,
@@ -200,7 +199,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     placeholder="輸入項目名稱..."
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-700 text-white font-medium"
+                    className="flex-1 bg-transparent text-base focus:outline-none placeholder-gray-700 text-white font-medium"
                   />
                 </div>
              </div>
@@ -222,26 +221,26 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <span className="text-white truncate max-w-[60px]">{projectName}</span>
           </button>
 
-          {/* 直接顯示原生日期選擇器 */}
+          {/* 直接顯示原生日期選擇器 - 確保字體為 16px 以防 iOS 縮放 */}
           <div className="flex flex-col gap-1 bg-[#252538] p-3 rounded-xl border border-white/5">
             <span className="text-[10px] text-gray-500 font-bold uppercase">日期</span>
             <input 
               type="date" 
               value={currentDateStr}
               onChange={(e) => setCurrentDateStr(e.target.value)}
-              className="bg-transparent text-white text-sm focus:outline-none w-full"
+              className="bg-transparent text-white text-base focus:outline-none w-full"
               style={{ colorScheme: 'dark' }}
             />
           </div>
 
-          {/* 直接顯示原生時間選擇器 */}
+          {/* 直接顯示原生時間選擇器 - 確保字體為 16px 以防 iOS 縮放 */}
           <div className="flex flex-col gap-1 bg-[#252538] p-3 rounded-xl border border-white/5">
             <span className="text-[10px] text-gray-500 font-bold uppercase">時間</span>
             <input 
               type="time" 
               value={currentTime}
               onChange={(e) => setCurrentTime(e.target.value)}
-              className="bg-transparent text-white text-sm focus:outline-none w-full"
+              className="bg-transparent text-white text-base focus:outline-none w-full"
               style={{ colorScheme: 'dark' }}
             />
           </div>
@@ -252,7 +251,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             placeholder="點擊此處輸入備註，或使用 AI 助手解析..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full bg-transparent resize-none text-sm focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed"
+            className="w-full bg-transparent resize-none text-base focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed"
           />
           <button 
             onClick={handleAiParse}
@@ -272,7 +271,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="新增標籤..."
-              className="flex-1 bg-transparent text-sm text-gray-400 focus:outline-none border-b border-white/5 py-1"
+              className="flex-1 bg-transparent text-base text-gray-400 focus:outline-none border-b border-white/5 py-1"
             />
         </div>
 
