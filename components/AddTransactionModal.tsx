@@ -1,13 +1,12 @@
 
 import React, { useState } from 'react';
 import { 
-  X, Check, Camera, Star, Sparkles, Loader2, Trash2,
+  X, Check, Camera, Star, Trash2,
   Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2,
-  Hash, Calendar as CalendarIcon, Clock, Store
+  Hash, Calendar as CalendarIcon, Clock
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { Transaction } from '../types';
-import { parseTransactionWithAI } from '../services/geminiService';
 import { format, isValid } from 'date-fns';
 
 const IconMap: Record<string, any> = {
@@ -42,7 +41,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [merchant, setMerchant] = useState(editingTransaction?.merchant || ''); 
   const [tags, setTags] = useState(editingTransaction?.tags || '');
   const [paymentMethod, setPaymentMethod] = useState<string>(editingTransaction?.paymentMethod || '現金');
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const [currentDateStr, setCurrentDateStr] = useState(editingTransaction?.date || format(safeInitialDate, 'yyyy-MM-dd'));
   const [currentTime, setCurrentTime] = useState(editingTransaction?.time || format(new Date(), 'HH:mm'));
 
@@ -84,27 +82,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         onDelete(editingTransaction.id);
         onClose();
       }
-    }
-  };
-
-  const handleAiParse = async () => {
-    const textToParse = name || merchant || note;
-    if (!textToParse.trim()) return;
-    
-    setIsAiLoading(true);
-    try {
-      const result = await parseTransactionWithAI(textToParse);
-      if (result) {
-        if (result.amount) setAmount(result.amount.toString());
-        if (result.categoryId) setCategoryId(result.categoryId);
-        if (result.note) setName(result.note);
-        if (result.merchant) setMerchant(result.merchant);
-        if (result.paymentMethod) setPaymentMethod(result.paymentMethod);
-      }
-    } catch (err) {
-      console.error("AI Parse Error:", err);
-    } finally {
-      setIsAiLoading(false);
     }
   };
 
@@ -255,7 +232,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         </div>
 
-        {/* 修改處：標籤輸入區移動至備註框上方 */}
+        {/* 標籤輸入區移動至備註框上方 */}
         <div className="flex items-center gap-3 px-2 py-1">
            <Hash size={18} className="text-cyan-500/60" />
            <input 
@@ -267,23 +244,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             />
         </div>
 
-        {/* Note Area with AI Sparkles */}
+        {/* Note Area */}
         <div className="relative bg-[#252538] rounded-2xl p-4 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all">
           <textarea
-            placeholder="點擊此處輸入備註，或使用 AI 助手解析..."
+            placeholder="點擊此處輸入備註..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="w-full bg-transparent resize-none text-base focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed"
           />
-          <button 
-            onClick={handleAiParse}
-            disabled={isAiLoading || (!name.trim() && !note.trim())}
-            className={`absolute bottom-3 right-3 p-3 rounded-xl transition-all ${
-              (name.trim() || note.trim()) ? 'bg-cyan-500 text-black opacity-100 shadow-lg' : 'bg-gray-800 text-gray-600 opacity-50 pointer-events-none'
-            } active:scale-90`}
-          >
-            {isAiLoading ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
-          </button>
         </div>
 
         {/* Delete Button (Editing only) */}
