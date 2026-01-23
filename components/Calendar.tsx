@@ -69,19 +69,16 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transac
           <ChevronLeft size={24} />
         </button>
         
-        <div className="flex flex-col items-center gap-2">
-          {/* 直接顯示原生日期選擇器 */}
-          <input 
-            type="date"
-            className="bg-[#252538] text-white text-xs p-1 rounded border border-white/10"
-            style={{ colorScheme: 'dark' }}
-            value={format(safeDate, 'yyyy-MM-dd')}
-            onChange={handleHeaderDateChange}
-          />
-          <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/5">
-            <h2 className="text-xl font-bold tracking-tight text-white">
-              {format(safeDate, 'yyyy / MM / dd')}
-            </h2>
+        <div className="flex flex-col items-center gap-1">
+          {/* 僅保留原生的日期選擇器，並美化外觀 */}
+          <div className="relative">
+            <input 
+              type="date"
+              className="bg-[#252538] text-white text-sm font-bold px-4 py-2 rounded-full border border-white/10 appearance-none text-center cursor-pointer active:bg-white/5 transition-colors"
+              style={{ colorScheme: 'dark' }}
+              value={format(safeDate, 'yyyy-MM-dd')}
+              onChange={handleHeaderDateChange}
+            />
           </div>
         </div>
 
