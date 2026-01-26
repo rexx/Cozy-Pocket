@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Check, Camera, Star, Trash2,
   Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2,
@@ -32,6 +33,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const isEditing = !!editingTransaction;
   const safeInitialDate = (initialDate && isValid(initialDate)) ? initialDate : new Date();
   
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  
   const [activeTab, setActiveTab] = useState('支出');
   const [amount, setAmount] = useState(editingTransaction?.amount.toString() || '0');
   const [categoryId, setCategoryId] = useState(editingTransaction?.categoryId || 'food');
@@ -42,6 +45,18 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<string>(editingTransaction?.paymentMethod || '現金');
   const [currentDateStr, setCurrentDateStr] = useState(editingTransaction?.date || format(safeInitialDate, 'yyyy-MM-dd'));
   const [currentTime, setCurrentTime] = useState(editingTransaction?.time || format(new Date(), 'HH:mm'));
+
+  // 自動 Focus 到金額輸入框
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (amountInputRef.current) {
+        amountInputRef.current.focus();
+        // 對於某些行動裝置，確保鍵盤彈出
+        amountInputRef.current.click();
+      }
+    }, 350); // 略長於 animate-slide-up 的 0.25s，確保動畫完成後 focus
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = () => {
     try {
@@ -167,6 +182,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 <div className="relative group">
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600 tracking-tighter bg-white/5 px-2 py-1 rounded">TWD</div>
                   <input 
+                    ref={amountInputRef}
                     type="number"
                     pattern="\d*"
                     inputMode="decimal"
