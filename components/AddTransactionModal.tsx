@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { 
   X, Check, Camera, Star, Trash2,
   Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2,
@@ -36,7 +36,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const amountInputRef = useRef<HTMLInputElement>(null);
   
   const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
-  const [amount, setAmount] = useState(editingTransaction?.amount.toString() || '0');
+  // 如果是新增，預設為空字串，避免 0 -> 空字串的轉換導致重新渲染中斷鍵盤
+  const [amount, setAmount] = useState(editingTransaction?.amount.toString() || '');
   const [categoryId, setCategoryId] = useState(editingTransaction?.categoryId || 'food');
   const [name, setName] = useState(editingTransaction?.name || ''); 
   const [note, setNote] = useState(editingTransaction?.note || ''); 
@@ -46,19 +47,19 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [currentDateStr, setCurrentDateStr] = useState(editingTransaction?.date || format(safeInitialDate, 'yyyy-MM-dd'));
   const [currentTime, setCurrentTime] = useState(editingTransaction?.time || format(new Date(), 'HH:mm'));
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (amountInputRef.current) {
-        amountInputRef.current.focus();
-        amountInputRef.current.click();
-      }
-    }, 350);
-    return () => clearTimeout(timer);
+  // iOS Safari 強制要求同步聚焦。在 React 組件掛載時立即呼叫。
+  useLayoutEffect(() => {
+    if (amountInputRef.current) {
+      // 雙重嘗試：立即聚焦並觸發點擊，以最大限度模擬使用者行為
+      amountInputRef.current.focus();
+      // 對於某些 iOS 版本，click() 有助於喚醒鍵盤
+      amountInputRef.current.click();
+    }
   }, []);
 
   const handleSubmit = () => {
     try {
-      const parsedAmount = parseFloat(amount);
+      const parsedAmount = parseFloat(amount || '0');
       if (isNaN(parsedAmount) || parsedAmount === 0) {
         alert("請輸入金額");
         return;
@@ -177,13 +178,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600 tracking-tighter bg-white/5 px-2 py-1 rounded">TWD</div>
                   <input 
                     ref={amountInputRef}
+                    autoFocus
                     type="number"
                     pattern="\d*"
                     inputMode="decimal"
+                    placeholder="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    onFocus={() => amount === '0' && setAmount('')}
-                    onBlur={() => amount === '' && setAmount('0')}
                     className={`w-full bg-transparent border-b-2 border-white/5 py-2 pl-12 text-right text-4xl font-light focus:outline-none transition-all ${
                       activeTab === '收入' ? 'focus:border-rose-500 text-rose-400' : 'focus:border-emerald-500 text-emerald-400'
                     }`}
