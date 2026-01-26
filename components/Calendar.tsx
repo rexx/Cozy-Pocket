@@ -21,6 +21,8 @@ interface CalendarProps {
 
 const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transactions }) => {
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
+  const today = new Date();
+  const isCurrentlyToday = isSameDay(safeDate, today);
   
   const monthStart = new Date(safeDate.getFullYear(), safeDate.getMonth(), 1);
   const monthEnd = endOfMonth(monthStart);
@@ -40,6 +42,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transac
 
   const nextMonth = () => onDateSelect(addMonths(safeDate, 1));
   const prevMonth = () => onDateSelect(addMonths(safeDate, -1));
+  const goToToday = () => onDateSelect(new Date());
 
   const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -64,17 +67,33 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transac
 
   return (
     <div className="bg-[#1a1c2c] p-4 pb-4 select-none">
-      <div className="flex justify-between items-center mb-6 px-2">
-        <button onClick={prevMonth} className="text-gray-500 p-2 active:scale-75 transition-transform">
-          <ChevronLeft size={24} />
-        </button>
+      {/* Header Layout: <, 今, [date], 🔍, > */}
+      <div className="grid grid-cols-3 items-center mb-6 px-1">
         
-        <div className="flex flex-col items-center gap-1">
-          {/* 僅保留原生的日期選擇器，並美化外觀 */}
+        {/* Left Side Group: < and 今 */}
+        <div className="flex items-center gap-1 justify-self-start">
+          <button onClick={prevMonth} className="text-gray-500 p-2 active:scale-75 transition-transform">
+            <ChevronLeft size={24} />
+          </button>
+          
+          <div className="w-9 flex justify-center">
+            {!isCurrentlyToday && (
+              <button 
+                onClick={goToToday}
+                className="flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-black px-2 py-1.5 rounded-lg active:scale-90 transition-all shadow-[0_0_10px_rgba(34,211,238,0.1)]"
+              >
+                今
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {/* Center: Date Picker - Perfectly Centered */}
+        <div className="flex justify-center">
           <div className="relative">
             <input 
               type="date"
-              className="bg-[#252538] text-white text-sm font-bold px-4 py-2 rounded-full border border-white/10 appearance-none text-center cursor-pointer active:bg-white/5 transition-colors"
+              className="bg-[#252538] text-white text-xs font-bold px-3 py-2 rounded-full border border-white/10 appearance-none text-center cursor-pointer active:bg-white/5 transition-colors w-32"
               style={{ colorScheme: 'dark' }}
               value={format(safeDate, 'yyyy-MM-dd')}
               onChange={handleHeaderDateChange}
@@ -82,8 +101,12 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transac
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <button className="text-gray-500 p-2 hover:text-white"><Search size={22} /></button>
+        {/* Right Side Group: 🔍 and > */}
+        <div className="flex items-center gap-1 justify-self-end">
+          <button className="text-gray-500 p-2 hover:text-white transition-colors">
+            <Search size={22} />
+          </button>
+          
           <button onClick={nextMonth} className="text-gray-500 p-2 active:scale-75 transition-transform">
             <ChevronRight size={24} />
           </button>
