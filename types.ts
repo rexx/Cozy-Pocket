@@ -1,5 +1,6 @@
 
 export type PaymentMethod = '現金' | '信用卡' | '電子支付' | '轉帳';
+export type TransactionType = '支出' | '收入';
 
 export interface Category {
   id: string;
@@ -10,10 +11,11 @@ export interface Category {
 
 export interface Transaction {
   id: string;
+  type: TransactionType;
   amount: number;
   categoryId: string;
-  name: string; // The primary item name (Big text)
-  note?: string; // Additional notes (Small text)
+  name: string;
+  note?: string;
   date: string; 
   time: string; 
   paymentMethod: string;
@@ -23,6 +25,7 @@ export interface Transaction {
 }
 
 export interface MonthlyStats {
-  total: number;
+  totalIncome: number;
+  totalExpense: number;
   budget: number;
 }

@@ -17,6 +17,8 @@ export const CATEGORIES: Category[] = [
 export const INITIAL_TRANSACTIONS: Transaction[] = [
   {
     id: '1',
+    // Added missing 'type' property to fix Transaction interface error
+    type: '支出',
     amount: 458,
     categoryId: 'food',
     name: 'PIZZA',
@@ -29,6 +31,8 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
   },
   {
     id: '2',
+    // Added missing 'type' property to fix Transaction interface error
+    type: '支出',
     amount: 318,
     categoryId: 'food',
     name: '炸雞',

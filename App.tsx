@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isSameDay, endOfMonth, isWithinInterval } from 'date-fns';
-import { Plus, Calendar as CalendarIcon, AlertCircle, X } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, AlertCircle, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
@@ -33,9 +34,11 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem('cozy-pocket-tx');
-      return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+      // Ensure existing transactions have a 'type' if they were saved without one
+      const parsed = saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+      return parsed.map((t: any) => ({ ...t, type: t.type || '支出' }));
     } catch (e) {
-      return INITIAL_TRANSACTIONS;
+      return INITIAL_TRANSACTIONS.map(t => ({ ...t, type: t.type || '支出' }));
     }
   });
   
@@ -77,7 +80,7 @@ const App: React.FC = () => {
       .sort((a, b) => (b.time || '').localeCompare(a.time || ''));
   }, [transactions, selectedDate]);
 
-  const monthlyTotal = useMemo(() => {
+  const monthlyStats = useMemo(() => {
     const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const end = endOfMonth(selectedDate);
     return transactions
@@ -86,11 +89,18 @@ const App: React.FC = () => {
         const txDate = new Date(y, m - 1, d);
         return isWithinInterval(txDate, { start, end });
       })
-      .reduce((acc, curr) => acc + curr.amount, 0);
+      .reduce((acc, curr) => {
+        if (curr.type === '收入') {
+          acc.income += curr.amount;
+        } else {
+          acc.expense += curr.amount;
+        }
+        return acc;
+      }, { income: 0, expense: 0 });
   }, [transactions, selectedDate]);
 
   const addTransaction = (newTx: Omit<Transaction, 'id'>) => {
-    const transaction: Transaction = { ...newTx, id: Date.now().toString() };
+    const transaction: Transaction = { ...newTx, id: Date.now().toString() } as Transaction;
     setTransactions(prev => [transaction, ...prev]);
   };
 
@@ -118,7 +128,6 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       
-      {/* 頂部固定區域 (不得滑動) */}
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         <Calendar 
           selectedDate={selectedDate} 
@@ -127,19 +136,30 @@ const App: React.FC = () => {
         />
       </div>
 
-      {/* 底部滑動區域 (只能上下滑動) */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
         <div className="px-4 py-2 mt-4">
-          <div className="bg-[#24273c] border border-white/5 rounded-2xl p-4 flex justify-between items-center shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400">
-                <CalendarIcon size={20} />
+          <div className="bg-[#24273c] border border-white/5 rounded-2xl p-4 flex gap-4 shadow-xl">
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+                <ArrowDownLeft size={12} className="text-rose-500" />
+                <span>本月收入</span>
               </div>
-              <span className="text-gray-300 font-medium">本月支出統計</span>
+              <div className="text-rose-400 font-black text-xl tracking-tighter">
+                ${monthlyStats.income.toLocaleString()}
+              </div>
             </div>
-            <span className="text-white font-bold text-2xl tracking-tight">
-              ${monthlyTotal.toLocaleString()}
-            </span>
+            
+            <div className="w-px bg-white/5 self-stretch"></div>
+
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+                <ArrowUpRight size={12} className="text-emerald-500" />
+                <span>本月支出</span>
+              </div>
+              <div className="text-emerald-400 font-black text-xl tracking-tighter">
+                ${monthlyStats.expense.toLocaleString()}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -162,7 +182,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* 懸浮按鈕固定在畫面最下方 */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
         <button 
           onClick={handleOpenModal}
@@ -172,7 +191,6 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* 底部漸層遮罩 */}
       <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-30"></div>
 
       {isModalOpen && (

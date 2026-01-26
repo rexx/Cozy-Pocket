@@ -6,7 +6,7 @@ import {
   Hash, Calendar as CalendarIcon, Clock
 } from 'lucide-react';
 import { CATEGORIES } from '../constants';
-import { Transaction } from '../types';
+import { Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 
 const IconMap: Record<string, any> = {
@@ -35,7 +35,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   
   const amountInputRef = useRef<HTMLInputElement>(null);
   
-  const [activeTab, setActiveTab] = useState('支出');
+  const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
   const [amount, setAmount] = useState(editingTransaction?.amount.toString() || '0');
   const [categoryId, setCategoryId] = useState(editingTransaction?.categoryId || 'food');
   const [name, setName] = useState(editingTransaction?.name || ''); 
@@ -46,15 +46,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [currentDateStr, setCurrentDateStr] = useState(editingTransaction?.date || format(safeInitialDate, 'yyyy-MM-dd'));
   const [currentTime, setCurrentTime] = useState(editingTransaction?.time || format(new Date(), 'HH:mm'));
 
-  // 自動 Focus 到金額輸入框
   useEffect(() => {
     const timer = setTimeout(() => {
       if (amountInputRef.current) {
         amountInputRef.current.focus();
-        // 對於某些行動裝置，確保鍵盤彈出
         amountInputRef.current.click();
       }
-    }, 350); // 略長於 animate-slide-up 的 0.25s，確保動畫完成後 focus
+    }, 350);
     return () => clearTimeout(timer);
   }, []);
 
@@ -66,7 +64,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         return;
       }
       
-      const data = {
+      const data: Omit<Transaction, 'id'> = {
+        type: activeTab,
         amount: parsedAmount,
         categoryId,
         name: name || '未命名項目',
@@ -79,7 +78,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       };
 
       if (isEditing && onUpdate && editingTransaction) {
-        onUpdate({ ...data, id: editingTransaction.id });
+        onUpdate({ ...data, id: editingTransaction.id } as Transaction);
       } else {
         onAdd(data);
       }
@@ -105,46 +104,42 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setPaymentMethod(methods[(currentIndex + 1) % methods.length]);
   };
 
-  const tabs = ['支出', '收入'];
+  const tabs: TransactionType[] = ['支出', '收入'];
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
-      {/* Header (不得滑動) */}
       <div className="flex-none">
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
           <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform">
             <X size={26} strokeWidth={2} />
           </button>
-          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? '修改紀錄' : '新增項目'}</h1>
+          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? `修改${activeTab}` : '新增項目'}</h1>
           <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform">
             <Check size={26} strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Tabs (不得滑動) */}
-        {!isEditing && (
-          <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
-            {tabs.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${
-                  activeTab === tab ? 'text-white' : 'text-gray-500'
-                }`}
-              >
-                {tab}
-                {activeTab === tab && (
-                  <div className="absolute bottom-0 left-4 right-4 h-1 bg-cyan-500 rounded-t-full shadow-[0_-2px_10px_rgba(34,211,238,0.3)]"></div>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
+          {tabs.map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${
+                activeTab === tab ? 'text-white' : 'text-gray-500'
+              }`}
+            >
+              {tab}
+              {activeTab === tab && (
+                <div className={`absolute bottom-0 left-4 right-4 h-1 rounded-t-full shadow-lg ${
+                  activeTab === '收入' ? 'bg-rose-500 shadow-rose-500/30' : 'bg-emerald-500 shadow-emerald-500/30'
+                }`}></div>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Content (只能上下滑動) */}
       <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
-        {/* Category Grid */}
         <div className="grid grid-cols-5 gap-x-2 gap-y-6">
           {CATEGORIES.map(cat => {
             const IconComp = IconMap[cat.icon];
@@ -171,7 +166,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           })}
         </div>
 
-        {/* Input Area (Camera + Amount + Name) */}
         <div className="space-y-4">
           <div className="flex gap-4 items-end">
              <button className="w-16 h-16 rounded-2xl bg-[#252538] border border-white/5 flex items-center justify-center text-gray-600 active:bg-white/10 transition-colors flex-shrink-0">
@@ -190,12 +184,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     onChange={(e) => setAmount(e.target.value)}
                     onFocus={() => amount === '0' && setAmount('')}
                     onBlur={() => amount === '' && setAmount('0')}
-                    className="w-full bg-transparent border-b-2 border-white/5 focus:border-cyan-500 py-2 pl-12 text-right text-4xl font-light focus:outline-none text-white transition-all"
+                    className={`w-full bg-transparent border-b-2 border-white/5 py-2 pl-12 text-right text-4xl font-light focus:outline-none transition-all ${
+                      activeTab === '收入' ? 'focus:border-rose-500 text-rose-400' : 'focus:border-emerald-500 text-emerald-400'
+                    }`}
                   />
                 </div>
 
-                <div className="flex items-center gap-3 border-b border-white/5 py-2 group focus-within:border-cyan-500/50 transition-colors">
-                  <Star size={18} className="text-gray-600 group-focus-within:text-cyan-500" />
+                <div className={`flex items-center gap-3 border-b border-white/5 py-2 group transition-colors ${
+                   activeTab === '收入' ? 'focus-within:border-rose-500/50' : 'focus-within:border-emerald-500/50'
+                }`}>
+                  <Star size={18} className={`text-gray-600 ${activeTab === '收入' ? 'group-focus-within:text-rose-500' : 'group-focus-within:text-emerald-500'}`} />
                   <input 
                     type="text"
                     placeholder="輸入項目名稱..."
@@ -208,10 +206,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         </div>
 
-        {/* Info Grid (Payment, Merchant, Date, Time) */}
         <div className="grid grid-cols-2 gap-3">
           <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-xl py-4 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors">
-            <span className="opacity-50">付款</span>
+            <span className="opacity-50">方式</span>
             <span className="text-white">{paymentMethod}</span>
           </button>
           
@@ -221,7 +218,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               type="text"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
-              placeholder="輸入商家..."
+              placeholder="輸入..."
               className="bg-transparent text-white text-right focus:outline-none w-full ml-2 font-bold placeholder-gray-700 text-sm"
             />
           </div>
@@ -249,19 +246,17 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         </div>
 
-        {/* 標籤輸入區 */}
         <div className="flex items-center gap-3 px-2 py-1">
-           <Hash size={18} className="text-cyan-500/60" />
+           <Hash size={18} className={activeTab === '收入' ? 'text-rose-500/60' : 'text-emerald-500/60'} />
            <input 
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              placeholder="新增標籤 (例如：午餐、旅行)..."
+              placeholder="標籤 (例如：獎金、旅行)..."
               className="flex-1 bg-transparent text-base text-gray-400 focus:outline-none border-b border-white/5 py-1 placeholder-gray-700 font-medium"
             />
         </div>
 
-        {/* Note Area */}
         <div className="relative bg-[#252538] rounded-2xl p-4 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all">
           <textarea
             placeholder="點擊此處輸入備註..."
@@ -271,7 +266,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           />
         </div>
 
-        {/* Delete Button (Editing only) */}
         {isEditing && (
           <button 
             onClick={handleDelete}

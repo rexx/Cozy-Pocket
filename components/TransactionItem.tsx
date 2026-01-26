@@ -18,6 +18,7 @@ interface TransactionItemProps {
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick }) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
   const IconComp = IconMap[category.icon] || Gift;
+  const isIncome = transaction.type === '收入';
 
   const subtextParts = [
     transaction.merchant,
@@ -39,10 +40,12 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
       
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-0.5">
-          <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
-            {transaction.name || category.name}
-          </h3>
-          <span className="text-white font-black text-lg ml-2 tabular-nums">
+          <div className="flex items-center gap-2 truncate">
+             <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
+                {transaction.name || category.name}
+             </h3>
+          </div>
+          <span className={`font-black text-lg ml-2 tabular-nums ${isIncome ? 'text-rose-400' : 'text-emerald-400'}`}>
             ${transaction.amount.toLocaleString()}
           </span>
         </div>
