@@ -105,7 +105,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setPaymentMethod(methods[(currentIndex + 1) % methods.length]);
   };
 
-  const tabs = ['支出', '收入', '轉帳', '應收', '應付'];
+  const tabs = ['支出', '收入'];
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
@@ -115,7 +115,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform">
             <X size={26} strokeWidth={2} />
           </button>
-          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? '修改紀錄' : '新增支出'}</h1>
+          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? '修改紀錄' : '新增項目'}</h1>
           <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform">
             <Check size={26} strokeWidth={2.5} />
           </button>
