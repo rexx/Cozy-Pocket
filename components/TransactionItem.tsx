@@ -3,11 +3,13 @@ import React from 'react';
 import { Transaction } from '../types';
 import { CATEGORIES } from '../constants';
 import { 
-  Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2 
+  CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
 } from 'lucide-react';
 
 const IconMap: Record<string, any> = {
-  Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2
+  CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
 };
 
 interface TransactionItemProps {
@@ -17,7 +19,7 @@ interface TransactionItemProps {
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick }) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
-  const IconComp = IconMap[category.icon] || Gift;
+  const IconComp = IconMap[category.icon] || MoreHorizontal;
   const isIncome = transaction.type === '收入';
 
   const subtextParts = [

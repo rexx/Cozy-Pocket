@@ -1,16 +1,17 @@
 
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { 
-  X, Check, Camera, Star, Trash2,
-  Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2,
-  Hash, Calendar as CalendarIcon, Clock
+  X, Check, Camera, Star, Trash2, Hash, Calendar as CalendarIcon, Clock,
+  CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
 } from 'lucide-react';
-import { CATEGORIES } from '../constants';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants';
 import { Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 
 const IconMap: Record<string, any> = {
-  Utensils, Car, Hospital, Home, Users, User, Building, Gift, Mic2, Flower2
+  CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
 };
 
 interface AddTransactionModalProps {
@@ -36,9 +37,17 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const amountInputRef = useRef<HTMLInputElement>(null);
   
   const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
-  // 如果是新增，預設為空字串，避免 0 -> 空字串的轉換導致重新渲染中斷鍵盤
   const [amount, setAmount] = useState(editingTransaction?.amount.toString() || '');
-  const [categoryId, setCategoryId] = useState(editingTransaction?.categoryId || 'food');
+  
+  const categoriesToDisplay = useMemo(() => {
+    return activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+  }, [activeTab]);
+
+  const [categoryId, setCategoryId] = useState(() => {
+    if (editingTransaction) return editingTransaction.categoryId;
+    return activeTab === '支出' ? 'food' : 'salary';
+  });
+
   const [name, setName] = useState(editingTransaction?.name || ''); 
   const [note, setNote] = useState(editingTransaction?.note || ''); 
   const [merchant, setMerchant] = useState(editingTransaction?.merchant || ''); 
@@ -47,15 +56,19 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [currentDateStr, setCurrentDateStr] = useState(editingTransaction?.date || format(safeInitialDate, 'yyyy-MM-dd'));
   const [currentTime, setCurrentTime] = useState(editingTransaction?.time || format(new Date(), 'HH:mm'));
 
-  // iOS Safari 強制要求同步聚焦。在 React 組件掛載時立即呼叫。
   useLayoutEffect(() => {
     if (amountInputRef.current) {
-      // 雙重嘗試：立即聚焦並觸發點擊，以最大限度模擬使用者行為
       amountInputRef.current.focus();
-      // 對於某些 iOS 版本，click() 有助於喚醒鍵盤
-      amountInputRef.current.click();
     }
   }, []);
+
+  // When switching tabs, update default category if not editing
+  const handleTabChange = (tab: TransactionType) => {
+    setActiveTab(tab);
+    if (!isEditing) {
+      setCategoryId(tab === '支出' ? 'food' : 'salary');
+    }
+  };
 
   const handleSubmit = () => {
     try {
@@ -124,7 +137,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           {tabs.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
               className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${
                 activeTab === tab ? 'text-white' : 'text-gray-500'
               }`}
@@ -142,8 +155,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
       <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         <div className="grid grid-cols-5 gap-x-2 gap-y-6">
-          {CATEGORIES.map(cat => {
-            const IconComp = IconMap[cat.icon];
+          {categoriesToDisplay.map(cat => {
+            const IconComp = IconMap[cat.icon] || MoreHorizontal;
             const isSelected = categoryId === cat.id;
             return (
               <button
@@ -159,7 +172,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 >
                   <IconComp size={24} color={isSelected ? "white" : cat.color} strokeWidth={2.5} />
                 </div>
-                <span className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-gray-600'}`}>
+                <span className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-gray-600'} text-center truncate w-full px-1`}>
                   {cat.name}
                 </span>
               </button>
