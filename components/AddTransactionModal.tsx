@@ -2,7 +2,8 @@
 import React, { useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { 
   X, Check, Star, Trash2, Plus, RotateCcw,
-  MoreHorizontal, Calendar as CalendarIcon, Clock
+  MoreHorizontal, Calendar as CalendarIcon, Clock,
+  Store, Tag, Banknote, CreditCard, SmartphoneNfc, ArrowLeftRight
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants';
@@ -153,6 +154,17 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setPaymentMethod(methods[(currentIndex + 1) % methods.length]);
   };
 
+  const getPaymentIcon = (method: string) => {
+    switch (method) {
+      case '現金': return Banknote;
+      case '信用卡': return CreditCard;
+      case '電子支付': return SmartphoneNfc;
+      case '轉帳': return ArrowLeftRight;
+      default: return Banknote;
+    }
+  };
+
+  const PaymentIcon = getPaymentIcon(paymentMethod);
   const tabs: TransactionType[] = ['支出', '收入'];
 
   const currentMainCat = useMemo(() => {
@@ -279,19 +291,20 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <button 
             onClick={togglePaymentMethod} 
-            className="bg-[#252538] rounded-2xl h-14 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors shadow-lg min-w-0"
+            className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 active:bg-[#2a2a3e] transition-colors shadow-lg min-w-0"
           >
-            <span className="opacity-50 flex-shrink-0">支付方式</span>
-            <span className="text-white truncate ml-2 text-right flex-1">{paymentMethod}</span>
+            <PaymentIcon size={16} className="text-gray-500 flex-shrink-0" />
+            <span className="text-white truncate ml-2 text-right flex-1 text-sm font-bold">{paymentMethod}</span>
           </button>
           
           <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-4 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg min-w-0 overflow-hidden">
+            <span className={`text-lg font-black mr-1 flex-shrink-0 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}>$</span>
             <input 
               ref={amountInputRef}
               type="number"
               pattern="\d*"
               inputMode="decimal"
-              placeholder="輸入金額"
+              placeholder="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className={`w-full min-w-0 bg-transparent text-right text-lg font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
@@ -302,22 +315,24 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         {/* 併排輸入區 Row 2: 商家 / 名稱 */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 group focus-within:border-white/20 transition-all shadow-lg min-w-0 overflow-hidden">
+            <Store size={16} className="text-gray-500 flex-shrink-0" />
             <input 
               type="text"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
               placeholder="商家"
-              className="bg-transparent text-white text-right focus:outline-none w-full min-w-0 font-bold placeholder-gray-700 text-sm"
+              className="bg-transparent text-white text-right focus:outline-none w-full min-w-0 font-bold placeholder-gray-700 text-sm ml-2"
             />
           </div>
           
           <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 group focus-within:border-white/20 transition-all shadow-lg min-w-0 overflow-hidden">
+            <Tag size={16} className="text-gray-500 flex-shrink-0" />
             <input 
               type="text"
               placeholder="名稱"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full min-w-0 bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white"
+              className="w-full min-w-0 bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2"
             />
           </div>
         </div>
