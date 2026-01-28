@@ -268,102 +268,99 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-8 space-y-10 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
+      <div className="flex-1 overflow-y-auto px-4 py-8 space-y-4 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         
-        <div className="px-2 min-h-[180px]">
+        {/* 分類選擇區 */}
+        <div className="px-2 min-h-[180px] mb-6">
           {renderGrid()}
         </div>
 
-        <div className="space-y-4">
-           <div className="flex-1 space-y-3">
-              {/* 金額輸入 */}
-              <div className="flex items-center bg-[#252538] rounded-full px-5 py-3 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg">
-                <div className="bg-[#3a3a5a] text-[10px] font-black text-white/70 px-3 py-1.5 rounded-xl mr-3 tracking-tighter shadow-sm">TWD</div>
-                <input 
-                  ref={amountInputRef}
-                  type="number"
-                  pattern="\d*"
-                  inputMode="decimal"
-                  placeholder="輸入金額..."
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className={`flex-1 bg-transparent text-right text-2xl font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
-                />
-              </div>
-
-              {/* 名稱輸入 */}
-              <div className="flex items-center bg-[#252538] rounded-full px-5 py-3 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg">
-                <input 
-                  type="text"
-                  placeholder="項目名稱..."
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="flex-1 bg-transparent text-right text-lg font-bold focus:outline-none placeholder-gray-600 text-white"
-                />
-                <button className="ml-3 p-1.5 bg-white/5 rounded-full text-gray-400 active:scale-90 transition-transform">
-                  <Star size={18} />
-                </button>
-              </div>
-           </div>
-        </div>
-
+        {/* 併排輸入區 Row 1: 支付 / 金額 */}
         <div className="grid grid-cols-2 gap-3">
-          {/* 支付方式 - 位置保留在左上 */}
-          <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-2xl py-4 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors shadow-sm">
-            <span className="opacity-50">支付方式</span>
-            <span className="text-white">{paymentMethod}</span>
+          <button 
+            onClick={togglePaymentMethod} 
+            className="bg-[#252538] rounded-2xl h-14 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors shadow-lg min-w-0"
+          >
+            <span className="opacity-50 flex-shrink-0">支付方式</span>
+            <span className="text-white truncate ml-2 text-right flex-1">{paymentMethod}</span>
           </button>
           
-          {/* 日期 - 對調到右上 */}
-          <div className="flex items-center justify-between bg-[#252538] p-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-sm">
-            <CalendarIcon size={16} className="text-gray-500" />
+          <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-4 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg min-w-0 overflow-hidden">
             <input 
-              type="date" 
-              value={currentDateStr}
-              onChange={(e) => setCurrentDateStr(e.target.value)}
-              className="bg-transparent text-white text-sm font-bold focus:outline-none text-right flex-1 cursor-pointer"
-              style={{ colorScheme: 'dark' }}
+              ref={amountInputRef}
+              type="number"
+              pattern="\d*"
+              inputMode="decimal"
+              placeholder="輸入金額"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={`w-full min-w-0 bg-transparent text-right text-lg font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
             />
           </div>
+        </div>
 
-          {/* 商家 - 對調到左下 */}
-          <div className="bg-[#252538] rounded-2xl py-3 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-sm">
-            <span className="opacity-50 whitespace-nowrap">商家</span>
+        {/* 併排輸入區 Row 2: 商家 / 名稱 */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 group focus-within:border-white/20 transition-all shadow-lg min-w-0 overflow-hidden">
             <input 
               type="text"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
-              placeholder="輸入商家..."
-              className="bg-transparent text-white text-right focus:outline-none w-full ml-2 font-bold placeholder-gray-700 text-sm"
+              placeholder="商家"
+              className="bg-transparent text-white text-right focus:outline-none w-full min-w-0 font-bold placeholder-gray-700 text-sm"
+            />
+          </div>
+          
+          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 group focus-within:border-white/20 transition-all shadow-lg min-w-0 overflow-hidden">
+            <input 
+              type="text"
+              placeholder="名稱"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full min-w-0 bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white"
+            />
+          </div>
+        </div>
+
+        {/* 併排輸入區 Row 3: 日期 / 時間 */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center justify-between bg-[#252538] h-14 px-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-lg min-w-0 overflow-hidden">
+            <CalendarIcon size={16} className="text-gray-500 flex-shrink-0" />
+            <input 
+              type="date" 
+              value={currentDateStr}
+              onChange={(e) => setCurrentDateStr(e.target.value)}
+              className="bg-transparent text-white text-xs font-bold focus:outline-none text-right w-full min-w-0 cursor-pointer ml-2"
+              style={{ colorScheme: 'dark' }}
             />
           </div>
 
-          {/* 時間 - 保留在右下 */}
-          <div className="flex items-center justify-between bg-[#252538] p-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-sm">
-            <Clock size={16} className="text-gray-500" />
+          <div className="flex items-center justify-between bg-[#252538] h-14 px-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-lg min-w-0 overflow-hidden">
+            <Clock size={16} className="text-gray-500 flex-shrink-0" />
             <input 
               type="time" 
               value={currentTime}
               onChange={(e) => setCurrentTime(e.target.value)}
-              className="bg-transparent text-white text-sm font-bold focus:outline-none text-right flex-1 cursor-pointer"
+              className="bg-transparent text-white text-xs font-bold focus:outline-none text-right w-full min-w-0 cursor-pointer ml-2"
               style={{ colorScheme: 'dark' }}
             />
           </div>
         </div>
 
-        <div className="relative bg-[#252538] rounded-[28px] p-5 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-lg">
+        {/* 備註輸入區 */}
+        <div className="relative bg-[#252538] rounded-2xl p-5 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-lg">
           <textarea
             placeholder="點擊輸入備註..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            className="w-full bg-transparent resize-none text-base focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed"
+            className="w-full bg-transparent resize-none text-sm focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed"
           />
         </div>
 
         {isEditing && (
           <button 
             onClick={handleDelete}
-            className="w-full py-5 text-red-500 text-sm font-bold flex items-center justify-center gap-2 bg-red-500/5 rounded-2xl border border-red-500/10 active:bg-red-500/20 transition-all"
+            className="w-full py-5 text-red-500 text-sm font-bold flex items-center justify-center gap-2 bg-red-500/5 rounded-2xl border border-red-500/10 active:bg-red-500/20 transition-all mt-4"
           >
             <Trash2 size={20} />
             <span>刪除這筆紀錄</span>
