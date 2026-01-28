@@ -192,12 +192,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   }`}
                   style={{ 
                     backgroundColor: bgColor,
-                    opacity: (isSelected || isControl) ? 1 : 0.6 
+                    opacity: 1 // 所有按鈕不反灰
                   }}
                 >
                   <IconComp size={24} color="white" strokeWidth={2.5} />
                 </div>
-                <span className={`text-[11px] font-bold ${isSelected || item.id === 'back' ? 'text-white' : 'text-gray-500'} text-center truncate w-full px-1`}>
+                <span className={`text-[11px] font-bold ${isSelected || item.id === 'back' ? 'text-white' : 'text-gray-400'} text-center truncate w-full px-1`}>
                   {item.name}
                 </span>
               </button>
@@ -221,13 +221,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             >
               <div 
                 className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                  isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : 'opacity-40 grayscale-[0.2]'
+                  isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : ''
                 }`}
-                style={{ backgroundColor: cat.color }}
+                style={{ backgroundColor: cat.color, opacity: 1 }} // 所有按鈕不反灰
               >
                 <IconComp size={24} color="white" strokeWidth={2.5} />
               </div>
-              <span className={`text-[11px] font-bold ${isSelected ? 'text-white' : 'text-gray-500'} text-center truncate w-full px-1`}>
+              <span className={`text-[11px] font-bold ${isSelected ? 'text-white' : 'text-gray-400'} text-center truncate w-full px-1`}>
                 {cat.name}
               </span>
             </button>

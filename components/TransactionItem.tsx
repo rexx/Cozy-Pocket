@@ -16,8 +16,11 @@ interface TransactionItemProps {
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick }) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
   const subCategory = category.subcategories?.find(s => s.id === transaction.subCategoryId);
-  const IconComp = IconMap[category.icon] || Icons.MoreHorizontal;
   const isIncome = transaction.type === '收入';
+
+  // 優先順序：如果是支出且有子類別，使用子類別圖示；否則（如收入或無子類別）使用主類別圖示
+  const iconName = (!isIncome && subCategory) ? subCategory.icon : category.icon;
+  const IconComp = IconMap[iconName] || Icons.MoreHorizontal;
 
   const subtextParts = [
     transaction.merchant,
