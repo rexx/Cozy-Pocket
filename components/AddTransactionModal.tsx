@@ -2,19 +2,26 @@
 import React, { useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { 
   X, Check, Camera, Star, Trash2, Hash, Calendar as CalendarIcon, Clock, Plus, RotateCcw,
-  CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
-  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail, User, Mic2, Flower2
+  MoreHorizontal
 } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants';
 import { Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 
 const IconMap: Record<string, any> = {
-  CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
-  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail, User, Mic2, Flower2,
+  ...Icons,
   Back: RotateCcw,
   Add: Plus
 };
+
+// 定義格狀選單項目的統一介面，解決 TS2339 錯誤
+interface GridItem {
+  id: string;
+  name: string;
+  icon: string;
+  color?: string;
+}
 
 interface AddTransactionModalProps {
   onClose: () => void;
@@ -154,27 +161,27 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const renderGrid = () => {
     if (activeTab === '支出' && isSubView && currentMainCat) {
-      // Subcategory View: Back + Subcats + Add
-      const items = [
-        { id: 'back', name: '返回', icon: 'Back', color: 'rgba(255,255,255,0.1)' },
+      // 子類別視圖：返回 + 子類別清單 + 新增
+      const items: GridItem[] = [
+        { id: 'back', name: '返回', icon: 'Back', color: 'rgba(255,255,255,0.08)' },
         ...(currentMainCat.subcategories || []),
-        { id: 'add', name: '新增', icon: 'Add', color: 'rgba(255,255,255,0.1)' }
+        { id: 'add', name: '新增', icon: 'Add', color: 'rgba(255,255,255,0.08)' }
       ];
 
       return (
         <div className="grid grid-cols-5 gap-x-2 gap-y-6">
           {items.map((item, idx) => {
             const isSelected = subCategoryId === item.id;
-            const IconComp = IconMap[item.icon as string] || MoreHorizontal;
+            const IconComp = IconMap[item.icon] || MoreHorizontal;
             const isControl = item.id === 'back' || item.id === 'add';
-            const bgColor = isControl ? item.color : currentMainCat.color;
+            const bgColor = isControl ? (item.color || 'rgba(255,255,255,0.08)') : currentMainCat.color;
 
             return (
               <button
                 key={`${item.id}-${idx}`}
                 onClick={() => {
                   if (item.id === 'back') handleBackToMain();
-                  else if (item.id === 'add') { /* Custom addition logic */ }
+                  else if (item.id === 'add') { /* 新增邏輯 */ }
                   else handleSubCategoryClick(item.id);
                 }}
                 className="flex flex-col items-center gap-2 group transition-all"
@@ -185,7 +192,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   }`}
                   style={{ 
                     backgroundColor: bgColor,
-                    opacity: (isSelected || isControl) ? 1 : 0.5 
+                    opacity: (isSelected || isControl) ? 1 : 0.6 
                   }}
                 >
                   <IconComp size={24} color="white" strokeWidth={2.5} />
@@ -200,7 +207,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       );
     }
 
-    // Main Category View
+    // 主類別視圖
     return (
       <div className="grid grid-cols-5 gap-x-2 gap-y-6">
         {categoriesToDisplay.map(cat => {
@@ -214,7 +221,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             >
               <div 
                 className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                  isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : 'opacity-40'
+                  isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : 'opacity-40 grayscale-[0.2]'
                 }`}
                 style={{ backgroundColor: cat.color }}
               >
@@ -265,20 +272,20 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
       <div className="flex-1 overflow-y-auto px-4 py-8 space-y-10 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         
-        {/* Category Grid Section */}
+        {/* 類別選擇網格 */}
         <div className="px-2 min-h-[180px]">
           {renderGrid()}
         </div>
 
-        {/* Input Section */}
+        {/* 輸入區域 */}
         <div className="flex gap-4 items-center">
-           {/* Camera Button */}
+           {/* 相機按鈕 (圓角方形) */}
            <button className="w-24 h-24 rounded-[32px] bg-[#252538] border border-white/10 flex items-center justify-center text-gray-600 active:bg-white/5 transition-colors flex-shrink-0 shadow-inner">
               <Camera size={40} />
            </button>
 
            <div className="flex-1 space-y-3">
-              {/* Amount Pill */}
+              {/* 金額輸入 */}
               <div className="flex items-center bg-[#252538] rounded-full px-4 py-2.5 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg">
                 <div className="bg-[#3a3a5a] text-[10px] font-black text-white/70 px-3 py-1.5 rounded-xl mr-3 tracking-tighter shadow-sm">TWD</div>
                 <input 
@@ -296,7 +303,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </button>
               </div>
 
-              {/* Name Pill */}
+              {/* 名稱輸入 */}
               <div className="flex items-center bg-[#252538] rounded-full px-4 py-2.5 border border-white/5 group focus-within:border-white/20 transition-all h-[56px] shadow-lg">
                 <input 
                   type="text"
@@ -312,7 +319,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
            </div>
         </div>
 
-        {/* Other Details */}
+        {/* 其他細節選項 */}
         <div className="grid grid-cols-2 gap-3">
           <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-2xl py-4 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors shadow-sm">
             <span className="opacity-50">支付</span>

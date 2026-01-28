@@ -5,6 +5,7 @@ export type TransactionType = '支出' | '收入';
 export interface SubCategory {
   id: string;
   name: string;
+  icon: string; // Added icon for subcategories
 }
 
 export interface Category {
@@ -20,7 +21,7 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   categoryId: string;
-  subCategoryId?: string; // New field for detailed expense tracking
+  subCategoryId?: string; 
   name: string;
   note?: string;
   date: string; 
