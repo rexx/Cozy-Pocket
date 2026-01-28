@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { 
-  X, Check, Camera, Star, Trash2, Hash, Calendar as CalendarIcon, Clock,
+  X, Check, Camera, Star, Trash2, Hash, Calendar as CalendarIcon, Clock, Plus, RotateCcw,
   CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
-  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail, User, Mic2, Flower2
 } from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants';
 import { Transaction, TransactionType } from '../types';
@@ -11,7 +11,9 @@ import { format, isValid } from 'date-fns';
 
 const IconMap: Record<string, any> = {
   CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
-  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail, User, Mic2, Flower2,
+  Back: RotateCcw,
+  Add: Plus
 };
 
 interface AddTransactionModalProps {
@@ -38,6 +40,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   
   const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
   const [amount, setAmount] = useState(editingTransaction?.amount.toString() || '');
+  const [isSubView, setIsSubView] = useState(isEditing && editingTransaction?.type === '支出');
   
   const categoriesToDisplay = useMemo(() => {
     return activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -46,6 +49,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [categoryId, setCategoryId] = useState(() => {
     if (editingTransaction) return editingTransaction.categoryId;
     return activeTab === '支出' ? 'food' : 'salary';
+  });
+
+  const [subCategoryId, setSubCategoryId] = useState(() => {
+    if (editingTransaction) return editingTransaction.subCategoryId;
+    return undefined;
   });
 
   const [name, setName] = useState(editingTransaction?.name || ''); 
@@ -62,12 +70,31 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   }, []);
 
-  // When switching tabs, update default category if not editing
   const handleTabChange = (tab: TransactionType) => {
     setActiveTab(tab);
+    setIsSubView(false);
     if (!isEditing) {
-      setCategoryId(tab === '支出' ? 'food' : 'salary');
+      const defaultId = tab === '支出' ? 'food' : 'salary';
+      setCategoryId(defaultId);
+      setSubCategoryId(undefined);
     }
+  };
+
+  const handleMainCategoryClick = (id: string) => {
+    setCategoryId(id);
+    if (activeTab === '支出') {
+      setIsSubView(true);
+    } else {
+      setSubCategoryId(undefined);
+    }
+  };
+
+  const handleSubCategoryClick = (id: string) => {
+    setSubCategoryId(id);
+  };
+
+  const handleBackToMain = () => {
+    setIsSubView(false);
   };
 
   const handleSubmit = () => {
@@ -82,7 +109,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         type: activeTab,
         amount: parsedAmount,
         categoryId,
-        name: name || '未命名項目',
+        subCategoryId,
+        name: name || '',
         note,
         merchant,
         paymentMethod,
@@ -120,6 +148,88 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const tabs: TransactionType[] = ['支出', '收入'];
 
+  const currentMainCat = useMemo(() => {
+    return EXPENSE_CATEGORIES.find(c => c.id === categoryId);
+  }, [categoryId]);
+
+  const renderGrid = () => {
+    if (activeTab === '支出' && isSubView && currentMainCat) {
+      // Subcategory View: Back + Subcats + Add
+      const items = [
+        { id: 'back', name: '返回', icon: 'Back', color: 'rgba(255,255,255,0.1)' },
+        ...(currentMainCat.subcategories || []),
+        { id: 'add', name: '新增', icon: 'Add', color: 'rgba(255,255,255,0.1)' }
+      ];
+
+      return (
+        <div className="grid grid-cols-5 gap-x-2 gap-y-6">
+          {items.map((item, idx) => {
+            const isSelected = subCategoryId === item.id;
+            const IconComp = IconMap[item.icon as string] || MoreHorizontal;
+            const isControl = item.id === 'back' || item.id === 'add';
+            const bgColor = isControl ? item.color : currentMainCat.color;
+
+            return (
+              <button
+                key={`${item.id}-${idx}`}
+                onClick={() => {
+                  if (item.id === 'back') handleBackToMain();
+                  else if (item.id === 'add') { /* Custom addition logic */ }
+                  else handleSubCategoryClick(item.id);
+                }}
+                className="flex flex-col items-center gap-2 group transition-all"
+              >
+                <div 
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : ''
+                  }`}
+                  style={{ 
+                    backgroundColor: bgColor,
+                    opacity: (isSelected || isControl) ? 1 : 0.5 
+                  }}
+                >
+                  <IconComp size={24} color="white" strokeWidth={2.5} />
+                </div>
+                <span className={`text-[11px] font-bold ${isSelected || item.id === 'back' ? 'text-white' : 'text-gray-500'} text-center truncate w-full px-1`}>
+                  {item.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Main Category View
+    return (
+      <div className="grid grid-cols-5 gap-x-2 gap-y-6">
+        {categoriesToDisplay.map(cat => {
+          const IconComp = IconMap[cat.icon] || MoreHorizontal;
+          const isSelected = categoryId === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => handleMainCategoryClick(cat.id)}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div 
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                  isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : 'opacity-40'
+                }`}
+                style={{ backgroundColor: cat.color }}
+              >
+                <IconComp size={24} color="white" strokeWidth={2.5} />
+              </div>
+              <span className={`text-[11px] font-bold ${isSelected ? 'text-white' : 'text-gray-500'} text-center truncate w-full px-1`}>
+                {cat.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
       <div className="flex-none">
@@ -153,80 +263,63 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
-        <div className="grid grid-cols-5 gap-x-2 gap-y-6">
-          {categoriesToDisplay.map(cat => {
-            const IconComp = IconMap[cat.icon] || MoreHorizontal;
-            const isSelected = categoryId === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setCategoryId(cat.id)}
-                className="flex flex-col items-center gap-2 group"
-              >
-                <div 
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                    isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : 'opacity-40 grayscale-[0.5]'
-                  }`}
-                  style={{ backgroundColor: isSelected ? cat.color : '#252538' }}
-                >
-                  <IconComp size={24} color={isSelected ? "white" : cat.color} strokeWidth={2.5} />
-                </div>
-                <span className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-gray-600'} text-center truncate w-full px-1`}>
-                  {cat.name}
-                </span>
-              </button>
-            );
-          })}
+      <div className="flex-1 overflow-y-auto px-4 py-8 space-y-10 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
+        
+        {/* Category Grid Section */}
+        <div className="px-2 min-h-[180px]">
+          {renderGrid()}
         </div>
 
-        <div className="space-y-4">
-          <div className="flex gap-4 items-end">
-             <button className="w-16 h-16 rounded-2xl bg-[#252538] border border-white/5 flex items-center justify-center text-gray-600 active:bg-white/10 transition-colors flex-shrink-0">
-                <Camera size={28} />
-             </button>
+        {/* Input Section */}
+        <div className="flex gap-4 items-center">
+           {/* Camera Button */}
+           <button className="w-24 h-24 rounded-[32px] bg-[#252538] border border-white/10 flex items-center justify-center text-gray-600 active:bg-white/5 transition-colors flex-shrink-0 shadow-inner">
+              <Camera size={40} />
+           </button>
 
-             <div className="flex-1 space-y-4">
-                <div className="relative group">
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600 tracking-tighter bg-white/5 px-2 py-1 rounded">TWD</div>
-                  <input 
-                    ref={amountInputRef}
-                    autoFocus
-                    type="number"
-                    pattern="\d*"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className={`w-full bg-transparent border-b-2 border-white/5 py-2 pl-12 text-right text-4xl font-light focus:outline-none transition-all ${
-                      activeTab === '收入' ? 'focus:border-rose-500 text-rose-400' : 'focus:border-emerald-500 text-emerald-400'
-                    }`}
-                  />
-                </div>
+           <div className="flex-1 space-y-3">
+              {/* Amount Pill */}
+              <div className="flex items-center bg-[#252538] rounded-full px-4 py-2.5 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg">
+                <div className="bg-[#3a3a5a] text-[10px] font-black text-white/70 px-3 py-1.5 rounded-xl mr-3 tracking-tighter shadow-sm">TWD</div>
+                <input 
+                  ref={amountInputRef}
+                  type="number"
+                  pattern="\d*"
+                  inputMode="decimal"
+                  placeholder="金額"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className={`flex-1 bg-transparent text-right text-xl font-bold focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
+                />
+                <button className="ml-3 p-1.5 bg-white/5 rounded-full text-gray-400 active:scale-90 transition-transform">
+                  <Plus size={16} strokeWidth={3} />
+                </button>
+              </div>
 
-                <div className={`flex items-center gap-3 border-b border-white/5 py-2 group transition-colors ${
-                   activeTab === '收入' ? 'focus-within:border-rose-500/50' : 'focus-within:border-emerald-500/50'
-                }`}>
-                  <Star size={18} className={`text-gray-600 ${activeTab === '收入' ? 'group-focus-within:text-rose-500' : 'group-focus-within:text-emerald-500'}`} />
-                  <input 
-                    type="text"
-                    placeholder="輸入項目名稱..."
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="flex-1 bg-transparent text-base focus:outline-none placeholder-gray-700 text-white font-medium"
-                  />
-                </div>
-             </div>
-          </div>
+              {/* Name Pill */}
+              <div className="flex items-center bg-[#252538] rounded-full px-4 py-2.5 border border-white/5 group focus-within:border-white/20 transition-all h-[56px] shadow-lg">
+                <input 
+                  type="text"
+                  placeholder="名稱"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="flex-1 bg-transparent text-right text-lg font-bold focus:outline-none placeholder-gray-600 text-white"
+                />
+                <button className="ml-3 p-1.5 bg-white/5 rounded-full text-gray-400 active:scale-90 transition-transform">
+                  <Star size={18} />
+                </button>
+              </div>
+           </div>
         </div>
 
+        {/* Other Details */}
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-xl py-4 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors">
-            <span className="opacity-50">方式</span>
+          <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-2xl py-4 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors shadow-sm">
+            <span className="opacity-50">支付</span>
             <span className="text-white">{paymentMethod}</span>
           </button>
           
-          <div className="bg-[#252538] rounded-xl py-3 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 group focus-within:border-cyan-500/30 transition-all">
+          <div className="bg-[#252538] rounded-2xl py-3 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-sm">
             <span className="opacity-50 whitespace-nowrap">商家</span>
             <input 
               type="text"
@@ -237,7 +330,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-between bg-[#252538] p-4 rounded-xl border border-white/5 active:bg-[#2a2a3e] relative">
+          <div className="flex items-center justify-between bg-[#252538] p-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-sm">
             <CalendarIcon size={16} className="text-gray-500" />
             <input 
               type="date" 
@@ -248,7 +341,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-between bg-[#252538] p-4 rounded-xl border border-white/5 active:bg-[#2a2a3e] relative">
+          <div className="flex items-center justify-between bg-[#252538] p-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-sm">
             <Clock size={16} className="text-gray-500" />
             <input 
               type="time" 
@@ -260,20 +353,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 px-2 py-1">
-           <Hash size={18} className={activeTab === '收入' ? 'text-rose-500/60' : 'text-emerald-500/60'} />
-           <input 
-              type="text"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="標籤 (例如：獎金、旅行)..."
-              className="flex-1 bg-transparent text-base text-gray-400 focus:outline-none border-b border-white/5 py-1 placeholder-gray-700 font-medium"
-            />
-        </div>
-
-        <div className="relative bg-[#252538] rounded-2xl p-4 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all">
+        <div className="relative bg-[#252538] rounded-[28px] p-5 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-lg">
           <textarea
-            placeholder="點擊此處輸入備註..."
+            placeholder="備註..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="w-full bg-transparent resize-none text-base focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed"

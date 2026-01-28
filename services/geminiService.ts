@@ -10,7 +10,11 @@ const transactionSchema = {
     note: { type: Type.STRING, description: "Detailed description or items bought" },
     categoryId: { 
       type: Type.STRING, 
-      description: "For '支出': fixed, food, transport, daily, medical, kids, entertainment, shopping, social, other. For '收入': salary, bonus, overtime, side_hustle, investment, rent, subsidy, tax_refund, red_envelope, other_income" 
+      description: "Expense: fixed, food, transport, daily, medical, kids, entertainment, shopping, social, finance. Income: salary, bonus, overtime, side_hustle, investment, rent_income, subsidy, tax_refund, red_envelope, other_income" 
+    },
+    subCategoryId: {
+      type: Type.STRING,
+      description: "Detailed subcategory ID from the mapping list if it is an expense. E.g., 'lunch' for food, 'rent' for fixed."
     },
     paymentMethod: { 
       type: Type.STRING, 
@@ -30,7 +34,7 @@ export async function parseTransactionWithAI(text: string) {
       config: {
         responseMimeType: "application/json",
         responseSchema: transactionSchema,
-        systemInstruction: "You are a specialized accountant. Extract transaction details. Income categories mapping: 薪資 -> salary, 獎金 -> bonus, 加班費 -> overtime, 副業 -> side_hustle, 投資 -> investment, 租金 -> rent, 補助 -> subsidy, 退稅 -> tax_refund, 紅包 -> red_envelope, 其他 -> other_income. Expense categories map to standard keys like food, transport etc.",
+        systemInstruction: "You are a specialized accountant. Correctly map the user's input to Category and SubCategory. Example: '吃午餐 100' -> type: 支出, categoryId: food, subCategoryId: lunch. '公司發獎金 1萬' -> type: 收入, categoryId: bonus.",
       },
     });
 

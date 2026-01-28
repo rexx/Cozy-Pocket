@@ -4,12 +4,12 @@ import { Transaction } from '../types';
 import { CATEGORIES } from '../constants';
 import { 
   CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
-  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail, User, Mic2, Flower2
 } from 'lucide-react';
 
 const IconMap: Record<string, any> = {
   CalendarCheck, Utensils, Car, ShoppingBasket, Hospital, Baby, Gamepad2, ShoppingBag, Users, MoreHorizontal,
-  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail
+  Banknote, Trophy, Timer, Laptop, TrendingUp, Home, HeartHandshake, FileDigit, Mail, User, Mic2, Flower2
 };
 
 interface TransactionItemProps {
@@ -19,6 +19,7 @@ interface TransactionItemProps {
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick }) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
+  const subCategory = category.subcategories?.find(s => s.id === transaction.subCategoryId);
   const IconComp = IconMap[category.icon] || MoreHorizontal;
   const isIncome = transaction.type === '收入';
 
@@ -27,6 +28,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
     transaction.note,
     transaction.tags ? `#${transaction.tags}` : null
   ].filter(Boolean);
+
+  const displayCategoryName = subCategory 
+    ? `${category.name} · ${subCategory.name}`
+    : category.name;
 
   return (
     <div 
@@ -42,10 +47,15 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
       
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-0.5">
-          <div className="flex items-center gap-2 truncate">
+          <div className="flex flex-col truncate">
              <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
-                {transaction.name || category.name}
+                {transaction.name || displayCategoryName}
              </h3>
+             {transaction.name && (
+               <span className="text-[10px] text-gray-500 font-medium">
+                 {displayCategoryName}
+               </span>
+             )}
           </div>
           <span className={`font-black text-lg ml-2 tabular-nums ${isIncome ? 'text-rose-400' : 'text-emerald-400'}`}>
             ${transaction.amount.toLocaleString()}
