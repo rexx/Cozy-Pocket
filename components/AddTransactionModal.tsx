@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { 
-  X, Check, Camera, Star, Trash2, Hash, Calendar as CalendarIcon, Clock, Plus, RotateCcw,
-  MoreHorizontal
+  X, Check, Star, Trash2, Plus, RotateCcw,
+  MoreHorizontal, Calendar as CalendarIcon, Clock
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants';
@@ -15,7 +15,7 @@ const IconMap: Record<string, any> = {
   Add: Plus
 };
 
-// 定義格狀選單項目的統一介面，解決 TS2339 錯誤
+// 定義格狀選單項目的統一介面
 interface GridItem {
   id: string;
   name: string;
@@ -161,7 +161,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const renderGrid = () => {
     if (activeTab === '支出' && isSubView && currentMainCat) {
-      // 子類別視圖：返回 + 子類別清單 + 新增
       const items: GridItem[] = [
         { id: 'back', name: '返回', icon: 'Back', color: 'rgba(255,255,255,0.08)' },
         ...(currentMainCat.subcategories || []),
@@ -192,7 +191,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   }`}
                   style={{ 
                     backgroundColor: bgColor,
-                    opacity: 1 // 所有按鈕不反灰
+                    opacity: 1 
                   }}
                 >
                   <IconComp size={24} color="white" strokeWidth={2.5} />
@@ -207,7 +206,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       );
     }
 
-    // 主類別視圖
     return (
       <div className="grid grid-cols-5 gap-x-2 gap-y-6">
         {categoriesToDisplay.map(cat => {
@@ -223,7 +221,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                   isSelected ? 'scale-110 shadow-lg ring-2 ring-white/20' : ''
                 }`}
-                style={{ backgroundColor: cat.color, opacity: 1 }} // 所有按鈕不反灰
+                style={{ backgroundColor: cat.color, opacity: 1 }}
               >
                 <IconComp size={24} color="white" strokeWidth={2.5} />
               </div>
@@ -272,42 +270,32 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
       <div className="flex-1 overflow-y-auto px-4 py-8 space-y-10 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         
-        {/* 類別選擇網格 */}
         <div className="px-2 min-h-[180px]">
           {renderGrid()}
         </div>
 
-        {/* 輸入區域 */}
-        <div className="flex gap-4 items-center">
-           {/* 相機按鈕 (圓角方形) */}
-           <button className="w-24 h-24 rounded-[32px] bg-[#252538] border border-white/10 flex items-center justify-center text-gray-600 active:bg-white/5 transition-colors flex-shrink-0 shadow-inner">
-              <Camera size={40} />
-           </button>
-
+        <div className="space-y-4">
            <div className="flex-1 space-y-3">
               {/* 金額輸入 */}
-              <div className="flex items-center bg-[#252538] rounded-full px-4 py-2.5 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg">
+              <div className="flex items-center bg-[#252538] rounded-full px-5 py-3 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg">
                 <div className="bg-[#3a3a5a] text-[10px] font-black text-white/70 px-3 py-1.5 rounded-xl mr-3 tracking-tighter shadow-sm">TWD</div>
                 <input 
                   ref={amountInputRef}
                   type="number"
                   pattern="\d*"
                   inputMode="decimal"
-                  placeholder="金額"
+                  placeholder="輸入金額..."
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className={`flex-1 bg-transparent text-right text-xl font-bold focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
+                  className={`flex-1 bg-transparent text-right text-2xl font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
                 />
-                <button className="ml-3 p-1.5 bg-white/5 rounded-full text-gray-400 active:scale-90 transition-transform">
-                  <Plus size={16} strokeWidth={3} />
-                </button>
               </div>
 
               {/* 名稱輸入 */}
-              <div className="flex items-center bg-[#252538] rounded-full px-4 py-2.5 border border-white/5 group focus-within:border-white/20 transition-all h-[56px] shadow-lg">
+              <div className="flex items-center bg-[#252538] rounded-full px-5 py-3 border border-white/5 group focus-within:border-white/20 transition-all shadow-lg">
                 <input 
                   type="text"
-                  placeholder="名稱"
+                  placeholder="項目名稱..."
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="flex-1 bg-transparent text-right text-lg font-bold focus:outline-none placeholder-gray-600 text-white"
@@ -319,24 +307,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
            </div>
         </div>
 
-        {/* 其他細節選項 */}
         <div className="grid grid-cols-2 gap-3">
+          {/* 支付方式 - 位置保留在左上 */}
           <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-2xl py-4 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 active:bg-[#2a2a3e] transition-colors shadow-sm">
-            <span className="opacity-50">支付</span>
+            <span className="opacity-50">支付方式</span>
             <span className="text-white">{paymentMethod}</span>
           </button>
           
-          <div className="bg-[#252538] rounded-2xl py-3 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-sm">
-            <span className="opacity-50 whitespace-nowrap">商家</span>
-            <input 
-              type="text"
-              value={merchant}
-              onChange={(e) => setMerchant(e.target.value)}
-              placeholder="輸入..."
-              className="bg-transparent text-white text-right focus:outline-none w-full ml-2 font-bold placeholder-gray-700 text-sm"
-            />
-          </div>
-
+          {/* 日期 - 對調到右上 */}
           <div className="flex items-center justify-between bg-[#252538] p-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-sm">
             <CalendarIcon size={16} className="text-gray-500" />
             <input 
@@ -348,6 +326,19 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             />
           </div>
 
+          {/* 商家 - 對調到左下 */}
+          <div className="bg-[#252538] rounded-2xl py-3 px-4 text-left text-xs font-bold text-gray-400 flex items-center justify-between border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-sm">
+            <span className="opacity-50 whitespace-nowrap">商家</span>
+            <input 
+              type="text"
+              value={merchant}
+              onChange={(e) => setMerchant(e.target.value)}
+              placeholder="輸入商家..."
+              className="bg-transparent text-white text-right focus:outline-none w-full ml-2 font-bold placeholder-gray-700 text-sm"
+            />
+          </div>
+
+          {/* 時間 - 保留在右下 */}
           <div className="flex items-center justify-between bg-[#252538] p-4 rounded-2xl border border-white/5 active:bg-[#2a2a3e] relative shadow-sm">
             <Clock size={16} className="text-gray-500" />
             <input 
@@ -362,7 +353,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
         <div className="relative bg-[#252538] rounded-[28px] p-5 min-h-[140px] border border-white/5 group focus-within:border-cyan-500/30 transition-all shadow-lg">
           <textarea
-            placeholder="備註..."
+            placeholder="點擊輸入備註..."
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="w-full bg-transparent resize-none text-base focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed"

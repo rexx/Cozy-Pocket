@@ -1,6 +1,7 @@
 
 // Add missing import for format
-import { format, subDays } from 'date-fns';
+// Fix: use addDays instead of subDays as it was reported missing
+import { format, addDays } from 'date-fns';
 import { Category, Transaction } from './types';
 
 export const EXPENSE_CATEGORIES: Category[] = [
@@ -150,8 +151,9 @@ export const INCOME_CATEGORIES: Category[] = [
 export const CATEGORIES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
 
 const today = new Date();
-const yesterday = subDays(today, 1);
-const dayBefore = subDays(today, 2);
+// Use addDays with negative value instead of subDays as it was reported missing
+const yesterday = addDays(today, -1);
+const dayBefore = addDays(today, -2);
 
 export const INITIAL_TRANSACTIONS: Transaction[] = [
   // Today

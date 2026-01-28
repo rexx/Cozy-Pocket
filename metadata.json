@@ -1,7 +1,5 @@
 {
   "name": "Cozy Pocket - Smart Expense Tracker",
   "description": "A minimalist, aesthetic expense tracking app with a smart calendar view and AI-powered transaction parsing.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "requestFramePermissions": []
 }
