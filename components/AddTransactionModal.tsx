@@ -54,12 +54,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     return activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   }, [activeTab]);
 
-  const [categoryId, setCategoryId] = useState(() => {
+  const [categoryId, setCategoryId] = useState<string | undefined>(() => {
     if (editingTransaction) return editingTransaction.categoryId;
-    return activeTab === '支出' ? 'food' : 'salary';
+    return undefined; // 不再預設類別
   });
 
-  const [subCategoryId, setSubCategoryId] = useState(() => {
+  const [subCategoryId, setSubCategoryId] = useState<string | undefined>(() => {
     if (editingTransaction) return editingTransaction.subCategoryId;
     return undefined;
   });
@@ -82,8 +82,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setActiveTab(tab);
     setIsSubView(false);
     if (!isEditing) {
-      const defaultId = tab === '支出' ? 'food' : 'salary';
-      setCategoryId(defaultId);
+      setCategoryId(undefined);
       setSubCategoryId(undefined);
     }
   };
@@ -112,11 +111,24 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         alert("請輸入金額");
         return;
       }
+
+      // 驗證主類別
+      if (!categoryId) {
+        alert("請選擇類別");
+        return;
+      }
+
+      // 強制檢查子類別 (僅針對支出)
+      if (activeTab === '支出' && !subCategoryId) {
+        alert("請選擇子類別");
+        setIsSubView(true); // 自動跳轉到子類別選擇視圖
+        return;
+      }
       
       const data: Omit<Transaction, 'id'> = {
         type: activeTab,
         amount: parsedAmount,
-        categoryId,
+        categoryId: categoryId!,
         subCategoryId,
         name: name || '',
         note,
