@@ -175,8 +175,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (activeTab === '支出' && isSubView && currentMainCat) {
       const items: GridItem[] = [
         { id: 'back', name: '返回', icon: 'Back', color: 'rgba(255,255,255,0.08)' },
-        ...(currentMainCat.subcategories || []),
-        { id: 'add', name: '新增', icon: 'Add', color: 'rgba(255,255,255,0.08)' }
+        ...(currentMainCat.subcategories || [])
       ];
 
       return (
@@ -184,7 +183,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           {items.map((item, idx) => {
             const isSelected = subCategoryId === item.id;
             const IconComp = IconMap[item.icon] || MoreHorizontal;
-            const isControl = item.id === 'back' || item.id === 'add';
+            const isControl = item.id === 'back';
             const bgColor = isControl ? (item.color || 'rgba(255,255,255,0.08)') : currentMainCat.color;
 
             return (
@@ -192,7 +191,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 key={`${item.id}-${idx}`}
                 onClick={() => {
                   if (item.id === 'back') handleBackToMain();
-                  else if (item.id === 'add') { /* 新增邏輯 */ }
                   else handleSubCategoryClick(item.id);
                 }}
                 className="flex flex-col items-center gap-2 group transition-all"

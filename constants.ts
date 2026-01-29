@@ -6,21 +6,6 @@ import { Category, Transaction } from './types';
 
 export const EXPENSE_CATEGORIES: Category[] = [
   { 
-    id: 'fixed', name: '固定支出', icon: 'CalendarCheck', color: '#4A90E2',
-    subcategories: [
-      { id: 'rent', name: '房租', icon: 'Home' },
-      { id: 'mortgage', name: '房貸', icon: 'Building' },
-      { id: 'management', name: '管理費', icon: 'Key' },
-      { id: 'water', name: '水費', icon: 'Droplets' },
-      { id: 'electricity', name: '電費', icon: 'Zap' },
-      { id: 'gas', name: '瓦斯費', icon: 'Flame' },
-      { id: 'telecom', name: '電信費', icon: 'Wifi' },
-      { id: 'insurance', name: '保險', icon: 'ShieldCheck' },
-      { id: 'monthly_parking', name: '月租停車', icon: 'CircleParking' },
-      { id: 'other_fixed', name: '其他固定', icon: 'PlusSquare' }
-    ]
-  },
-  { 
     id: 'food', name: '飲食', icon: 'Utensils', color: '#eecf8e',
     subcategories: [
       { id: 'breakfast', name: '早餐', icon: 'Coffee' },
@@ -85,6 +70,21 @@ export const EXPENSE_CATEGORIES: Category[] = [
       { id: 'baby_supplies', name: '尿布奶粉', icon: 'Milk' },
       { id: 'kids_medical', name: '小孩醫療', icon: 'Baby' },
       { id: 'other_kids', name: '其他小孩', icon: 'Heart' }
+    ]
+  },
+  { 
+    id: 'fixed', name: '固定支出', icon: 'CalendarCheck', color: '#4A90E2',
+    subcategories: [
+      { id: 'rent', name: '房租', icon: 'Home' },
+      { id: 'mortgage', name: '房貸', icon: 'Building' },
+      { id: 'management', name: '管理費', icon: 'Key' },
+      { id: 'water', name: '水費', icon: 'Droplets' },
+      { id: 'electricity', name: '電費', icon: 'Zap' },
+      { id: 'gas', name: '瓦斯費', icon: 'Flame' },
+      { id: 'telecom', name: '電信費', icon: 'Wifi' },
+      { id: 'insurance', name: '保險', icon: 'ShieldCheck' },
+      { id: 'monthly_parking', name: '月租停車', icon: 'CircleParking' },
+      { id: 'other_fixed', name: '其他固定', icon: 'PlusSquare' }
     ]
   },
   { 
