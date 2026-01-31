@@ -34,7 +34,6 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem('cozy-pocket-tx');
-      // Ensure existing transactions have a 'type' if they were saved without one
       const parsed = saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
       return parsed.map((t: any) => ({ ...t, type: t.type || '支出' }));
     } catch (e) {
@@ -77,7 +76,7 @@ const App: React.FC = () => {
         const txDate = new Date(y, m - 1, d);
         return isSameDay(txDate, selectedDate);
       })
-      .sort((a, b) => (b.time || '').localeCompare(a.time || ''));
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
   }, [transactions, selectedDate]);
 
   const monthlyStats = useMemo(() => {
@@ -128,6 +127,7 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       
+      {/* 頂部日曆：固定在頂部 */}
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         <Calendar 
           selectedDate={selectedDate} 
@@ -136,33 +136,8 @@ const App: React.FC = () => {
         />
       </div>
 
+      {/* 中間滾動內容區 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
-        <div className="px-4 py-2 mt-4">
-          <div className="bg-[#24273c] border border-white/5 rounded-2xl p-4 flex gap-4 shadow-xl">
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-                <ArrowDownLeft size={12} className="text-rose-500" />
-                <span>本月收入</span>
-              </div>
-              <div className="text-rose-400 font-black text-xl tracking-tighter">
-                ${monthlyStats.income.toLocaleString()}
-              </div>
-            </div>
-            
-            <div className="w-px bg-white/5 self-stretch"></div>
-
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-                <ArrowUpRight size={12} className="text-emerald-500" />
-                <span>本月支出</span>
-              </div>
-              <div className="text-emerald-400 font-black text-xl tracking-tighter">
-                ${monthlyStats.expense.toLocaleString()}
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="mt-2 space-y-1 pb-32">
           {dailyTransactions.length > 0 ? (
             dailyTransactions.map(tx => (
@@ -173,25 +148,56 @@ const App: React.FC = () => {
               />
             ))
           ) : (
-            <div className="flex flex-col items-center justify-center py-24 px-10 text-center">
+            <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
               <div className="text-7xl mb-6 filter grayscale opacity-40">☕</div>
               <p className="text-gray-400 font-medium text-lg">今天還沒有任何紀錄</p>
-              <p className="text-sm text-gray-500 mt-2">點擊下方按鈕，隨手記下一筆吧！</p>
             </div>
           )}
+
+          {/* 本月總計卡片：放置在列表最下方，隨滾動顯示 */}
+          <div className="px-5 pt-10 pb-4">
+            <div className="bg-[#24273c] border border-white/5 rounded-3xl p-5 flex gap-4 shadow-2xl">
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                  <ArrowDownLeft size={14} className="text-rose-500" />
+                  <span>本月收入</span>
+                </div>
+                <div className="text-rose-400 font-black text-2xl tracking-tighter">
+                  ${monthlyStats.income.toLocaleString()}
+                </div>
+              </div>
+              
+              <div className="w-px bg-white/5 self-stretch my-1"></div>
+
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                  <ArrowUpRight size={14} className="text-emerald-500" />
+                  <span>本月支出</span>
+                </div>
+                <div className="text-emerald-400 font-black text-2xl tracking-tighter">
+                  ${monthlyStats.expense.toLocaleString()}
+                </div>
+              </div>
+            </div>
+            <p className="text-center text-[10px] text-gray-700 font-bold uppercase tracking-[0.2em] mt-6 opacity-30">
+              Cozy Pocket • End of List
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+      {/* 懸浮新增按鈕：固定於右下角 */}
+      <div className="fixed bottom-8 right-8 z-50">
         <button 
           onClick={handleOpenModal}
-          className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,211,238,0.4)] active:scale-95 transition-transform hover:brightness-110 pointer-events-auto"
+          className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(34,211,238,0.4)] active:scale-90 transition-all hover:brightness-110"
         >
           <Plus size={36} strokeWidth={2.5} />
         </button>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-30"></div>
+      {/* 底部漸層遮罩 */}
+      <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-40"></div>
 
       {isModalOpen && (
         <AddTransactionModal 

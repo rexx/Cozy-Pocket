@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Transaction } from '../types';
 import { CATEGORIES } from '../constants';
@@ -71,24 +70,31 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
       </div>
       
       <div className="flex-1 min-w-0">
+        {/* 第一行：標題 + 時間 */}
         <div className="flex justify-between items-center mb-0.5">
-          <div className="flex flex-col truncate">
-             <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
-                {title}
-             </h3>
-          </div>
-          <span className={`font-black text-lg ml-2 tabular-nums ${isIncome ? 'text-rose-400' : 'text-emerald-400'}`}>
-            ${transaction.amount.toLocaleString()}
-          </span>
+          <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
+            {title}
+          </h3>
+          {transaction.time && (
+            <span className="text-[10px] text-gray-600 font-bold tabular-nums flex-shrink-0 ml-4">
+              {transaction.time}
+            </span>
+          )}
         </div>
         
+        {/* 第二行：副標題 + (支付方式與金額) */}
         <div className="flex justify-between items-center">
           <p className="text-gray-500 text-xs truncate pr-4 font-medium">
             {subtitleParts.join(' · ') || '無詳細說明'}
           </p>
-          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-500 font-black uppercase tracking-widest border border-white/5">
-            {transaction.paymentMethod}
-          </span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-500 font-black uppercase tracking-widest border border-white/5">
+              {transaction.paymentMethod}
+            </span>
+            <span className={`font-black text-lg tabular-nums ${isIncome ? 'text-rose-400' : 'text-emerald-400'}`}>
+              ${transaction.amount.toLocaleString()}
+            </span>
+          </div>
         </div>
       </div>
     </div>
