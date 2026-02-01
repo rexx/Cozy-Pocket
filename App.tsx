@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isSameDay, endOfMonth, isWithinInterval } from 'date-fns';
-import { Plus, Calendar as CalendarIcon, AlertCircle, X, ArrowUpRight, ArrowDownLeft, ReceiptText } from 'lucide-react';
+import { Plus, AlertCircle, X } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
 import { Transaction } from './types';
 import { INITIAL_TRANSACTIONS } from './constants';
+import { db } from './db';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
   if (errors.length === 0) return null;
@@ -30,20 +31,32 @@ const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ err
 
 const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    try {
-      const saved = localStorage.getItem('cozy-pocket-tx');
-      const parsed = saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
-      return parsed.map((t: any) => ({ ...t, type: t.type || '支出' }));
-    } catch (e) {
-      return INITIAL_TRANSACTIONS.map(t => ({ ...t, type: t.type || '支出' }));
-    }
-  });
-  
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
+
+  // Initialize and load data from Dexie
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        const count = await db.transactions.count();
+        if (count === 0) {
+          // Seed initial data if empty
+          await db.transactions.bulkAdd(INITIAL_TRANSACTIONS as Transaction[]);
+        }
+        const allTransactions = await db.transactions.toArray();
+        setTransactions(allTransactions);
+      } catch (err: any) {
+        setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initData();
+  }, []);
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -64,10 +77,6 @@ const App: React.FC = () => {
   }, []);
 
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
-
-  useEffect(() => {
-    localStorage.setItem('cozy-pocket-tx', JSON.stringify(transactions));
-  }, [transactions]);
 
   const dailyTransactions = useMemo(() => {
     return transactions
@@ -109,19 +118,35 @@ const App: React.FC = () => {
       }, { income: 0, expense: 0 });
   }, [transactions, selectedDate]);
 
-  const addTransaction = (newTx: Omit<Transaction, 'id'>) => {
-    const transaction: Transaction = { ...newTx, id: Date.now().toString() } as Transaction;
-    setTransactions(prev => [transaction, ...prev]);
+  const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
+    try {
+      const id = Date.now().toString();
+      const transaction: Transaction = { ...newTx, id } as Transaction;
+      await db.transactions.add(transaction);
+      setTransactions(prev => [transaction, ...prev]);
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `Add Error: ${err.message}`]);
+    }
   };
 
-  const updateTransaction = (updatedTx: Transaction) => {
-    setTransactions(prev => prev.map(t => t.id === updatedTx.id ? updatedTx : t));
-    setEditingTransaction(null);
+  const updateTransaction = async (updatedTx: Transaction) => {
+    try {
+      await db.transactions.put(updatedTx);
+      setTransactions(prev => prev.map(t => t.id === updatedTx.id ? updatedTx : t));
+      setEditingTransaction(null);
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `Update Error: ${err.message}`]);
+    }
   };
 
-  const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-    setEditingTransaction(null);
+  const deleteTransaction = async (id: string) => {
+    try {
+      await db.transactions.delete(id);
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      setEditingTransaction(null);
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `Delete Error: ${err.message}`]);
+    }
   };
 
   const handleOpenModal = () => {
@@ -133,6 +158,15 @@ const App: React.FC = () => {
     setEditingTransaction(tx);
     setIsModalOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen w-full bg-[#1a1c2c] items-center justify-center">
+        <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin"></div>
+        <p className="mt-4 text-gray-500 font-bold text-xs uppercase tracking-widest">載入中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
@@ -163,11 +197,8 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* 統計區域：左右分割，移除標籤文字 */}
           <div className="px-6 pt-12 pb-16">
             <div className="bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl">
-              
-              {/* 左邊：本月總計（數字靠左，淡化） */}
               <div className="flex-1 opacity-30 border-r border-white/5 pr-4 space-y-1.5">
                 <div className="text-gray-500 text-[9px] font-black uppercase tracking-[0.1em] mb-1">
                   本月
@@ -180,7 +211,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* 右邊：當日總計（數字靠右，顯眼） */}
               <div className="flex-[1.2] pl-4 space-y-1.5 text-right">
                 <div className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
                   今日
@@ -192,7 +222,6 @@ const App: React.FC = () => {
                   -${dailyStats.expense.toLocaleString()}
                 </div>
               </div>
-
             </div>
 
             <p className="text-center text-[10px] text-gray-700 font-bold uppercase tracking-[0.4em] mt-12 opacity-15">
