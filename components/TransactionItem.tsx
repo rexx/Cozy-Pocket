@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Transaction } from '../types';
 import { CATEGORIES } from '../constants';
@@ -17,11 +18,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
   const subCategory = category.subcategories?.find(s => s.id === transaction.subCategoryId);
   const isIncome = transaction.type === '收入';
 
-  // 圖示選擇邏輯
   const iconName = (!isIncome && subCategory) ? subCategory.icon : category.icon;
   const IconComp = IconMap[iconName] || Icons.MoreHorizontal;
 
-  // 標題顯示邏輯：名稱 > 商家 > 子類別 > 分類
   let title = '';
   if (transaction.name) {
     title = transaction.name;
@@ -33,34 +32,24 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
     title = category.name;
   }
 
-  // 副標題顯示邏輯：收納所有「非標題」且「有內容」的資訊
   const subtitleParts: string[] = [];
   
-  // 1. 名稱 (若非標題)
-  if (transaction.name && title !== transaction.name) {
-    subtitleParts.push(transaction.name);
-  }
+  if (transaction.name && title !== transaction.name) subtitleParts.push(transaction.name);
+  if (transaction.merchant && title !== transaction.merchant) subtitleParts.push(transaction.merchant);
   
-  // 2. 商家 (若非標題)
-  if (transaction.merchant && title !== transaction.merchant) {
-    subtitleParts.push(transaction.merchant);
-  }
-  
-  // 3. 類別資訊 (只用小類別，且若小類別非標題才顯示)
   if (subCategory) {
-    if (title !== subCategory.name) {
-      subtitleParts.push(subCategory.name); // 不再加入父類別名稱
-    }
-  } else {
-    // 若無子類別（如收入類別），且標題不是分類名稱，才顯示分類名稱
-    if (title !== category.name) {
-      subtitleParts.push(category.name);
-    }
+    if (title !== subCategory.name) subtitleParts.push(subCategory.name);
+  } else if (title !== category.name) {
+    subtitleParts.push(category.name);
   }
 
-  // 4. 備註與標籤
   if (transaction.note) subtitleParts.push(transaction.note);
-  if (transaction.tags) subtitleParts.push(`#${transaction.tags}`);
+  
+  // 處理多個標籤
+  if (transaction.tags) {
+    const individualTags = transaction.tags.split(/\s+/).filter(t => t.length > 0);
+    individualTags.forEach(tag => subtitleParts.push(`#${tag}`));
+  }
 
   return (
     <div 
@@ -75,7 +64,6 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
       </div>
       
       <div className="flex-1 min-w-0">
-        {/* 第一行：標題 + 時間 */}
         <div className="flex justify-between items-center mb-0.5">
           <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
             {title}
@@ -87,10 +75,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
           )}
         </div>
         
-        {/* 第二行：副標題 + (支付方式與金額) */}
         <div className="flex justify-between items-center">
           <p className="text-gray-500 text-xs truncate pr-4 font-medium">
-            {subtitleParts.join(' · ') || '無詳細說明'}
+            {subtitleParts.join(' · ')}
           </p>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-500 font-black uppercase tracking-widest border border-white/5">
