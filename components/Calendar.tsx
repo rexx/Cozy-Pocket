@@ -16,10 +16,11 @@ import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 interface CalendarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  onSearchClick: () => void;
   transactions: any[];
 }
 
-const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transactions }) => {
+const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearchClick, transactions }) => {
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
   const today = new Date();
   const isCurrentlyToday = isSameDay(safeDate, today);
@@ -103,7 +104,10 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, transac
 
         {/* Right Side Group: 🔍 and > */}
         <div className="flex items-center gap-1 justify-self-end">
-          <button className="text-gray-500 p-2 hover:text-white transition-colors">
+          <button 
+            onClick={onSearchClick}
+            className="text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
+          >
             <Search size={22} />
           </button>
           
