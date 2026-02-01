@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isSameDay, endOfMonth, isWithinInterval } from 'date-fns';
-import { Plus, Calendar as CalendarIcon, AlertCircle, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, AlertCircle, X, ArrowUpRight, ArrowDownLeft, ReceiptText } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
@@ -79,6 +79,17 @@ const App: React.FC = () => {
       .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
   }, [transactions, selectedDate]);
 
+  const dailyStats = useMemo(() => {
+    return dailyTransactions.reduce((acc, curr) => {
+      if (curr.type === '收入') {
+        acc.income += curr.amount;
+      } else {
+        acc.expense += curr.amount;
+      }
+      return acc;
+    }, { income: 0, expense: 0 });
+  }, [dailyTransactions]);
+
   const monthlyStats = useMemo(() => {
     const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const end = endOfMonth(selectedDate);
@@ -124,10 +135,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans">
+    <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       
-      {/* 頂部日曆：固定在頂部 */}
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         <Calendar 
           selectedDate={selectedDate} 
@@ -136,7 +146,6 @@ const App: React.FC = () => {
         />
       </div>
 
-      {/* 中間滾動內容區 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
         <div className="mt-2 space-y-1 pb-32">
           {dailyTransactions.length > 0 ? (
@@ -154,39 +163,45 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* 本月總計卡片：放置在列表最下方，隨滾動顯示 */}
-          <div className="px-5 pt-10 pb-4">
-            <div className="bg-[#24273c] border border-white/5 rounded-3xl p-5 flex gap-4 shadow-2xl">
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-black uppercase tracking-widest">
-                  <ArrowDownLeft size={14} className="text-rose-500" />
-                  <span>本月收入</span>
-                </div>
-                <div className="text-rose-400 font-black text-2xl tracking-tighter">
-                  ${monthlyStats.income.toLocaleString()}
-                </div>
-              </div>
+          {/* 統計區域：左右分割，移除標籤文字 */}
+          <div className="px-6 pt-12 pb-16">
+            <div className="bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl">
               
-              <div className="w-px bg-white/5 self-stretch my-1"></div>
-
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-black uppercase tracking-widest">
-                  <ArrowUpRight size={14} className="text-emerald-500" />
-                  <span>本月支出</span>
+              {/* 左邊：本月總計（數字靠左，淡化） */}
+              <div className="flex-1 opacity-30 border-r border-white/5 pr-4 space-y-1.5">
+                <div className="text-gray-500 text-[9px] font-black uppercase tracking-[0.1em] mb-1">
+                  本月
                 </div>
-                <div className="text-emerald-400 font-black text-2xl tracking-tighter">
-                  ${monthlyStats.expense.toLocaleString()}
+                <div className="text-rose-400 font-bold text-sm tabular-nums truncate">
+                  +${monthlyStats.income.toLocaleString()}
+                </div>
+                <div className="text-emerald-400 font-bold text-sm tabular-nums truncate">
+                  -${monthlyStats.expense.toLocaleString()}
                 </div>
               </div>
+
+              {/* 右邊：當日總計（數字靠右，顯眼） */}
+              <div className="flex-[1.2] pl-4 space-y-1.5 text-right">
+                <div className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
+                  今日
+                </div>
+                <div className="text-rose-400 font-black text-xl tabular-nums tracking-tighter leading-none">
+                  +${dailyStats.income.toLocaleString()}
+                </div>
+                <div className="text-emerald-400 font-black text-xl tabular-nums tracking-tighter leading-none">
+                  -${dailyStats.expense.toLocaleString()}
+                </div>
+              </div>
+
             </div>
-            <p className="text-center text-[10px] text-gray-700 font-bold uppercase tracking-[0.2em] mt-6 opacity-30">
-              Cozy Pocket • End of List
+
+            <p className="text-center text-[10px] text-gray-700 font-bold uppercase tracking-[0.4em] mt-12 opacity-15">
+              Cozy Pocket • Minimalism 
             </p>
           </div>
         </div>
       </div>
 
-      {/* 懸浮新增按鈕：固定於右下角 */}
       <div className="fixed bottom-8 right-8 z-50">
         <button 
           onClick={handleOpenModal}
@@ -196,7 +211,6 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* 底部漸層遮罩 */}
       <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-40"></div>
 
       {isModalOpen && (

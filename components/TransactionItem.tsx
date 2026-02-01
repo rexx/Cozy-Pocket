@@ -34,26 +34,31 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
   }
 
   // 副標題顯示邏輯：收納所有「非標題」且「有內容」的資訊
-  const displayCategoryName = subCategory 
-    ? `${category.name} · ${subCategory.name}`
-    : category.name;
-
   const subtitleParts: string[] = [];
   
-  // 如果標題不是名稱，且名稱有值，放入副標題
-  if (title !== transaction.name && transaction.name) subtitleParts.push(transaction.name);
+  // 1. 名稱 (若非標題)
+  if (transaction.name && title !== transaction.name) {
+    subtitleParts.push(transaction.name);
+  }
   
-  // 如果標題不是商家，且商家有值，放入副標題
-  if (title !== transaction.merchant && transaction.merchant) subtitleParts.push(transaction.merchant);
+  // 2. 商家 (若非標題)
+  if (transaction.merchant && title !== transaction.merchant) {
+    subtitleParts.push(transaction.merchant);
+  }
   
-  // 如果標題不是分類/子類別名稱，放入分類資訊
-  if (title !== subCategory?.name && title !== category.name) {
-    subtitleParts.push(displayCategoryName);
-  } else if (subCategory && title === subCategory.name) {
-    // 如果標題是子類別，副標題放父類別名稱
-    subtitleParts.push(category.name);
+  // 3. 類別資訊 (只用小類別，且若小類別非標題才顯示)
+  if (subCategory) {
+    if (title !== subCategory.name) {
+      subtitleParts.push(subCategory.name); // 不再加入父類別名稱
+    }
+  } else {
+    // 若無子類別（如收入類別），且標題不是分類名稱，才顯示分類名稱
+    if (title !== category.name) {
+      subtitleParts.push(category.name);
+    }
   }
 
+  // 4. 備註與標籤
   if (transaction.note) subtitleParts.push(transaction.note);
   if (transaction.tags) subtitleParts.push(`#${transaction.tags}`);
 

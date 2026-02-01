@@ -1,6 +1,4 @@
 
-// Add missing import for format
-// Fix: use addDays instead of subDays as it was reported missing
 import { format, addDays } from 'date-fns';
 import { Category, Transaction } from './types';
 
@@ -151,145 +149,133 @@ export const INCOME_CATEGORIES: Category[] = [
 export const CATEGORIES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
 
 const today = new Date();
-// Use addDays with negative value instead of subDays as it was reported missing
-const yesterday = addDays(today, -1);
-const dayBefore = addDays(today, -2);
 
 export const INITIAL_TRANSACTIONS: Transaction[] = [
-  // Today
+  // T-3 (Both Name & Merchant)
   {
-    id: '1',
+    id: 's1',
     type: '支出',
-    amount: 458,
+    amount: 1280,
     categoryId: 'food',
-    subCategoryId: 'lunch',
-    name: '午餐 PIZZA',
-    note: '雙拼口味',
-    merchant: 'LOPIA',
-    date: format(today, 'yyyy-MM-dd'),
-    time: '12:30',
-    paymentMethod: '電子支付',
-    tags: '午餐'
+    subCategoryId: 'party',
+    name: '週年紀念餐',
+    merchant: '王品牛排',
+    date: format(addDays(today, -3), 'yyyy-MM-dd'),
+    time: '19:30',
+    paymentMethod: '信用卡'
   },
+  // T-2 (Name Only)
   {
-    id: '2',
+    id: 's2',
     type: '支出',
-    amount: 85,
+    amount: 850,
+    categoryId: 'fixed',
+    subCategoryId: 'telecom',
+    name: '12月手機費',
+    date: format(addDays(today, -2), 'yyyy-MM-dd'),
+    time: '10:00',
+    paymentMethod: '電子支付'
+  },
+  // T-2 (Merchant Only)
+  {
+    id: 's3',
+    type: '支出',
+    amount: 155,
     categoryId: 'food',
-    subCategoryId: 'breakfast',
-    name: '蛋餅+大冰奶',
-    merchant: '美而美',
-    date: format(today, 'yyyy-MM-dd'),
-    time: '08:15',
+    subCategoryId: 'drink',
+    name: '', // Added name to satisfy Transaction interface
+    merchant: '50嵐',
+    date: format(addDays(today, -2), 'yyyy-MM-dd'),
+    time: '14:20',
     paymentMethod: '現金'
   },
+  // T-1 (Neither Name nor Merchant)
   {
-    id: '3',
+    id: 's4',
     type: '支出',
     amount: 30,
     categoryId: 'transport',
     subCategoryId: 'mrt',
-    name: '捷運',
-    date: format(today, 'yyyy-MM-dd'),
+    name: '', // Added name to satisfy Transaction interface
+    date: format(addDays(today, -1), 'yyyy-MM-dd'),
     time: '08:45',
     paymentMethod: '電子支付'
   },
+  // T (Income - Name Only)
   {
-    id: '4',
-    type: '支出',
-    amount: 120,
-    categoryId: 'food',
-    subCategoryId: 'drink',
-    name: '星巴克那堤',
-    merchant: 'Starbucks',
-    date: format(today, 'yyyy-MM-dd'),
-    time: '15:20',
-    paymentMethod: '信用卡',
-    tags: '下午茶'
-  },
-  // Yesterday
-  {
-    id: '5',
+    id: 's5',
     type: '收入',
-    amount: 52000,
-    categoryId: 'salary',
-    name: '12月薪資',
-    note: '月薪入帳',
-    date: format(yesterday, 'yyyy-MM-dd'),
-    time: '09:00',
+    amount: 12000,
+    categoryId: 'side_hustle',
+    name: '平面設計案尾款',
+    date: format(today, 'yyyy-MM-dd'),
+    time: '11:00',
     paymentMethod: '轉帳'
   },
+  // T (Merchant Only)
   {
-    id: '6',
+    id: 's6',
     type: '支出',
-    amount: 890,
-    categoryId: 'daily',
-    subCategoryId: 'consumables',
-    name: '超市採買',
-    merchant: '全聯',
-    date: format(yesterday, 'yyyy-MM-dd'),
-    time: '18:30',
+    amount: 145,
+    categoryId: 'food',
+    subCategoryId: 'lunch',
+    name: '', // Added name to satisfy Transaction interface
+    merchant: '吉野家',
+    date: format(today, 'yyyy-MM-dd'),
+    time: '12:15',
     paymentMethod: '電子支付'
   },
+  // T+1 (Name, Merchant, Note, Tags - Full Data)
   {
-    id: '7',
+    id: 's7',
     type: '支出',
-    amount: 250,
-    categoryId: 'transport',
-    subCategoryId: 'taxi',
-    name: '回家計程車',
-    merchant: 'Uber',
-    date: format(yesterday, 'yyyy-MM-dd'),
-    time: '22:15',
-    paymentMethod: '信用卡'
-  },
-  {
-    id: '8',
-    type: '支出',
-    amount: 1200,
-    categoryId: 'social',
-    subCategoryId: 'treating',
-    name: '朋友聚餐',
-    merchant: '鼎泰豐',
-    date: format(yesterday, 'yyyy-MM-dd'),
-    time: '19:45',
-    paymentMethod: '現金',
-    tags: '聚會'
-  },
-  // Day Before Yesterday
-  {
-    id: '9',
-    type: '支出',
-    amount: 390,
-    categoryId: 'entertainment',
-    subCategoryId: 'streaming',
-    name: 'Netflix',
-    date: format(dayBefore, 'yyyy-MM-dd'),
-    time: '10:00',
-    paymentMethod: '信用卡'
-  },
-  {
-    id: '10',
-    type: '支出',
-    amount: 2480,
+    amount: 2350,
     categoryId: 'shopping',
     subCategoryId: 'clothes',
-    name: '防風外套',
+    name: '保暖發熱衣',
     merchant: 'Uniqlo',
-    date: format(dayBefore, 'yyyy-MM-dd'),
-    time: '14:30',
+    note: '買給爸媽的禮物',
+    tags: '孝親',
+    date: format(addDays(today, 1), 'yyyy-MM-dd'),
+    time: '15:40',
     paymentMethod: '信用卡'
   },
+  // T+1 (Neither)
   {
-    id: '11',
+    id: 's8',
     type: '支出',
-    amount: 1500,
+    amount: 450,
     categoryId: 'medical',
-    subCategoryId: 'checkup',
-    name: '牙醫洗牙',
-    merchant: '安欣診所',
-    date: format(dayBefore, 'yyyy-MM-dd'),
-    time: '16:00',
+    subCategoryId: 'medicine',
+    name: '', // Added name to satisfy Transaction interface
+    date: format(addDays(today, 1), 'yyyy-MM-dd'),
+    time: '18:20',
     paymentMethod: '現金'
+  },
+  // T+2 (Merchant Only)
+  {
+    id: 's9',
+    type: '支出',
+    amount: 89,
+    categoryId: 'daily',
+    subCategoryId: 'consumables',
+    name: '', // Added name to satisfy Transaction interface
+    merchant: '屈臣氏',
+    date: format(addDays(today, 2), 'yyyy-MM-dd'),
+    time: '20:10',
+    paymentMethod: '電子支付'
+  },
+  // T+3 (Both Name & Merchant)
+  {
+    id: 's10',
+    type: '支出',
+    amount: 220,
+    categoryId: 'entertainment',
+    subCategoryId: 'movie',
+    name: '早場電影',
+    merchant: '威秀影城',
+    date: format(addDays(today, 3), 'yyyy-MM-dd'),
+    time: '09:30',
+    paymentMethod: '信用卡'
   }
 ];
