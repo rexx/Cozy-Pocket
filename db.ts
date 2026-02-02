@@ -1,15 +1,15 @@
 
-import { Dexie } from 'dexie';
+import Dexie from 'dexie';
 import type { Table } from 'dexie';
 import { Transaction } from './types';
 
-// Use named import for Dexie to ensure the class methods are correctly inherited and recognized by TypeScript
+// Use default import for Dexie to ensure the class methods like version() are correctly inherited and recognized by TypeScript
 export class CozyPocketDB extends Dexie {
   transactions!: Table<Transaction>;
 
   constructor() {
     super('CozyPocketDB');
-    // Ensure the database schema is defined using the version method inherited from Dexie
+    // Initialize the database version and define the schema for the transactions table
     this.version(1).stores({
       transactions: '++id, date, categoryId, type' // Primary key and indexes
     });
