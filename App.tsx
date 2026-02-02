@@ -5,6 +5,7 @@ import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft } from 'lucide-re
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
+import DataManagementModal from './components/DataManagementModal';
 import { Transaction } from './types';
 import { INITIAL_TRANSACTIONS, CATEGORIES } from './constants';
 import { db } from './db';
@@ -34,6 +35,7 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
 
@@ -43,6 +45,15 @@ const App: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize and load data from Dexie
+  const refreshData = async () => {
+    try {
+      const allTransactions = await db.transactions.toArray();
+      setTransactions(allTransactions);
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
+    }
+  };
+
   useEffect(() => {
     const initData = async () => {
       try {
@@ -51,10 +62,9 @@ const App: React.FC = () => {
           // Seed initial data if empty
           await db.transactions.bulkAdd(INITIAL_TRANSACTIONS as Transaction[]);
         }
-        const allTransactions = await db.transactions.toArray();
-        setTransactions(allTransactions);
+        await refreshData();
       } catch (err: any) {
-        setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
+        setCapturedErrors(prev => [...prev, `DB Init Error: ${err.message}`]);
       } finally {
         setIsLoading(false);
       }
@@ -212,6 +222,7 @@ const App: React.FC = () => {
             selectedDate={selectedDate} 
             onDateSelect={setSelectedDate}
             onSearchClick={toggleSearchMode}
+            onSettingsClick={() => setIsSettingsOpen(true)}
             transactions={transactions}
           />
         ) : (
@@ -358,6 +369,13 @@ const App: React.FC = () => {
           onAdd={addTransaction}
           onUpdate={updateTransaction}
           onDelete={deleteTransaction}
+        />
+      )}
+
+      {isSettingsOpen && (
+        <DataManagementModal 
+          onClose={() => setIsSettingsOpen(false)}
+          onDataChange={refreshData}
         />
       )}
     </div>

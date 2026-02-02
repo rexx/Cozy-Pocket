@@ -11,16 +11,17 @@ import {
   getDay,
   isValid
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Settings } from 'lucide-react';
 
 interface CalendarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   onSearchClick: () => void;
+  onSettingsClick: () => void;
   transactions: any[];
 }
 
-const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearchClick, transactions }) => {
+const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearchClick, onSettingsClick, transactions }) => {
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
   const today = new Date();
   const isCurrentlyToday = isSameDay(safeDate, today);
@@ -68,7 +69,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
 
   return (
     <div className="bg-[#1a1c2c] p-4 pb-4 select-none">
-      {/* Header Layout: <, 今, [date], 🔍, > */}
+      {/* Header Layout: <, 今, [date], ⚙️, 🔍, > */}
       <div className="grid grid-cols-3 items-center mb-6 px-1">
         
         {/* Left Side Group: < and 今 */}
@@ -102,8 +103,16 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
           </div>
         </div>
 
-        {/* Right Side Group: 🔍 and > */}
+        {/* Right Side Group: ⚙️, 🔍 and > */}
         <div className="flex items-center gap-1 justify-self-end">
+          <button 
+            onClick={onSettingsClick}
+            className="text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
+            title="資料管理"
+          >
+            <Settings size={20} />
+          </button>
+
           <button 
             onClick={onSearchClick}
             className="text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
