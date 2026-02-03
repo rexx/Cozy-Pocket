@@ -59,7 +59,6 @@ const App: React.FC = () => {
       try {
         const count = await db.transactions.count();
         if (count === 0) {
-          // Seed initial data if empty
           await db.transactions.bulkAdd(INITIAL_TRANSACTIONS as Transaction[]);
         }
         await refreshData();
@@ -103,7 +102,6 @@ const App: React.FC = () => {
       .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
   }, [transactions, selectedDate]);
 
-  // Search Results Filtering Logic
   const filteredTransactions = useMemo(() => {
     if (!isSearchMode || !searchQuery.trim()) return [];
     
@@ -347,7 +345,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating Action Button - Hide in search mode for cleaner UI */}
+      {/* Floating Action Button */}
       {!isSearchMode && (
         <div className="fixed bottom-8 right-8 z-50">
           <button 
