@@ -1,7 +1,7 @@
 
-import React, { useState, useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import { 
-  X, Check, Star, Trash2, Plus, RotateCcw, Hash,
+  X, Check, Trash2, Plus, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
   Store, Tag, Banknote, CreditCard, SmartphoneNfc, ArrowLeftRight,
   Sparkles, Loader2
@@ -53,7 +53,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     return (editingTransaction.amount * multiplier).toString();
   };
 
-  // States
   const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
   const [amount, setAmount] = useState(getInitialAmount());
   const [isSubView, setIsSubView] = useState(isEditing && editingTransaction?.type === '支出');
@@ -63,14 +62,20 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [note, setNote] = useState(editingTransaction?.note || ''); 
   const [merchant, setMerchant] = useState(editingTransaction?.merchant || ''); 
   const [paymentMethod, setPaymentMethod] = useState<string>(editingTransaction?.paymentMethod || '現金');
-  const [currentDateStr, setCurrentDateStr] = useState(editingTransaction?.date || format(safeInitialDate, 'yyyy-MM-dd'));
-  const [currentTime, setCurrentTime] = useState(editingTransaction?.time || format(new Date(), 'HH:mm'));
+  
+  // Date/Time UI states derived from timestamp
+  const [currentDateStr, setCurrentDateStr] = useState(
+    editingTransaction ? format(new Date(editingTransaction.timestamp), 'yyyy-MM-dd') : format(safeInitialDate, 'yyyy-MM-dd')
+  );
+  const [currentTime, setCurrentTime] = useState(
+    editingTransaction ? format(new Date(editingTransaction.timestamp), 'HH:mm') : format(new Date(), 'HH:mm')
+  );
+
   const [tagList, setTagList] = useState<string[]>(
     editingTransaction?.tags ? editingTransaction.tags.split(/\s+/).filter(t => t.length > 0) : []
   );
   const [tagInput, setTagInput] = useState('');
 
-  // AI Integration States
   const [aiInput, setAiInput] = useState('');
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const hasApiKey = !!process.env.API_KEY;
@@ -115,14 +120,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           // If the AI result type is "支出", we display it as 100 (which submits as -100).
           setAmount(Math.abs(result.amount).toString());
         }
-        
-        // Handle Categories
         if (result.categoryId) {
           setCategoryId(result.categoryId);
           if (result.type === '支出') setIsSubView(true);
         }
         if (result.subCategoryId) setSubCategoryId(result.subCategoryId);
-
         setName(result.name || result.merchant || "");
         setMerchant(result.merchant || "");
         setNote(result.note || "");
@@ -189,6 +191,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       });
     }
 
+    // Precise timestamp construction:
+    // Combine YYYY-MM-DD and HH:mm with current seconds and milliseconds for sorting uniqueness.
+    const baseDate = new Date(`${currentDateStr}T${currentTime}`);
+    const now = new Date();
+    const timestamp = baseDate.getTime() + (now.getSeconds() * 1000) + now.getMilliseconds();
+
     const data: Omit<Transaction, 'id'> = {
       type: activeTab,
       amount: finalAmount,
@@ -198,8 +206,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       note,
       merchant,
       paymentMethod,
-      date: currentDateStr,
-      time: currentTime,
+      timestamp,
       tags: finalTagList.join(' ')
     };
 

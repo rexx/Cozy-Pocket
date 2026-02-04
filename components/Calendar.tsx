@@ -9,7 +9,8 @@ import {
   isSameDay, 
   addMonths, 
   getDay,
-  isValid
+  isValid,
+  endOfDay
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Search, Settings } from 'lucide-react';
 
@@ -49,11 +50,10 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
   const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
   const hasTransactions = (day: Date) => {
-    return transactions.some(t => {
-      const [y, m, d] = t.date.split('-').map(Number);
-      const txDate = new Date(y, m - 1, d);
-      return isSameDay(txDate, day);
-    });
+    // Fix: replace missing startOfDay with manual date creation
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+    const dayEnd = endOfDay(day).getTime();
+    return transactions.some(t => t.timestamp >= dayStart && t.timestamp <= dayEnd);
   };
 
   const handleHeaderDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {

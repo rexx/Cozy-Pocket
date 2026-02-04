@@ -73,8 +73,7 @@ export interface Transaction {
   name: string;
   merchant?: string;
   note?: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  timestamp: number; // 數字格式 (Epoch)，包含日期與時間
   paymentMethod: string;
   tags?: string;
 }
@@ -89,6 +88,9 @@ export interface Transaction {
 
 ### 6.2 AI 解析
 *   整合 Gemini API，支援將自然語言輸入（如「午餐 120 現金」）結構化為帳務紀錄。
+
+### 6.3 精確排序 (Precise Sorting)
+*   雖然 UI 介面僅讓使用者選擇至「分鐘」，但系統在存檔時會自動擷取當下的「秒數」與「毫秒」併入 `timestamp`。這解決了在同一分鐘內新增多筆交易時，畫面排序可能跳動的問題。
 
 ---
 

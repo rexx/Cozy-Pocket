@@ -148,10 +148,17 @@ export const INCOME_CATEGORIES: Category[] = [
 
 export const CATEGORIES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES];
 
+// Fix: Manually zero out seconds and milliseconds instead of using missing startOfMinute
 const today = new Date();
+today.setSeconds(0, 0);
+
+const createTS = (daysOffset: number, timeStr: string) => {
+  const d = addDays(today, daysOffset);
+  const dateStr = format(d, 'yyyy-MM-dd');
+  return new Date(`${dateStr}T${timeStr}`).getTime();
+};
 
 export const INITIAL_TRANSACTIONS: Transaction[] = [
-  // T-3 (Both Name & Merchant)
   {
     id: 's1',
     type: '支出',
@@ -160,11 +167,9 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     subCategoryId: 'party',
     name: '週年紀念餐',
     merchant: '王品牛排',
-    date: format(addDays(today, -3), 'yyyy-MM-dd'),
-    time: '19:30',
+    timestamp: createTS(-3, '19:30'),
     paymentMethod: '信用卡'
   },
-  // T-2 (Name Only)
   {
     id: 's2',
     type: '支出',
@@ -172,60 +177,50 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     categoryId: 'fixed',
     subCategoryId: 'telecom',
     name: '12月手機費',
-    date: format(addDays(today, -2), 'yyyy-MM-dd'),
-    time: '10:00',
+    timestamp: createTS(-2, '10:00'),
     paymentMethod: '電子支付'
   },
-  // T-2 (Merchant Only)
   {
     id: 's3',
     type: '支出',
     amount: 155,
     categoryId: 'food',
     subCategoryId: 'drink',
-    name: '', // Added name to satisfy Transaction interface
+    name: '',
     merchant: '50嵐',
-    date: format(addDays(today, -2), 'yyyy-MM-dd'),
-    time: '14:20',
+    timestamp: createTS(-2, '14:20'),
     paymentMethod: '現金'
   },
-  // T-1 (Neither Name nor Merchant)
   {
     id: 's4',
     type: '支出',
     amount: 30,
     categoryId: 'transport',
     subCategoryId: 'mrt',
-    name: '', // Added name to satisfy Transaction interface
-    date: format(addDays(today, -1), 'yyyy-MM-dd'),
-    time: '08:45',
+    name: '',
+    timestamp: createTS(-1, '08:45'),
     paymentMethod: '電子支付'
   },
-  // T (Income - Name Only)
   {
     id: 's5',
     type: '收入',
     amount: 12000,
     categoryId: 'side_hustle',
     name: '平面設計案尾款',
-    date: format(today, 'yyyy-MM-dd'),
-    time: '11:00',
+    timestamp: createTS(0, '11:00'),
     paymentMethod: '轉帳'
   },
-  // T (Merchant Only)
   {
     id: 's6',
     type: '支出',
     amount: 145,
     categoryId: 'food',
     subCategoryId: 'lunch',
-    name: '', // Added name to satisfy Transaction interface
+    name: '',
     merchant: '吉野家',
-    date: format(today, 'yyyy-MM-dd'),
-    time: '12:15',
+    timestamp: createTS(0, '12:15'),
     paymentMethod: '電子支付'
   },
-  // T+1 (Name, Merchant, Note, Tags - Full Data)
   {
     id: 's7',
     type: '支出',
@@ -236,36 +231,30 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     merchant: 'Uniqlo',
     note: '買給爸媽的禮物',
     tags: '孝親',
-    date: format(addDays(today, 1), 'yyyy-MM-dd'),
-    time: '15:40',
+    timestamp: createTS(1, '15:40'),
     paymentMethod: '信用卡'
   },
-  // T+1 (Neither)
   {
     id: 's8',
     type: '支出',
     amount: 450,
     categoryId: 'medical',
     subCategoryId: 'medicine',
-    name: '', // Added name to satisfy Transaction interface
-    date: format(addDays(today, 1), 'yyyy-MM-dd'),
-    time: '18:20',
+    name: '',
+    timestamp: createTS(1, '18:20'),
     paymentMethod: '現金'
   },
-  // T+2 (Merchant Only)
   {
     id: 's9',
     type: '支出',
     amount: 89,
     categoryId: 'daily',
     subCategoryId: 'consumables',
-    name: '', // Added name to satisfy Transaction interface
+    name: '',
     merchant: '屈臣氏',
-    date: format(addDays(today, 2), 'yyyy-MM-dd'),
-    time: '20:10',
+    timestamp: createTS(2, '20:10'),
     paymentMethod: '電子支付'
   },
-  // T+3 (Both Name & Merchant)
   {
     id: 's10',
     type: '支出',
@@ -274,8 +263,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     subCategoryId: 'movie',
     name: '早場電影',
     merchant: '威秀影城',
-    date: format(addDays(today, 3), 'yyyy-MM-dd'),
-    time: '09:30',
+    timestamp: createTS(3, '09:30'),
     paymentMethod: '信用卡'
   }
 ];

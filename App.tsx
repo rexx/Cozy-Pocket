@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { format, isSameDay, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, isSameDay, endOfMonth, isWithinInterval, endOfDay } from 'date-fns';
 import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
@@ -97,13 +97,12 @@ const App: React.FC = () => {
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
 
   const dailyTransactions = useMemo(() => {
+    // Fix: replaced missing startOfDay with manual calculation
+    const dayStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime();
+    const dayEnd = endOfDay(selectedDate).getTime();
     return transactions
-      .filter(t => {
-        const [y, m, d] = t.date.split('-').map(Number);
-        const txDate = new Date(y, m - 1, d);
-        return isSameDay(txDate, selectedDate);
-      })
-      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+      .filter(t => t.timestamp >= dayStart && t.timestamp <= dayEnd)
+      .sort((a, b) => a.timestamp - b.timestamp);
   }, [transactions, selectedDate]);
 
   const filteredTransactions = useMemo(() => {
@@ -122,7 +121,7 @@ const App: React.FC = () => {
         category?.name.toLowerCase().includes(query) ||
         subCategory?.name.toLowerCase().includes(query)
       );
-    }).sort((a, b) => b.date.localeCompare(a.date) || (b.time || '').localeCompare(a.time || ''));
+    }).sort((a, b) => b.timestamp - a.timestamp);
   }, [transactions, searchQuery, isSearchMode]);
 
   const dailyStats = useMemo(() => {
@@ -137,14 +136,11 @@ const App: React.FC = () => {
   }, [dailyTransactions]);
 
   const monthlyStats = useMemo(() => {
-    const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-    const end = endOfMonth(selectedDate);
+    // Fix: replaced missing startOfMonth with manual calculation
+    const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).getTime();
+    const end = endOfMonth(selectedDate).getTime();
     return transactions
-      .filter(t => {
-        const [y, m, d] = t.date.split('-').map(Number);
-        const txDate = new Date(y, m - 1, d);
-        return isWithinInterval(txDate, { start, end });
-      })
+      .filter(t => t.timestamp >= start && t.timestamp <= end)
       .reduce((acc, curr) => {
         if (curr.type === '收入') {
           acc.income += curr.amount;
@@ -301,7 +297,7 @@ const App: React.FC = () => {
                   {filteredTransactions.map(tx => (
                     <div key={tx.id}>
                       <div className="px-5 py-1 bg-white/5 border-l-2 border-cyan-500/50">
-                        <span className="text-[10px] text-gray-500 font-bold">{tx.date}</span>
+                        <span className="text-[10px] text-gray-500 font-bold">{format(tx.timestamp, 'yyyy-MM-dd')}</span>
                       </div>
                       <TransactionItem 
                         transaction={tx} 

@@ -12,7 +12,7 @@ export class CozyPocketDB extends Dexie {
     super('CozyPocketDB');
     // 定義資料表結構
     this.version(1).stores({
-      transactions: '++id, date, categoryId, type'
+      transactions: '++id, timestamp, categoryId, type'
     });
   }
 }

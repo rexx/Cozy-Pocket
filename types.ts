@@ -24,8 +24,7 @@ export interface Transaction {
   subCategoryId?: string; 
   name: string;
   note?: string;
-  date: string; 
-  time: string; 
+  timestamp: number; // Combined date and time into a single Epoch number
   paymentMethod: string;
   merchant?: string;
   projectName?: string;

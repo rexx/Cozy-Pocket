@@ -3,6 +3,7 @@ import React from 'react';
 import { Transaction } from '../types';
 import { CATEGORIES } from '../constants';
 import * as Icons from 'lucide-react';
+import { format } from 'date-fns';
 
 const IconMap: Record<string, any> = {
   ...Icons
@@ -58,6 +59,8 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
     ? `-$${Math.abs(displayAmount).toLocaleString()}` 
     : `$${displayAmount.toLocaleString()}`;
 
+  const formattedTime = format(new Date(transaction.timestamp), 'HH:mm');
+
   return (
     <div 
       onClick={() => onClick(transaction)}
@@ -75,11 +78,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
           <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
             {title}
           </h3>
-          {transaction.time && (
-            <span className="text-[10px] text-gray-600 font-bold tabular-nums flex-shrink-0 ml-4">
-              {transaction.time}
-            </span>
-          )}
+          <span className="text-[10px] text-gray-600 font-bold tabular-nums flex-shrink-0 ml-4">
+            {formattedTime}
+          </span>
         </div>
         
         <div className="flex justify-between items-center">

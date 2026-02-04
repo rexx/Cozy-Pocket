@@ -10,7 +10,7 @@ interface DataManagementModalProps {
   onDataChange: () => void;
 }
 
-const CSV_HEADERS = ["id", "type", "amount", "categoryId", "subCategoryId", "name", "merchant", "note", "date", "time", "paymentMethod", "tags"];
+const CSV_HEADERS = ["id", "type", "amount", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "paymentMethod", "tags"];
 
 const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,8 +30,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
           t.name || '',
           t.merchant || '',
           t.note || '',
-          t.date,
-          t.time,
+          t.timestamp,
           t.paymentMethod,
           t.tags || ''
         ].map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
@@ -142,10 +141,11 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
           CSV_HEADERS.forEach((header, index) => {
             let val = values[index] || '';
             if (header === 'amount') obj[header] = parseFloat(val);
+            else if (header === 'timestamp') obj[header] = parseInt(val, 10);
             else obj[header] = val;
           });
           return obj as Transaction;
-        }).filter(t => !isNaN(t.amount));
+        }).filter(t => !isNaN(t.amount) && !isNaN(t.timestamp));
 
         if (parsedTransactions.length === 0) {
           throw new Error('找不到有效的交易紀錄');
@@ -178,7 +178,6 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
 
       <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c]">
         
-        {/* Export Section */}
         <div className="bg-[#252538] rounded-3xl p-6 border border-white/5 shadow-xl space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
@@ -197,7 +196,6 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
           </button>
         </div>
 
-        {/* Import Section */}
         <div className="bg-[#252538] rounded-3xl p-6 border border-white/5 shadow-xl space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400">
@@ -248,7 +246,6 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
           )}
         </div>
 
-        {/* Status Message */}
         {status.type !== 'idle' && (
           <div className={`p-4 rounded-2xl border flex items-center gap-3 animate-slide-up ${
             status.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
