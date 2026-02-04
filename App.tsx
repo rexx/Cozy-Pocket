@@ -152,14 +152,33 @@ const App: React.FC = () => {
   }, [transactions, selectedDate]);
 
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
-    try {
-      // 使用更安全的 UUID 替代 Date.now()
-      const id = crypto.randomUUID();
-      const transaction: Transaction = { ...newTx, id } as Transaction;
-      await db.transactions.add(transaction);
-      setTransactions(prev => [transaction, ...prev]);
-    } catch (err: any) {
-      setCapturedErrors(prev => [...prev, `Add Error: ${err.message}`]);
+    let attempts = 0;
+    const maxAttempts = 10;
+    let baseTime = Date.now();
+
+    while (attempts < maxAttempts) {
+      try {
+        // 每次嘗試如果失敗，就稍微增加時間戳來產生新 ID
+        const id = (baseTime + attempts).toString();
+        const transaction: Transaction = { ...newTx, id } as Transaction;
+        
+        await db.transactions.add(transaction);
+        setTransactions(prev => [transaction, ...prev]);
+        return; // 成功寫入後直接結束函數
+      } catch (err: any) {
+        // 如果是主鍵衝突 (ConstraintError)，則嘗試下一個 ID
+        if (err.name === 'ConstraintError' || err.message.includes('already exists')) {
+          attempts++;
+          continue;
+        }
+        // 若是其他錯誤，則記錄並跳出
+        setCapturedErrors(prev => [...prev, `Add Error: ${err.message}`]);
+        break;
+      }
+    }
+    
+    if (attempts >= maxAttempts) {
+      setCapturedErrors(prev => [...prev, "Add Error: 無法產生唯一的交易 ID，請稍後再試。"]);
     }
   };
 
