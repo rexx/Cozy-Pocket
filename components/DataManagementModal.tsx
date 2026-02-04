@@ -52,6 +52,48 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     }
   };
 
+  /**
+   * Correctly split full CSV text into rows, respecting quoted newlines.
+   */
+  const splitCSVIntoRows = (text: string) => {
+    const rows: string[] = [];
+    let currentRow = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        // Handle escaped quotes (double quotes)
+        if (inQuotes && nextChar === '"') {
+          currentRow += '""';
+          i++; // Skip next quote
+        } else {
+          inQuotes = !inQuotes;
+          currentRow += '"';
+        }
+      } else if (!inQuotes && (char === '\n' || char === '\r')) {
+        // We hit a newline outside of quotes - this is a real row end
+        if (currentRow.trim().length > 0) {
+          rows.push(currentRow);
+        }
+        currentRow = '';
+        // Skip the \n if we just handled \r
+        if (char === '\r' && nextChar === '\n') {
+          i++;
+        }
+      } else {
+        currentRow += char;
+      }
+    }
+
+    if (currentRow.trim().length > 0) {
+      rows.push(currentRow);
+    }
+    return rows;
+  };
+
   const parseCSVLine = (line: string) => {
     const result = [];
     let cur = '';
@@ -84,11 +126,14 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     reader.onload = async (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        if (!text) throw new Error('檔案內容為空');
+
+        // Robust row splitting that handles newlines inside quotes
+        const lines = splitCSVIntoRows(text);
         
         if (lines.length < 2) throw new Error('檔案格式不正確或無資料');
 
-        const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
+        // Skip headers (lines[0]) and parse the rest
         const dataRows = lines.slice(1);
 
         const parsedTransactions: Transaction[] = dataRows.map(line => {
@@ -101,6 +146,10 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
           });
           return obj as Transaction;
         }).filter(t => !isNaN(t.amount));
+
+        if (parsedTransactions.length === 0) {
+          throw new Error('找不到有效的交易紀錄');
+        }
 
         if (mode === 'overwrite') {
           await db.transactions.clear();
