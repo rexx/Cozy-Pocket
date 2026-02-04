@@ -153,7 +153,8 @@ const App: React.FC = () => {
 
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     try {
-      const id = Date.now().toString();
+      // 使用更安全的 UUID 替代 Date.now()
+      const id = crypto.randomUUID();
       const transaction: Transaction = { ...newTx, id } as Transaction;
       await db.transactions.add(transaction);
       setTransactions(prev => [transaction, ...prev]);
