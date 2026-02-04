@@ -41,9 +41,21 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const amountInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   
+  // Logic: 
+  // If editing an expense, internal DB value is -50, UI should show 50.
+  // User input -1 for expense -> DB value becomes 1.
+  // User input 50 for expense -> DB value becomes -50.
+  // InternalValue = (Type === '支出' ? -1 : 1) * UserInput
+  // UserInput = (Type === '支出' ? -1 : 1) * InternalValue
+  const getInitialAmount = () => {
+    if (!editingTransaction) return '';
+    const multiplier = editingTransaction.type === '支出' ? -1 : 1;
+    return (editingTransaction.amount * multiplier).toString();
+  };
+
   // States
   const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
-  const [amount, setAmount] = useState(editingTransaction?.amount.toString() || '');
+  const [amount, setAmount] = useState(getInitialAmount());
   const [isSubView, setIsSubView] = useState(isEditing && editingTransaction?.type === '支出');
   const [categoryId, setCategoryId] = useState<string | undefined>(editingTransaction?.categoryId);
   const [subCategoryId, setSubCategoryId] = useState<string | undefined>(editingTransaction?.subCategoryId);
@@ -95,10 +107,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     try {
       const result = await parseTransactionWithAI(aiInput);
       if (result) {
-        // Automatically fill fields based on AI parsing
-        // Rule: If result is null, change to empty string
-        if (result.amount !== undefined && result.amount !== null) setAmount(result.amount.toString());
         if (result.type) setActiveTab(result.type as TransactionType);
+        
+        // Handle Amount with sign logic for AI results
+        if (result.amount !== undefined && result.amount !== null) {
+          // If AI says "Spending 100", result.amount might be 100.
+          // If the AI result type is "支出", we display it as 100 (which submits as -100).
+          setAmount(Math.abs(result.amount).toString());
+        }
         
         // Handle Categories
         if (result.categoryId) {
@@ -107,16 +123,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         }
         if (result.subCategoryId) setSubCategoryId(result.subCategoryId);
 
-        // Strings: Convert null/undefined to empty strings
         setName(result.name || result.merchant || "");
         setMerchant(result.merchant || "");
         setNote(result.note || "");
         setPaymentMethod(result.paymentMethod || "現金");
-
-        // Rule: AI input don't touch date/time. 
-        // No setCurrentDateStr or setCurrentTime here.
-
-        // Clear AI input after successful mapping
         setAiInput('');
       }
     } catch (err) {
@@ -156,7 +166,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleSubmit = () => {
     const parsedAmount = parseFloat(amount || '0');
-    if (isNaN(parsedAmount) || parsedAmount === 0) return alert("請輸入金額");
+    if (isNaN(parsedAmount)) return alert("請輸入有效的數字");
     if (!categoryId) return alert("請選擇類別");
     if (activeTab === '支出' && !subCategoryId) {
       alert("請選擇子類別");
@@ -164,6 +174,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
     
+    // Sign Logic Implementation:
+    // Income (收入): UserInput 100 -> DB 100; UserInput -10 -> DB -10
+    // Expense (支出): UserInput 100 -> DB -100; UserInput -1 -> DB 1
+    const multiplier = activeTab === '支出' ? -1 : 1;
+    const finalAmount = parsedAmount * multiplier;
+
     let finalTagList = [...tagList];
     const input = tagInput.trim();
     if (input) {
@@ -175,7 +191,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     const data: Omit<Transaction, 'id'> = {
       type: activeTab,
-      amount: parsedAmount,
+      amount: finalAmount,
       categoryId: categoryId!,
       subCategoryId,
       name: name || '',
@@ -244,7 +260,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 pb-32 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         
-        {/* AI Quick Fill - Only shown when adding */}
         {hasApiKey && !isEditing && (
           <div className="px-2 mb-2">
             <form onSubmit={handleAiSubmit} className="relative group">
@@ -316,7 +331,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </button>
           <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-4 border border-white/5 shadow-lg min-w-0 overflow-hidden">
             <span className={`text-lg font-black mr-1 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}>$</span>
-            <input ref={amountInputRef} type="number" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={`w-full bg-transparent text-right text-lg font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`} />
+            <input ref={amountInputRef} type="number" step="any" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={`w-full bg-transparent text-right text-lg font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`} />
           </div>
         </div>
 

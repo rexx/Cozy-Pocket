@@ -59,7 +59,11 @@ const App: React.FC = () => {
       try {
         const count = await db.transactions.count();
         if (count === 0) {
-          await db.transactions.bulkAdd(INITIAL_TRANSACTIONS as Transaction[]);
+          const signedInit = INITIAL_TRANSACTIONS.map(t => ({
+            ...t,
+            amount: t.type === '支出' ? -Math.abs(t.amount) : Math.abs(t.amount)
+          }));
+          await db.transactions.bulkAdd(signedInit as Transaction[]);
         }
         await refreshData();
       } catch (err: any) {
@@ -158,20 +162,17 @@ const App: React.FC = () => {
 
     while (attempts < maxAttempts) {
       try {
-        // 每次嘗試如果失敗，就稍微增加時間戳來產生新 ID
         const id = (baseTime + attempts).toString();
         const transaction: Transaction = { ...newTx, id } as Transaction;
         
         await db.transactions.add(transaction);
         setTransactions(prev => [transaction, ...prev]);
-        return; // 成功寫入後直接結束函數
+        return;
       } catch (err: any) {
-        // 如果是主鍵衝突 (ConstraintError)，則嘗試下一個 ID
         if (err.name === 'ConstraintError' || err.message.includes('already exists')) {
           attempts++;
           continue;
         }
-        // 若是其他錯誤，則記錄並跳出
         setCapturedErrors(prev => [...prev, `Add Error: ${err.message}`]);
         break;
       }
@@ -220,6 +221,14 @@ const App: React.FC = () => {
     }
   };
 
+  // Rule: Income is Red, signs follow DB. Expense is Green, signs opposite of DB.
+  const formatStatAmount = (val: number, isExpense: boolean) => {
+    const displayVal = isExpense ? -val : val;
+    return displayVal < 0 
+      ? `-$${Math.abs(displayVal).toLocaleString()}` 
+      : `$${displayVal.toLocaleString()}`;
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col h-screen w-full bg-[#1a1c2c] items-center justify-center">
@@ -233,7 +242,6 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       
-      {/* Header Area */}
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         {!isSearchMode ? (
           <Calendar 
@@ -277,7 +285,6 @@ const App: React.FC = () => {
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
         <div className="mt-2 space-y-1 pb-32">
           {isSearchMode ? (
-            /* Search Mode Content */
             <>
               {searchQuery.trim() === '' ? (
                 <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
@@ -311,7 +318,6 @@ const App: React.FC = () => {
               )}
             </>
           ) : (
-            /* Normal Daily Content */
             <>
               {dailyTransactions.length > 0 ? (
                 dailyTransactions.map(tx => (
@@ -328,7 +334,6 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Stats only in non-search mode */}
               <div className="px-6 pt-12 pb-16">
                 <div className="bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl">
                   <div className="flex-1 opacity-30 border-r border-white/5 pr-4 space-y-1.5">
@@ -336,10 +341,10 @@ const App: React.FC = () => {
                       本月
                     </div>
                     <div className="text-rose-400 font-bold text-sm tabular-nums truncate">
-                      +${monthlyStats.income.toLocaleString()}
+                      {formatStatAmount(monthlyStats.income, false)}
                     </div>
                     <div className="text-emerald-400 font-bold text-sm tabular-nums truncate">
-                      -${monthlyStats.expense.toLocaleString()}
+                      {formatStatAmount(monthlyStats.expense, true)}
                     </div>
                   </div>
 
@@ -348,10 +353,10 @@ const App: React.FC = () => {
                       今日
                     </div>
                     <div className="text-rose-400 font-black text-xl tabular-nums tracking-tighter leading-none">
-                      +${dailyStats.income.toLocaleString()}
+                      {formatStatAmount(dailyStats.income, false)}
                     </div>
                     <div className="text-emerald-400 font-black text-xl tabular-nums tracking-tighter leading-none">
-                      -${dailyStats.expense.toLocaleString()}
+                      {formatStatAmount(dailyStats.expense, true)}
                     </div>
                   </div>
                 </div>
@@ -365,7 +370,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating Action Button */}
       {!isSearchMode && (
         <div className="fixed bottom-8 right-8 z-50">
           <button 

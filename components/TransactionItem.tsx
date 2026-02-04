@@ -45,11 +45,18 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
 
   if (transaction.note) subtitleParts.push(transaction.note);
   
-  // 處理多個標籤
   if (transaction.tags) {
     const individualTags = transaction.tags.split(/\s+/).filter(t => t.length > 0);
     individualTags.forEach(tag => subtitleParts.push(`#${tag}`));
   }
+
+  // Display logic:
+  // Income (收入): Signs match DB (Red)
+  // Expense (支出): Signs opposite of DB (Green)
+  const displayAmount = isIncome ? transaction.amount : -transaction.amount;
+  const formattedAmount = displayAmount < 0 
+    ? `-$${Math.abs(displayAmount).toLocaleString()}` 
+    : `$${displayAmount.toLocaleString()}`;
 
   return (
     <div 
@@ -84,7 +91,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
               {transaction.paymentMethod}
             </span>
             <span className={`font-black text-lg tabular-nums ${isIncome ? 'text-rose-400' : 'text-emerald-400'}`}>
-              ${transaction.amount.toLocaleString()}
+              {formattedAmount}
             </span>
           </div>
         </div>
