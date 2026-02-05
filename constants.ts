@@ -1,4 +1,3 @@
-
 import { format, addDays } from 'date-fns';
 import { Category, Transaction } from './types';
 
@@ -95,6 +94,7 @@ export const EXPENSE_CATEGORIES: Category[] = [
       { id: 'attractions', name: '門票景點', icon: 'MapPin' },
       { id: 'lodging', name: '旅遊住宿', icon: 'Hotel' },
       { id: 'souvenirs', name: '伴手禮', icon: 'Gift' },
+      { id: 'sports', name: '運動', icon: 'Dumbbell' },
       { id: 'other_entertainment', name: '其他娛樂', icon: 'Compass' }
     ]
   },
@@ -106,6 +106,8 @@ export const EXPENSE_CATEGORIES: Category[] = [
       { id: 'accessories', name: '配件', icon: 'Watch' },
       { id: 'makeup', name: '美妝', icon: 'Brush' },
       { id: 'skincare', name: '保養', icon: 'Sparkles' },
+      { id: 'haircut', name: '理髮', icon: 'Scissors' },
+      { id: 'software', name: '應用軟體', icon: 'AppWindow' },
       { id: 'other_shopping', name: '其他購物', icon: 'ShoppingBag' }
     ]
   },
