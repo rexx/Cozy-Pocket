@@ -5,7 +5,7 @@ export type TransactionType = '支出' | '收入';
 export interface SubCategory {
   id: string;
   name: string;
-  icon: string; // Added icon for subcategories
+  icon: string;
 }
 
 export interface Category {
@@ -20,11 +20,12 @@ export interface Transaction {
   id: string;
   type: TransactionType;
   amount: number;
+  currency: string; // New field
   categoryId: string;
   subCategoryId?: string; 
   name: string;
   note?: string;
-  timestamp: number; // Combined date and time into a single Epoch number
+  timestamp: number;
   paymentMethod: string;
   merchant?: string;
   projectName?: string;

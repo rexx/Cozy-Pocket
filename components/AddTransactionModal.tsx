@@ -1,22 +1,25 @@
 
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { 
   X, Check, Trash2, Plus, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
   Store, Tag, Banknote, CreditCard, SmartphoneNfc, ArrowLeftRight,
-  Sparkles, Loader2
+  Sparkles, Loader2, Globe
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants';
 import { Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 import { parseTransactionWithAI } from '../services/geminiService';
+import { db } from '../db';
 
 const IconMap: Record<string, any> = {
   ...Icons,
   Back: RotateCcw,
   Add: Plus
 };
+
+const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
 interface AddTransactionModalProps {
   onClose: () => void;
@@ -41,12 +44,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const amountInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   
-  // Logic: 
-  // If editing an expense, internal DB value is -50, UI should show 50.
-  // User input -1 for expense -> DB value becomes 1.
-  // User input 50 for expense -> DB value becomes -50.
-  // InternalValue = (Type === '支出' ? -1 : 1) * UserInput
-  // UserInput = (Type === '支出' ? -1 : 1) * InternalValue
   const getInitialAmount = () => {
     if (!editingTransaction) return '';
     const multiplier = editingTransaction.type === '支出' ? -1 : 1;
@@ -55,6 +52,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
   const [amount, setAmount] = useState(getInitialAmount());
+  const [currency, setCurrency] = useState(editingTransaction?.currency || 'TWD');
   const [isSubView, setIsSubView] = useState(isEditing && editingTransaction?.type === '支出');
   const [categoryId, setCategoryId] = useState<string | undefined>(editingTransaction?.categoryId);
   const [subCategoryId, setSubCategoryId] = useState<string | undefined>(editingTransaction?.subCategoryId);
@@ -63,7 +61,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [merchant, setMerchant] = useState(editingTransaction?.merchant || ''); 
   const [paymentMethod, setPaymentMethod] = useState<string>(editingTransaction?.paymentMethod || '現金');
   
-  // Date/Time UI states derived from timestamp
   const [currentDateStr, setCurrentDateStr] = useState(
     editingTransaction ? format(new Date(editingTransaction.timestamp), 'yyyy-MM-dd') : format(safeInitialDate, 'yyyy-MM-dd')
   );
@@ -75,10 +72,17 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     editingTransaction?.tags ? editingTransaction.tags.split(/\s+/).filter(t => t.length > 0) : []
   );
   const [tagInput, setTagInput] = useState('');
-
   const [aiInput, setAiInput] = useState('');
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const hasApiKey = !!process.env.API_KEY;
+
+  useEffect(() => {
+    if (!isEditing) {
+      db.settings.get('defaultCurrency').then(setting => {
+        if (setting) setCurrency(setting.value);
+      });
+    }
+  }, [isEditing]);
 
   useLayoutEffect(() => {
     if (amountInputRef.current && !isEditing) {
@@ -104,6 +108,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const handleSubCategoryClick = (id: string) => setSubCategoryId(id);
   const handleBackToMain = () => setIsSubView(false);
 
+  const toggleCurrency = () => {
+    const currentIndex = CURRENCIES.indexOf(currency);
+    setCurrency(CURRENCIES[(currentIndex + 1) % CURRENCIES.length]);
+  };
+
   const handleAiSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiInput.trim() || isAiProcessing) return;
@@ -113,11 +122,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       const result = await parseTransactionWithAI(aiInput);
       if (result) {
         if (result.type) setActiveTab(result.type as TransactionType);
-        
-        // Handle Amount with sign logic for AI results
+        if (result.currency && CURRENCIES.includes(result.currency.toUpperCase())) {
+          setCurrency(result.currency.toUpperCase());
+        }
         if (result.amount !== undefined && result.amount !== null) {
-          // If AI says "Spending 100", result.amount might be 100.
-          // If the AI result type is "支出", we display it as 100 (which submits as -100).
           setAmount(Math.abs(result.amount).toString());
         }
         if (result.categoryId) {
@@ -176,9 +184,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
     
-    // Sign Logic Implementation:
-    // Income (收入): UserInput 100 -> DB 100; UserInput -10 -> DB -10
-    // Expense (支出): UserInput 100 -> DB -100; UserInput -1 -> DB 1
     const multiplier = activeTab === '支出' ? -1 : 1;
     const finalAmount = parsedAmount * multiplier;
 
@@ -191,8 +196,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       });
     }
 
-    // Precise timestamp construction:
-    // Combine YYYY-MM-DD and HH:mm with current seconds and milliseconds for sorting uniqueness.
     const baseDate = new Date(`${currentDateStr}T${currentTime}`);
     const now = new Date();
     const timestamp = baseDate.getTime() + (now.getSeconds() * 1000) + now.getMilliseconds();
@@ -200,6 +203,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     const data: Omit<Transaction, 'id'> = {
       type: activeTab,
       amount: finalAmount,
+      currency,
       categoryId: categoryId!,
       subCategoryId,
       name: name || '',
@@ -277,7 +281,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </div>
                 <input 
                   type="text"
-                  placeholder="AI 快速填寫，例：早餐 80 元 現金..."
+                  placeholder="AI 快速填寫，例：拉麵 1500日圓 現金..."
                   className="bg-transparent text-xs font-medium text-white w-full focus:outline-none placeholder-gray-600"
                   value={aiInput}
                   onChange={(e) => setAiInput(e.target.value)}
@@ -332,13 +336,23 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
+          <button onClick={toggleCurrency} className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 active:bg-[#2a2a3e] shadow-lg min-w-0">
+            <Globe size={16} className="text-gray-500" />
+            <span className="text-white truncate ml-2 text-right flex-1 text-sm font-bold tracking-widest">{currency}</span>
+          </button>
+          <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-4 border border-white/5 shadow-lg min-w-0 overflow-hidden">
+            <input ref={amountInputRef} type="number" step="any" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={`w-full bg-transparent text-right text-lg font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 active:bg-[#2a2a3e] shadow-lg min-w-0">
             <PaymentIcon size={16} className="text-gray-500" />
             <span className="text-white truncate ml-2 text-right flex-1 text-sm font-bold">{paymentMethod}</span>
           </button>
-          <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-4 border border-white/5 shadow-lg min-w-0 overflow-hidden">
-            <span className={`text-lg font-black mr-1 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}>$</span>
-            <input ref={amountInputRef} type="number" step="any" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={`w-full bg-transparent text-right text-lg font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`} />
+          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
+            <Tag size={16} className="text-gray-500" />
+            <input type="text" placeholder="名稱" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2" />
           </div>
         </div>
 
@@ -347,17 +361,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <Store size={16} className="text-gray-500" />
             <input type="text" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="商家" className="bg-transparent text-white text-right focus:outline-none w-full font-bold placeholder-gray-700 text-sm ml-2" />
           </div>
-          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
-            <Tag size={16} className="text-gray-500" />
-            <input type="text" placeholder="名稱" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#252538] h-14 px-4 rounded-2xl border border-white/5 shadow-lg flex items-center">
             <CalendarIcon size={16} className="text-gray-500" />
             <input type="date" value={currentDateStr} onChange={(e) => setCurrentDateStr(e.target.value)} className="bg-transparent text-white text-xs font-bold text-right w-full ml-2" style={{ colorScheme: 'dark' }} />
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div className="bg-[#252538] h-14 px-4 rounded-2xl border border-white/5 shadow-lg flex items-center">
             <Clock size={16} className="text-gray-500" />
             <input type="time" value={currentTime} onChange={(e) => setCurrentTime(e.target.value)} className="bg-transparent text-white text-xs font-bold text-right w-full ml-2" style={{ colorScheme: 'dark' }} />

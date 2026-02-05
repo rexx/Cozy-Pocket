@@ -9,6 +9,15 @@ const IconMap: Record<string, any> = {
   ...Icons
 };
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  'TWD': '$',
+  'USD': '$',
+  'JPY': '¥',
+  'EUR': '€',
+  'HKD': '$',
+  'CNY': '¥'
+};
+
 interface TransactionItemProps {
   transaction: Transaction;
   onClick: (transaction: Transaction) => void;
@@ -34,34 +43,24 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
   }
 
   const subtitleParts: string[] = [];
-  
   if (transaction.name && title !== transaction.name) subtitleParts.push(transaction.name);
   if (transaction.merchant && title !== transaction.merchant) subtitleParts.push(transaction.merchant);
-  
-  if (subCategory) {
-    if (title !== subCategory.name) subtitleParts.push(subCategory.name);
-  } else if (title !== category.name) {
-    subtitleParts.push(category.name);
-  }
-
+  if (subCategory && title !== subCategory.name) subtitleParts.push(subCategory.name);
+  else if (!subCategory && title !== category.name) subtitleParts.push(category.name);
   if (transaction.note) subtitleParts.push(transaction.note);
-  
   if (transaction.tags) {
     const individualTags = transaction.tags.split(/\s+/).filter(t => t.length > 0);
     individualTags.forEach(tag => subtitleParts.push(`#${tag}`));
   }
 
-  // Display logic:
-  // Income (收入): Signs match DB (Red)
-  // Expense (支出): Signs opposite of DB (Green)
   const displayAmount = isIncome ? transaction.amount : -transaction.amount;
+  const currencySymbol = CURRENCY_SYMBOLS[transaction.currency] || transaction.currency;
   
-  // Fix: Ensure zero values do not show a negative sign
   const formattedAmount = Math.abs(displayAmount) < 0.0001 
-    ? `$0` 
+    ? `${currencySymbol}0` 
     : (displayAmount < 0 
-        ? `-$${Math.abs(displayAmount).toLocaleString()}` 
-        : `$${displayAmount.toLocaleString()}`);
+        ? `-${currencySymbol}${Math.abs(displayAmount).toLocaleString()}` 
+        : `${currencySymbol}${displayAmount.toLocaleString()}`);
 
   const formattedTime = format(new Date(transaction.timestamp), 'HH:mm');
 

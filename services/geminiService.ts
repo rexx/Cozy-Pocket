@@ -5,6 +5,7 @@ const transactionSchema = {
   type: Type.OBJECT,
   properties: {
     amount: { type: Type.NUMBER, description: "The cost/amount of the transaction" },
+    currency: { type: Type.STRING, description: "The currency code, e.g., TWD, USD, JPY, EUR, HKD, CNY. Default to TWD if not specified." },
     type: { type: Type.STRING, description: "Either '支出' (expense) or '收入' (income)" },
     merchant: { type: Type.STRING, description: "Where the purchase was made" },
     note: { type: Type.STRING, description: "Detailed description or items bought" },
@@ -14,14 +15,14 @@ const transactionSchema = {
     },
     subCategoryId: {
       type: Type.STRING,
-      description: "Detailed subcategory ID from the mapping list if it is an expense. E.g., 'lunch' for food, 'bus' for transport."
+      description: "Detailed subcategory ID from the mapping list if it is an expense."
     },
     paymentMethod: { 
       type: Type.STRING, 
       description: "One of: 現金, 信用卡, 電子支付, 轉帳" 
     }
   },
-  required: ["amount", "type", "categoryId", "paymentMethod"]
+  required: ["amount", "type", "categoryId", "paymentMethod", "currency"]
 };
 
 export async function parseTransactionWithAI(text: string) {
@@ -33,7 +34,7 @@ export async function parseTransactionWithAI(text: string) {
       config: {
         responseMimeType: "application/json",
         responseSchema: transactionSchema,
-        systemInstruction: "You are a specialized accountant. Correctly map the user's input to Category and SubCategory. Always return empty strings instead of null for text fields if information is missing. Example: '吃午餐 100' -> type: 支出, categoryId: food, subCategoryId: lunch.",
+        systemInstruction: "You are a specialized accountant. Correctly map the user's input to Category, SubCategory and Currency. Example: '吃午餐 100' -> currency: TWD, amount: 100. 'Ramen 1500yen' -> currency: JPY, amount: 1500.",
       },
     });
 
