@@ -55,9 +55,13 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
   // Income (收入): Signs match DB (Red)
   // Expense (支出): Signs opposite of DB (Green)
   const displayAmount = isIncome ? transaction.amount : -transaction.amount;
-  const formattedAmount = displayAmount < 0 
-    ? `-$${Math.abs(displayAmount).toLocaleString()}` 
-    : `$${displayAmount.toLocaleString()}`;
+  
+  // Fix: Ensure zero values do not show a negative sign
+  const formattedAmount = Math.abs(displayAmount) < 0.0001 
+    ? `$0` 
+    : (displayAmount < 0 
+        ? `-$${Math.abs(displayAmount).toLocaleString()}` 
+        : `$${displayAmount.toLocaleString()}`);
 
   const formattedTime = format(new Date(transaction.timestamp), 'HH:mm');
 

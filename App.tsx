@@ -97,7 +97,6 @@ const App: React.FC = () => {
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
 
   const dailyTransactions = useMemo(() => {
-    // Fix: replaced missing startOfDay with manual calculation
     const dayStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime();
     const dayEnd = endOfDay(selectedDate).getTime();
     return transactions
@@ -136,7 +135,6 @@ const App: React.FC = () => {
   }, [dailyTransactions]);
 
   const monthlyStats = useMemo(() => {
-    // Fix: replaced missing startOfMonth with manual calculation
     const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).getTime();
     const end = endOfMonth(selectedDate).getTime();
     return transactions
@@ -219,6 +217,9 @@ const App: React.FC = () => {
 
   // Rule: Income is Red, signs follow DB. Expense is Green, signs opposite of DB.
   const formatStatAmount = (val: number, isExpense: boolean) => {
+    // Fix: If the absolute value is essentially zero, return $0 to avoid "$-0"
+    if (Math.abs(val) < 0.0001) return `$0`;
+    
     const displayVal = isExpense ? -val : val;
     return displayVal < 0 
       ? `-$${Math.abs(displayVal).toLocaleString()}` 
