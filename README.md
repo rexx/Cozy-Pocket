@@ -49,15 +49,25 @@ export interface Transaction {
   id: string;
   type: '支出' | '收入';
   amount: number;
+  currency: string;
   categoryId: string;
   subCategoryId?: string;
   name: string;
   merchant?: string;
   note?: string;
-  timestamp: number; // 數字格式 (Epoch)，包含日期與時間
+  timestamp: number; // Epoch milliseconds
   paymentMethod: string;
+  projectName?: string;
   tags?: string;
 }
+```
+
+### Dexie Schema
+```typescript
+this.version(1).stores({
+  transactions: '++id, timestamp, categoryId, type, currency',
+  settings: 'key'
+});
 ```
 
 ---
