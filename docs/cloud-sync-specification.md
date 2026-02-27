@@ -176,6 +176,18 @@ this.version(1).stores({
 - 現行處理：Phase 1 僅 `create`，不處理 update conflict。
 - 後續策略：上線 `update` 前需先定義 version/timestamp conflict policy。
 
+### 7.7 未來衝突解決規則（Phase 2+）
+- 適用情境：本地與雲端都存在同一 `id`，且資料內容不同。
+- 比較欄位：`updatedAt`（最後更新時間）。
+- 規則：
+  - 若 `local.updatedAt > cloud.updatedAt`：以本地為準（覆寫雲端）。
+  - 若 `local.updatedAt < cloud.updatedAt`：以雲端為準（覆寫本地）。
+  - 若 `local.updatedAt === cloud.updatedAt`：**以雲端為準**（支援雲端人工修正優先）。
+- 設計說明：
+  - 使用者在 App 本地端調整資料時，`updatedAt` 必須更新為最新時間。
+  - 若雲端端有人工調整且時間戳與本地相同，系統仍採雲端版本。
+- 實作階段：本規則僅做為 Phase 2+ 設計約束，Phase 1 不實作。
+
 ## 8. 安全與設定（Phase 1）
 - 使用者需提供：
   - `apiUrl`（Apps Script Web App URL）
