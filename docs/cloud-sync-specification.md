@@ -253,11 +253,16 @@ this.version(1).stores({
 ## 9. GAS 部署（Phase 1）
 1. 新建 Google Sheet。
 2. `Extensions -> Apps Script`。
-3. 貼上 `doPost`（僅 `create`）程式碼並設定 `TOKEN`。
-4. Deploy Web App：
+3. 貼上後端程式碼：[docs/google-apps-script-phase1.js](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/docs/google-apps-script-phase1.js)。
+4. 設定 Script Property：
+   - `Project Settings -> Script properties -> Add script property`
+   - Key: `SYNC_TOKEN`
+   - Value: 你的同步 token（需與前端設定一致）
+5. Deploy Web App：
    - Execute as: `Me`
    - Who has access: `Anyone`
-5. 將部署網址填入前端 `apiUrl`。
+6. `Deploy -> New deployment -> Web app`，完成後複製 Web App URL。
+7. 將部署網址填入前端 `apiUrl`，並在前端設定同一組 `token`。
 
 ## 10. 驗收標準（MVP）
 1. 新增交易後，IndexedDB 內可看到該筆資料。
