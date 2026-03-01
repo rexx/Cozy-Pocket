@@ -88,3 +88,25 @@ this.version(1).stores({
 ## 7. 如何運行
 1. `npm install`
 2. `npm run dev`
+3. 開啟 `http://localhost:5173/`
+
+若需要讓同網段裝置也能連線：
+
+```bash
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+
+---
+
+## 8. 重置本機資料 (Local Storage / IndexedDB)
+
+App 內建重置按鈕：
+
+1. 右上角進入「資料與設定」
+2. 找到「重置本機資料」
+3. 點擊「清除本機資料並重置」
+
+此操作會執行：
+* `localStorage.clear()`
+* 刪除 `CozyPocketDB`（IndexedDB）
+* 自動重新載入頁面

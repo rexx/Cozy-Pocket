@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe } from 'lucide-react';
+import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Trash2 } from 'lucide-react';
 import { Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
@@ -160,6 +160,21 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     reader.readAsText(file);
   };
 
+  const resetLocalData = async () => {
+    if (!confirm('這會清除 Local Storage 與 IndexedDB 的所有資料，且無法復原。確定要重置嗎？')) return;
+    try {
+      setStatus({ type: 'idle', message: '' });
+      localStorage.clear();
+      await db.delete();
+      setStatus({ type: 'success', message: '本機資料已清除，正在重新載入...' });
+      setTimeout(() => {
+        window.location.reload();
+      }, 400);
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `重置失敗: ${err.message}` });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
       <div className="flex-none">
@@ -220,6 +235,24 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
               儲存同步設定
             </button>
           </div>
+        </div>
+
+        <div className="bg-[#252538] rounded-3xl p-6 border border-red-500/20 shadow-xl space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400">
+              <Trash2 size={22} />
+            </div>
+            <div>
+              <h2 className="font-bold text-white">重置本機資料</h2>
+              <p className="text-xs text-gray-500">清除 Local Storage 與 IndexedDB，並重新載入頁面</p>
+            </div>
+          </div>
+          <button
+            onClick={resetLocalData}
+            className="w-full py-4 bg-red-500/20 border border-red-500/30 text-red-300 font-black rounded-2xl active:scale-[0.98] transition-all"
+          >
+            清除本機資料並重置
+          </button>
         </div>
 
         <div className="bg-[#252538] rounded-3xl p-6 border border-white/5 shadow-xl space-y-4">
