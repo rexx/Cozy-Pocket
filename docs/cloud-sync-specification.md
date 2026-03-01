@@ -4,7 +4,7 @@
 - 同步模式：**Phase 1（個人用 / Simple Token）**。
 - 功能範圍：**僅 `create + sync`**。
 - `id` 來源：**前端產生並送出**。
-- 本次不做：`read/update/delete`、`keepalive`、`Service Worker Background Sync`、OAuth。
+- 本次不做：`get/update/delete`、`keepalive`、`Service Worker Background Sync`、OAuth。
 
 ## 2. 目前本地資料模型（以程式碼為準）
 
@@ -68,34 +68,67 @@ this.version(1).stores({
 - `POST {apiUrl}`
 - `Content-Type: application/json`
 
+### 4.1.1 API 路線圖（你已確認）
+- **Phase 1**：`create`（POST）
+- **Phase 2**：`get`（GET / pull）
+- **Phase 3**：`update`（POST）
+- **Phase 4**：`delete`（POST）
+
 ### 4.2 Request Body（create only）
 ```json
 {
   "token": "your_sync_token",
   "action": "create",
-  "id": "1709000000000",
-  "type": "支出",
-  "amount": -100,
-  "currency": "TWD",
-  "categoryId": "food",
-  "subCategoryId": "breakfast",
-  "name": "早餐",
-  "merchant": "便利商店",
-  "note": "三明治",
-  "timestamp": 1709000000000,
-  "paymentMethod": "現金",
-  "tags": "早餐 便利商店",
-  "projectName": ""
+  "items": [
+    {
+      "id": "1709000000000",
+      "type": "支出",
+      "amount": -100,
+      "currency": "TWD",
+      "categoryId": "food",
+      "subCategoryId": "breakfast",
+      "name": "早餐",
+      "merchant": "便利商店",
+      "note": "三明治",
+      "timestamp": 1709000000000,
+      "paymentMethod": "現金",
+      "tags": "早餐 便利商店",
+      "projectName": ""
+    }
+  ]
 }
 ```
 
+- 單筆同步：`items` 只放 1 筆。
+- 匯入同步：`items` 可放多筆（建議分批送，避免單次 payload 過大）。
+
 ### 4.3 Response Body
 ```json
-{ "status": "success", "id": "1709000000000" }
+{
+  "status": "success",
+  "results": [
+    { "id": "1709000000000", "status": "success" }
+  ]
+}
 ```
 
 ```json
-{ "status": "success", "skipped": true, "message": "Duplicate ID" }
+{
+  "status": "success",
+  "results": [
+    { "id": "1709000000000", "status": "skipped", "message": "Duplicate ID" }
+  ]
+}
+```
+
+```json
+{
+  "status": "success",
+  "results": [
+    { "id": "1709000000000", "status": "success" },
+    { "id": "1709000000001", "status": "error", "message": "Invalid amount" }
+  ]
+}
 ```
 
 ```json
@@ -123,20 +156,29 @@ this.version(1).stores({
   - 視為同步失敗。
   - 保留該筆為待同步狀態（不標記為完成）。
   - 顯示可見的錯誤提示給使用者。
+- 當 `status === "success"` 且有 `results[]` 時：
+  - 必須逐筆處理 `results[i].status`。
+  - 允許部分成功、部分失敗（Partial Failure），不得以全批成功處理。
 
 ## 5. 同步流程（MVP）
 1. 前端新增交易，先寫入 IndexedDB。
-2. 前端呼叫 GAS `create` API 上傳該筆交易。
-3. GAS 以 `id` 檢查重複。
-4. 同 `id` 已存在時，MVP 行為為 `skip`（不覆寫既有列），回傳 `{ "status": "success", "skipped": true }`。
-5. 僅當 response JSON 的 `status === "success"` 且非錯誤回應時，前端才標記該筆同步完成。
+2. 前端呼叫 GAS `create` API 上傳資料（單筆新增也用 `items: [oneItem]`）。
+3. GAS 逐筆以 `id` 檢查重複。
+4. 同 `id` 已存在時，該筆結果標記為 `skipped`（不覆寫既有列）。
+5. 前端依 `results[]` 逐筆更新同步狀態（`success/skipped/error`）。
+
+### 5.1 Phase 1 `create` 使用情境 / 觸發條件
+1. 新增交易後立即同步（Immediate Create Sync）
+- 觸發：使用者在 App 新增一筆交易成功寫入本地後。
+- 行為：呼叫 `create`，`items` 只帶該 1 筆。
+
+2. 啟動補送未完成資料（Startup Pending Sync）
+- 觸發：App 啟動後執行 `syncPending`（掃描待同步資料）。
+- 行為：以 `create` 分批補送待同步資料。
 
 ## 6. `syncPending` 定義
 - `syncPending` 是「補發機制」：
   - 在 App 啟動時，掃描本地尚未成功上傳的交易，逐筆重送到雲端。
-- 本專案現況：
-  - 目前 code base 還**沒有** `syncPending` 狀態欄位與函式實作。
-  - 若後續要加，需先在本地模型加入同步狀態欄位（例如 `synced`）。
 
 ## 7. Sync Conflict Matrix
 
@@ -219,7 +261,8 @@ this.version(1).stores({
 
 ## 10. 驗收標準（MVP）
 1. 新增交易後，IndexedDB 內可看到該筆資料。
-2. 網路正常時，Google Sheets 對應年份分頁新增一列。
-3. 重送同一筆 `id`，不會重複新增列。
+2. 網路正常時，`create` 可成功寫入 Google Sheets 對應年份分頁（單筆或多筆）。
+3. 重送同一筆 `id`，結果為 `skipped`，不會重複新增列。
 4. `token` 錯誤時，API 回 `unauthorized` 或 `status: error`，前端顯示同步失敗提示。
-5. 當同步失敗（含驗證失敗、網路錯誤）時，UI 必須有可見提示（例如 toast、錯誤列、狀態訊息）。
+5. 回應可逐筆辨識 `success/skipped/error`，前端能正確更新各筆同步狀態。
+6. 當同步失敗（含驗證失敗、網路錯誤）時，UI 必須有可見提示（例如 toast、錯誤列、狀態訊息）。
