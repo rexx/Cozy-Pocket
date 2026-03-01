@@ -336,23 +336,25 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={toggleCurrency} className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 active:bg-[#2a2a3e] shadow-lg min-w-0">
-            <Globe size={16} className="text-gray-500" />
-            <span className="text-white truncate ml-2 text-right flex-1 text-sm font-bold tracking-widest">{currency}</span>
-          </button>
-          <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-4 border border-white/5 shadow-lg min-w-0 overflow-hidden">
-            <input ref={amountInputRef} type="number" step="any" inputMode="decimal" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} className={`w-full bg-transparent text-right text-lg font-black focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
           <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 active:bg-[#2a2a3e] shadow-lg min-w-0">
             <PaymentIcon size={16} className="text-gray-500" />
             <span className="text-white truncate ml-2 text-right flex-1 text-sm font-bold">{paymentMethod}</span>
           </button>
-          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
-            <Tag size={16} className="text-gray-500" />
-            <input type="text" placeholder="名稱" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2" />
+          <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-3 border border-white/5 shadow-lg min-w-0 overflow-hidden">
+            <button onClick={toggleCurrency} className="flex items-center gap-1.5 pr-3 mr-3 border-r border-white/10 shrink-0 active:scale-95 transition-transform">
+              <Globe size={14} className="text-gray-500" />
+              <span className="text-[11px] text-gray-300 font-black tracking-widest">{currency}</span>
+            </button>
+            <input
+              ref={amountInputRef}
+              type="number"
+              step="any"
+              inputMode="decimal"
+              placeholder="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className={`flex-1 min-w-0 w-0 bg-transparent text-right text-2xl font-black leading-none focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
+            />
           </div>
         </div>
 
@@ -361,13 +363,17 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <Store size={16} className="text-gray-500" />
             <input type="text" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="商家" className="bg-transparent text-white text-right focus:outline-none w-full font-bold placeholder-gray-700 text-sm ml-2" />
           </div>
-          <div className="bg-[#252538] h-14 px-4 rounded-2xl border border-white/5 shadow-lg flex items-center">
-            <CalendarIcon size={16} className="text-gray-500" />
-            <input type="date" value={currentDateStr} onChange={(e) => setCurrentDateStr(e.target.value)} className="bg-transparent text-white text-xs font-bold text-right w-full ml-2" style={{ colorScheme: 'dark' }} />
+          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
+            <Tag size={16} className="text-gray-500" />
+            <input type="text" placeholder="名稱" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#252538] h-14 px-4 rounded-2xl border border-white/5 shadow-lg flex items-center">
+            <CalendarIcon size={16} className="text-gray-500" />
+            <input type="date" value={currentDateStr} onChange={(e) => setCurrentDateStr(e.target.value)} className="bg-transparent text-white text-xs font-bold text-right w-full ml-2" style={{ colorScheme: 'dark' }} />
+          </div>
           <div className="bg-[#252538] h-14 px-4 rounded-2xl border border-white/5 shadow-lg flex items-center">
             <Clock size={16} className="text-gray-500" />
             <input type="time" value={currentTime} onChange={(e) => setCurrentTime(e.target.value)} className="bg-transparent text-white text-xs font-bold text-right w-full ml-2" style={{ colorScheme: 'dark' }} />
