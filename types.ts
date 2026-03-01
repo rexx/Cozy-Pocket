@@ -30,6 +30,9 @@ export interface Transaction {
   merchant?: string;
   projectName?: string;
   tags?: string;
+  updatedAt?: number;
+  syncStatus?: 'pending' | 'synced' | 'error';
+  lastSyncError?: string;
 }
 
 export interface MonthlyStats {

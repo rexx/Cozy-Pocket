@@ -17,10 +17,18 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
+  const [syncApiUrl, setSyncApiUrl] = useState('');
+  const [syncToken, setSyncToken] = useState('');
 
   useEffect(() => {
-    db.settings.get('defaultCurrency').then(setting => {
-      if (setting) setDefaultCurrency(setting.value);
+    Promise.all([
+      db.settings.get('defaultCurrency'),
+      db.settings.get('syncApiUrl'),
+      db.settings.get('syncToken')
+    ]).then(([currencySetting, apiUrlSetting, tokenSetting]) => {
+      if (currencySetting) setDefaultCurrency(currencySetting.value);
+      if (apiUrlSetting?.value) setSyncApiUrl(apiUrlSetting.value);
+      if (tokenSetting?.value) setSyncToken(tokenSetting.value);
     });
   }, []);
 
@@ -29,6 +37,19 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     setDefaultCurrency(newVal);
     await db.settings.put({ key: 'defaultCurrency', value: newVal });
     onDataChange();
+  };
+
+  const saveSyncConfig = async () => {
+    try {
+      await db.settings.bulkPut([
+        { key: 'syncApiUrl', value: syncApiUrl.trim() },
+        { key: 'syncToken', value: syncToken.trim() }
+      ]);
+      setStatus({ type: 'success', message: '同步設定已儲存' });
+      onDataChange();
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `同步設定儲存失敗: ${err.message}` });
+    }
   };
 
   const exportToCSV = async () => {
@@ -170,6 +191,34 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
             >
               {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
+          </div>
+          <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400 font-bold">Sync API URL</label>
+              <input
+                type="text"
+                value={syncApiUrl}
+                onChange={(e) => setSyncApiUrl(e.target.value)}
+                placeholder="https://script.google.com/macros/s/.../exec"
+                className="w-full bg-[#1a1c2c] text-white text-sm px-3 py-2 rounded-xl focus:outline-none border border-white/10"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-400 font-bold">Sync Token</label>
+              <input
+                type="password"
+                value={syncToken}
+                onChange={(e) => setSyncToken(e.target.value)}
+                placeholder="輸入 GAS token"
+                className="w-full bg-[#1a1c2c] text-white text-sm px-3 py-2 rounded-xl focus:outline-none border border-white/10"
+              />
+            </div>
+            <button
+              onClick={saveSyncConfig}
+              className="w-full py-3 bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black rounded-xl active:scale-95 transition-all"
+            >
+              儲存同步設定
+            </button>
           </div>
         </div>
 

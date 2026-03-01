@@ -9,6 +9,7 @@ import DataManagementModal from './components/DataManagementModal';
 import { Transaction } from './types';
 import { INITIAL_TRANSACTIONS, CATEGORIES } from './constants';
 import { db } from './db';
+import { syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
   if (errors.length === 0) return null;
@@ -77,6 +78,21 @@ const App: React.FC = () => {
     };
     initData();
   }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const runStartupSync = async () => {
+      const results = await syncPendingTransactions();
+      const failed = results.filter(r => r.status === 'error');
+      if (failed.length > 0) {
+        setCapturedErrors(prev => [...prev, `Sync Pending Error: ${failed.length} 筆待同步資料上傳失敗`]);
+      }
+      if (results.length > 0) {
+        await refreshData();
+      }
+    };
+    runStartupSync();
+  }, [isLoading]);
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -149,9 +165,23 @@ const App: React.FC = () => {
     while (attempts < maxAttempts) {
       try {
         const id = (baseTime + attempts).toString();
-        const transaction: Transaction = { ...newTx, id } as Transaction;
+        const transaction: Transaction = {
+          ...newTx,
+          id,
+          updatedAt: Date.now(),
+          syncStatus: 'pending'
+        } as Transaction;
         await db.transactions.add(transaction);
         setTransactions(prev => [transaction, ...prev]);
+
+        void (async () => {
+          const results = await syncCreateItems([transaction]);
+          const failed = results.find(r => r.id === transaction.id && r.status === 'error');
+          if (failed) {
+            setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Create sync failed'}`]);
+          }
+          await refreshData();
+        })();
         return;
       } catch (err: any) {
         if (err.name === 'ConstraintError' || err.message.includes('already exists')) {
@@ -166,8 +196,14 @@ const App: React.FC = () => {
 
   const updateTransaction = async (updatedTx: Transaction) => {
     try {
-      await db.transactions.put(updatedTx);
-      setTransactions(prev => prev.map(t => t.id === updatedTx.id ? updatedTx : t));
+      const existing = transactions.find(t => t.id === updatedTx.id);
+      const merged: Transaction = {
+        ...existing,
+        ...updatedTx,
+        updatedAt: Date.now()
+      };
+      await db.transactions.put(merged);
+      setTransactions(prev => prev.map(t => t.id === updatedTx.id ? merged : t));
       setEditingTransaction(null);
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `Update Error: ${err.message}`]);
