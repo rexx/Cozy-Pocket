@@ -66,7 +66,9 @@ const App: React.FC = () => {
             currency: t.currency || 'TWD',
             amount: t.type === '支出' ? -Math.abs(t.amount) : Math.abs(t.amount)
           }));
-          await db.transactions.bulkAdd(signedInit as Transaction[]);
+          // Use bulkPut so repeated init calls (e.g. React StrictMode double effects)
+          // won't fail with duplicate-key constraint errors.
+          await db.transactions.bulkPut(signedInit as Transaction[]);
           await db.settings.put({ key: 'defaultCurrency', value: 'TWD' });
         }
         await refreshData();
