@@ -171,6 +171,7 @@ const App: React.FC = () => {
           ...newTx,
           id,
           updatedAt: Date.now(),
+          version: 1,
           syncStatus: 'pending'
         } as Transaction;
         await db.transactions.add(transaction);
@@ -199,14 +200,27 @@ const App: React.FC = () => {
   const updateTransaction = async (updatedTx: Transaction) => {
     try {
       const existing = transactions.find(t => t.id === updatedTx.id);
+      const nextVersion = (existing?.version || 0) + 1;
       const merged: Transaction = {
         ...existing,
         ...updatedTx,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        version: nextVersion,
+        syncStatus: 'pending',
+        lastSyncError: undefined,
       };
       await db.transactions.put(merged);
       setTransactions(prev => prev.map(t => t.id === updatedTx.id ? merged : t));
       setEditingTransaction(null);
+
+      void (async () => {
+        const results = await syncCreateItems([merged]);
+        const failed = results.find(r => r.id === merged.id && r.status === 'error');
+        if (failed) {
+          setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Update sync failed'}`]);
+        }
+        await refreshData();
+      })();
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `Update Error: ${err.message}`]);
     }

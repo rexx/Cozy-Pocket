@@ -28,9 +28,9 @@ export interface Transaction {
   timestamp: number;
   paymentMethod: string;
   merchant?: string;
-  projectName?: string;
   tags?: string;
   updatedAt?: number;
+  version?: number;
   syncStatus?: 'pending' | 'synced' | 'error';
   lastSyncError?: string;
 }

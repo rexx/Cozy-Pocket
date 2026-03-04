@@ -50,7 +50,8 @@ const toPayloadItem = (tx: Transaction) => ({
   timestamp: tx.timestamp,
   paymentMethod: tx.paymentMethod,
   tags: tx.tags || '',
-  projectName: tx.projectName || '',
+  updatedAt: Number(tx.updatedAt || tx.timestamp || Date.now()),
+  version: Number(tx.version || 1),
 });
 
 const normalizeResults = (
@@ -101,16 +102,16 @@ const syncCreateItemsWithConfig = async (
   if (items.length === 0) return [];
 
   try {
+    const payload = JSON.stringify({
+      token: config.token,
+      action: 'create',
+      items: items.map(toPayloadItem),
+    });
+
     const res = await fetch(config.apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        token: config.token,
-        action: 'create',
-        items: items.map(toPayloadItem),
-      }),
+      // Use a CORS "simple request" body to avoid OPTIONS preflight for GAS web app.
+      body: new URLSearchParams({ payload }),
     });
 
     let json: SyncApiResponse | null = null;
@@ -177,4 +178,3 @@ export const syncPendingTransactions = async (): Promise<SyncResultItem[]> => {
 
   return allResults;
 };
-

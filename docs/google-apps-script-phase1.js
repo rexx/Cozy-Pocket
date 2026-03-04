@@ -1,6 +1,6 @@
 /**
  * Cozy Pocket - Google Apps Script (Phase 1)
- * - action: "create"
+ * - action: "create" (upsert by id)
  * - payload: { token, action, items: Transaction[] }
  * - response: 200-wrapping JSON with per-item results
  *
@@ -25,7 +25,8 @@ const SHEET_HEADERS = [
   'timestamp',
   'paymentMethod',
   'tags',
-  'projectName',
+  'updatedAt',
+  'version',
 ];
 
 function doPost(e) {
@@ -34,7 +35,7 @@ function doPost(e) {
       return json({ status: 'error', message: 'Missing request body' });
     }
 
-    const body = JSON.parse(e.postData.contents);
+    const body = parseRequestBody(e);
     const token = String(body.token || '').trim();
     const expectedToken = String(PropertiesService.getScriptProperties().getProperty(TOKEN_PROPERTY_KEY) || '').trim();
 
@@ -59,6 +60,24 @@ function doPost(e) {
   }
 }
 
+function parseRequestBody(e) {
+  const raw = String((e && e.postData && e.postData.contents) || '').trim();
+  if (!raw) return {};
+
+  // Supports both:
+  // 1) application/json raw body
+  // 2) application/x-www-form-urlencoded with payload=<json>
+  const formPayload = e && e.parameter && typeof e.parameter.payload === 'string'
+    ? e.parameter.payload
+    : '';
+
+  if (formPayload) {
+    return JSON.parse(formPayload);
+  }
+
+  return JSON.parse(raw);
+}
+
 function processCreateItems(ss, items) {
   const results = [];
   const yearState = {};
@@ -77,16 +96,15 @@ function processCreateItems(ss, items) {
         const sheet = getOrCreateYearSheet(ss, year);
         yearState[year] = {
           sheet: sheet,
-          idSet: loadIdSet(sheet),
+          recordMap: loadRecordMap(sheet),
           rowsToAppend: [],
+          rowsToUpdate: [],
         };
       }
 
       const state = yearState[year];
-      if (state.idSet[id]) {
-        results.push({ id: id, status: 'skipped', message: 'Duplicate ID' });
-        continue;
-      }
+      const incomingUpdatedAt = toNumber(item.updatedAt, Number(item.timestamp || 0) || Date.now());
+      const incomingVersion = toNumber(item.version, 1);
 
       const row = [
         id,
@@ -101,12 +119,43 @@ function processCreateItems(ss, items) {
         Number(item.timestamp || 0),
         String(item.paymentMethod || ''),
         String(item.tags || ''),
-        String(item.projectName || ''),
+        incomingUpdatedAt,
+        incomingVersion,
       ];
 
-      state.rowsToAppend.push(row);
-      state.idSet[id] = true;
-      results.push({ id: id, status: 'success' });
+      const existing = state.recordMap[id];
+      if (!existing) {
+        state.rowsToAppend.push(row);
+        state.recordMap[id] = {
+          row: -1,
+          appendIndex: state.rowsToAppend.length - 1,
+          version: incomingVersion,
+          updatedAt: incomingUpdatedAt,
+        };
+        results.push({ id: id, status: 'success', message: 'Inserted' });
+        continue;
+      }
+
+      const decision = resolveSyncDecision(existing, incomingVersion, incomingUpdatedAt);
+
+      if (decision === 'update') {
+        if (existing.row > 1) {
+          state.rowsToUpdate.push({ row: existing.row, values: row });
+        } else if (typeof existing.appendIndex === 'number') {
+          state.rowsToAppend[existing.appendIndex] = row;
+        }
+        state.recordMap[id] = {
+          row: existing.row,
+          appendIndex: existing.appendIndex,
+          version: incomingVersion,
+          updatedAt: incomingUpdatedAt,
+        };
+        results.push({ id: id, status: 'success', message: 'Updated' });
+      } else if (decision === 'conflict') {
+        results.push({ id: id, status: 'error', message: 'Conflict: stale version' });
+      } else {
+        results.push({ id: id, status: 'skipped', message: 'Already up-to-date' });
+      }
     } catch (err) {
       results.push({
         id: id,
@@ -119,6 +168,11 @@ function processCreateItems(ss, items) {
   // Bulk append per year tab to reduce API calls.
   Object.keys(yearState).forEach(function (year) {
     const state = yearState[year];
+
+    state.rowsToUpdate.forEach(function (entry) {
+      state.sheet.getRange(entry.row, 1, 1, SHEET_HEADERS.length).setValues([entry.values]);
+    });
+
     if (!state.rowsToAppend.length) return;
 
     const startRow = state.sheet.getLastRow() + 1;
@@ -144,25 +198,52 @@ function getOrCreateYearSheet(ss, year) {
     sheet.getRange(1, 1, 1, SHEET_HEADERS.length).setValues([SHEET_HEADERS]);
   } else if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, SHEET_HEADERS.length).setValues([SHEET_HEADERS]);
+  } else {
+    const headerValues = sheet.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0];
+    for (let i = 0; i < SHEET_HEADERS.length; i++) {
+      if (String(headerValues[i] || '').trim() !== SHEET_HEADERS[i]) {
+        sheet.getRange(1, i + 1).setValue(SHEET_HEADERS[i]);
+      }
+    }
   }
   return sheet;
 }
 
-function loadIdSet(sheet) {
-  const set = {};
+function loadRecordMap(sheet) {
+  const map = {};
   const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return set;
+  if (lastRow <= 1) return map;
 
-  const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  const values = sheet.getRange(2, 1, lastRow - 1, SHEET_HEADERS.length).getValues();
   for (let i = 0; i < values.length; i++) {
-    const id = String(values[i][0] || '').trim();
-    if (id) set[id] = true;
+    const row = values[i];
+    const id = String(row[0] || '').trim();
+    if (!id) continue;
+    map[id] = {
+      row: i + 2,
+      appendIndex: -1,
+      updatedAt: toNumber(row[12], 0),
+      version: toNumber(row[13], 0),
+    };
   }
-  return set;
+  return map;
+}
+
+function resolveSyncDecision(existing, incomingVersion, incomingUpdatedAt) {
+  if (incomingVersion > existing.version) return 'update';
+  if (incomingVersion < existing.version) return 'conflict';
+
+  if (incomingUpdatedAt > existing.updatedAt) return 'update';
+  if (incomingUpdatedAt < existing.updatedAt) return 'conflict';
+  return 'skip';
+}
+
+function toNumber(value, fallback) {
+  const num = Number(value);
+  return isFinite(num) ? num : fallback;
 }
 
 function json(obj) {
   // 200-wrapping: always return HTTP 200 with status in JSON body.
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
-

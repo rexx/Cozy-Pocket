@@ -57,8 +57,9 @@ export interface Transaction {
   note?: string;
   timestamp: number; // Epoch milliseconds
   paymentMethod: string;
-  projectName?: string;
   tags?: string;
+  updatedAt?: number;
+  version?: number;
 }
 ```
 

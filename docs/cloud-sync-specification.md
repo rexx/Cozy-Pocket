@@ -24,8 +24,9 @@ export interface Transaction {
   timestamp: number;
   paymentMethod: string;
   merchant?: string;
-  projectName?: string;
   tags?: string;
+  updatedAt?: number;
+  version?: number;
 }
 ```
 
@@ -60,13 +61,21 @@ this.version(1).stores({
   - `J: timestamp`
   - `K: paymentMethod`
   - `L: tags`
-  - `M: projectName`
+  - `M: updatedAt`（最後更新時間，Epoch ms）
+  - `N: version`（整筆版本號）
 
 ## 4. API 規格（Phase 1）
 
 ### 4.1 Endpoint
 - `POST {apiUrl}`
-- `Content-Type: application/json`
+- `Content-Type: application/x-www-form-urlencoded`（Simple Request，避免 CORS preflight）
+
+### 4.1.a CORS 策略（GAS Web App）
+- 背景：瀏覽器對 `application/json` `POST` 通常會先送 `OPTIONS` preflight；GAS Web App 常在 preflight/redirect 情境下導致前端無法讀取可用錯誤內容。
+- 本專案策略：使用 **Simple Request**，避免 preflight。
+- 前端實作：送出 `URLSearchParams`，欄位為 `payload=<JSON字串>`。
+- 後端（GAS）實作：優先解析 `e.parameter.payload`，若無再回退解析 raw JSON（保留相容性）。
+- 注意：`text/plain + JSON` 也是可行的 Simple Request 方案；本專案目前選擇 `form-urlencoded` 是為了表單相容性與參數解析可預期性。
 
 ### 4.1.1 API 路線圖（你已確認）
 - **Phase 1**：`create`（POST）
@@ -75,6 +84,8 @@ this.version(1).stores({
 - **Phase 4**：`delete`（POST）
 
 ### 4.2 Request Body（create only）
+- 傳輸格式：`payload=<urlencoded JSON>`
+- `payload` 內容（JSON）：
 ```json
 {
   "token": "your_sync_token",
@@ -93,7 +104,8 @@ this.version(1).stores({
       "timestamp": 1709000000000,
       "paymentMethod": "現金",
       "tags": "早餐 便利商店",
-      "projectName": ""
+      "updatedAt": 1709000000000,
+      "version": 1
     }
   ]
 }
@@ -116,7 +128,7 @@ this.version(1).stores({
 {
   "status": "success",
   "results": [
-    { "id": "1709000000000", "status": "skipped", "message": "Duplicate ID" }
+    { "id": "1709000000000", "status": "skipped", "message": "Already up-to-date" }
   ]
 }
 ```
@@ -164,7 +176,11 @@ this.version(1).stores({
 1. 前端新增交易，先寫入 IndexedDB。
 2. 前端呼叫 GAS `create` API 上傳資料（單筆新增也用 `items: [oneItem]`）。
 3. GAS 逐筆以 `id` 檢查重複。
-4. 同 `id` 已存在時，該筆結果標記為 `skipped`（不覆寫既有列）。
+4. 同 `id` 已存在時，執行 upsert conflict 規則：
+   - `incoming.version > existing.version`：更新雲端列（`success`）
+   - `incoming.version === existing.version` 且 `incoming.updatedAt > existing.updatedAt`：更新雲端列（`success`）
+   - `incoming.version === existing.version` 且 `incoming.updatedAt === existing.updatedAt`：視為重送（`skipped`）
+   - 其餘情況：回傳衝突錯誤（`error`, `message: "Conflict: stale version"`）
 5. 前端依 `results[]` 逐筆更新同步狀態（`success/skipped/error`）。
 
 ### 5.1 Phase 1 `create` 使用情境 / 觸發條件
@@ -185,13 +201,13 @@ this.version(1).stores({
 ### 7.1 同一筆資料重送（重試/重複點擊）
 - 情境：相同 `id` 被多次送出。
 - 風險：雲端重複寫入。
-- 現行處理：GAS 以 `id` 驗重；已存在則 `skip`。
-- 後續策略：維持 `id` 唯一約束與 `skipped` 回應。
+- 現行處理：GAS 以 `id + version + updatedAt` 比較；完全相同視為 `skipped`（冪等）。
+- 後續策略：維持冪等回應，避免重複寫入。
 
 ### 7.2 不同裝置意外產生相同 `id`
 - 情境：兩端本地生成碰撞 `id`（低機率）。
 - 風險：其中一筆可能被視為 duplicate 而未上雲。
-- 現行處理：後送資料會被 `skip`。
+- 現行處理：依 `version + updatedAt` 判定，可能 `update`、`skipped` 或 `error(conflict)`。
 - 後續策略：若風險不可接受，改用 UUID v4 作為 `id` 生成策略。
 
 ### 7.3 伺服端寫入成功但客戶端未收到成功回應
@@ -203,8 +219,8 @@ this.version(1).stores({
 ### 7.4 本地有資料、雲端沒有
 - 情境：離線或 token 錯誤時新增交易，未成功上雲。
 - 風險：跨裝置看不到該筆資料。
-- 現行處理：目前無自動補發實作。
-- 後續策略：實作 `syncPending`，在啟動時補送未完成資料。
+- 現行處理：App 啟動時自動執行 `syncPending` 補送。
+- 後續策略：增加手動重試入口與重試統計。
 
 ### 7.5 雲端有資料、本地沒有
 - 情境：其他裝置已上傳，本機未同步拉回。
@@ -213,22 +229,22 @@ this.version(1).stores({
 - 後續策略：未來若新增 `pull`，需定義雲端覆寫與 merge 規則。
 
 ### 7.6 同一筆資料內容被修改（未來風險）
-- 情境：若未來上線 `update`，本地與雲端可能同時修改。
+- 情境：多裝置對同一 `id` 先後修改。
 - 風險：版本衝突與資料覆寫爭議。
-- 現行處理：Phase 1 僅 `create`，不處理 update conflict。
-- 後續策略：上線 `update` 前需先定義 version/timestamp conflict policy。
+- 現行處理：已在 `create`（upsert）實作 conflict policy（`version` 優先，`updatedAt` 次之）。
+- 後續策略：Phase 2 pull 時沿用同一規則做雙向 merge。
 
 ### 7.7 未來衝突解決規則（Phase 2+）
 - 適用情境：本地與雲端都存在同一 `id`，且資料內容不同。
-- 比較欄位：`updatedAt`（最後更新時間）。
+- 比較欄位：`version`（主）與 `updatedAt`（輔）。
 - 規則：
-  - 若 `local.updatedAt > cloud.updatedAt`：以本地為準（覆寫雲端）。
-  - 若 `local.updatedAt < cloud.updatedAt`：以雲端為準（覆寫本地）。
-  - 若 `local.updatedAt === cloud.updatedAt`：**以雲端為準**（支援雲端人工修正優先）。
+  - 若 `local.version > cloud.version`：以本地為準（覆寫雲端）。
+  - 若 `local.version < cloud.version`：以雲端為準（覆寫本地）。
+  - 若 `local.version === cloud.version`：比較 `updatedAt`，較新者為準。
+  - 若 `version` 與 `updatedAt` 皆相同：視為相同版本，不做變更。
 - 設計說明：
-  - 使用者在 App 本地端調整資料時，`updatedAt` 必須更新為最新時間。
-  - 若雲端端有人工調整且時間戳與本地相同，系統仍採雲端版本。
-- 實作階段：本規則僅做為 Phase 2+ 設計約束，Phase 1 不實作。
+  - 使用者在 App 本地端調整資料時，`version` 必須 +1，`updatedAt` 必須更新為最新時間。
+  - 目前已實作在 push/create(upsert)；pull 端規則待 Phase 2 套用。
 
 ### 7.8 補充風險清單（Phase 2+）
 - 說明：以下為未來擴充同步時常見衝突來源，Phase 1 先記錄不實作。
