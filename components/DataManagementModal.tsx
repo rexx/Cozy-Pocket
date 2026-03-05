@@ -4,13 +4,14 @@ import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Tras
 import { Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
+import { formatReadableDateTime, toEpochSeconds } from '../time';
 
 interface DataManagementModalProps {
   onClose: () => void;
   onDataChange: () => void;
 }
 
-const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "paymentMethod", "tags"];
+const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags"];
 const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
 const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange }) => {
@@ -68,6 +69,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
           t.merchant || '',
           t.note || '',
           t.timestamp,
+          t.readableDateTime || formatReadableDateTime(t.timestamp),
           t.paymentMethod,
           t.tags || ''
         ].map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
@@ -134,16 +136,24 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
         if (!text) throw new Error('檔案內容為空');
         const lines = splitCSVIntoRows(text);
         if (lines.length < 2) throw new Error('檔案格式不正確或無資料');
+        const parsedHeader = parseCSVLine(lines[0]);
+        const headers = parsedHeader.length > 0 ? parsedHeader : CSV_HEADERS;
         const dataRows = lines.slice(1);
         const parsedTransactions: Transaction[] = dataRows.map(line => {
           const values = parseCSVLine(line);
           const obj: any = {};
-          CSV_HEADERS.forEach((header, index) => {
+          headers.forEach((header, index) => {
             let val = values[index] || '';
             if (header === 'amount') obj[header] = parseFloat(val);
-            else if (header === 'timestamp') obj[header] = parseInt(val, 10);
+            else if (header === 'timestamp') obj[header] = toEpochSeconds(parseInt(val, 10));
             else obj[header] = val;
           });
+          if (Number.isNaN(obj.timestamp) && obj.readableDateTime) {
+            obj.timestamp = toEpochSeconds(new Date(obj.readableDateTime).getTime());
+          }
+          if (!obj.readableDateTime && Number.isFinite(obj.timestamp)) {
+            obj.readableDateTime = formatReadableDateTime(obj.timestamp);
+          }
           if (!obj.currency) obj.currency = 'TWD';
           return obj as Transaction;
         }).filter(t => !isNaN(t.amount) && !isNaN(t.timestamp));

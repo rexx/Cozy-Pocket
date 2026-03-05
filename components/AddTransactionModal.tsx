@@ -12,6 +12,7 @@ import { Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 import { parseTransactionWithAI } from '../services/geminiService';
 import { db } from '../db';
+import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 
 const IconMap: Record<string, any> = {
   ...Icons,
@@ -62,10 +63,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<string>(editingTransaction?.paymentMethod || '現金');
   
   const [currentDateStr, setCurrentDateStr] = useState(
-    editingTransaction ? format(new Date(editingTransaction.timestamp), 'yyyy-MM-dd') : format(safeInitialDate, 'yyyy-MM-dd')
+    editingTransaction ? format(new Date(toEpochMillis(editingTransaction.timestamp)), 'yyyy-MM-dd') : format(safeInitialDate, 'yyyy-MM-dd')
   );
   const [currentTime, setCurrentTime] = useState(
-    editingTransaction ? format(new Date(editingTransaction.timestamp), 'HH:mm') : format(new Date(), 'HH:mm')
+    editingTransaction ? format(new Date(toEpochMillis(editingTransaction.timestamp)), 'HH:mm') : format(new Date(), 'HH:mm')
   );
 
   const [tagList, setTagList] = useState<string[]>(
@@ -197,8 +198,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
 
     const baseDate = new Date(`${currentDateStr}T${currentTime}`);
-    const now = new Date();
-    const timestamp = baseDate.getTime() + (now.getSeconds() * 1000) + now.getMilliseconds();
+    const timestamp = toEpochSeconds(baseDate.getTime());
 
     const data: Omit<Transaction, 'id'> = {
       type: activeTab,
@@ -211,6 +211,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       merchant,
       paymentMethod,
       timestamp,
+      readableDateTime: formatReadableDateTime(timestamp),
       tags: finalTagList.join(' ')
     };
 

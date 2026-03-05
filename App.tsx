@@ -10,6 +10,7 @@ import { Transaction } from './types';
 import { INITIAL_TRANSACTIONS, CATEGORIES } from './constants';
 import { db } from './db';
 import { syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
+import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
   if (errors.length === 0) return null;
@@ -45,6 +46,15 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const normalizeTransactionTime = (tx: Transaction): Transaction => {
+    const normalizedTimestamp = toEpochSeconds(tx.timestamp);
+    return {
+      ...tx,
+      timestamp: normalizedTimestamp,
+      readableDateTime: tx.readableDateTime || formatReadableDateTime(normalizedTimestamp),
+    };
+  };
+
   const refreshData = async () => {
     try {
       const allTransactions = await db.transactions.toArray();
@@ -64,12 +74,23 @@ const App: React.FC = () => {
           const signedInit = INITIAL_TRANSACTIONS.map(t => ({
             ...t,
             currency: t.currency || 'TWD',
-            amount: t.type === '支出' ? -Math.abs(t.amount) : Math.abs(t.amount)
+            amount: t.type === '支出' ? -Math.abs(t.amount) : Math.abs(t.amount),
+            readableDateTime: t.readableDateTime || formatReadableDateTime(t.timestamp),
           }));
           // Use bulkPut so repeated init calls (e.g. React StrictMode double effects)
           // won't fail with duplicate-key constraint errors.
           await db.transactions.bulkPut(signedInit as Transaction[]);
           await db.settings.put({ key: 'defaultCurrency', value: 'TWD' });
+        } else {
+          const existing = await db.transactions.toArray();
+          const normalized = existing.map(normalizeTransactionTime);
+          const hasChanged = normalized.some((tx, idx) => (
+            tx.timestamp !== existing[idx].timestamp ||
+            tx.readableDateTime !== existing[idx].readableDateTime
+          ));
+          if (hasChanged) {
+            await db.transactions.bulkPut(normalized);
+          }
         }
         await refreshData();
       } catch (err: any) {
@@ -116,8 +137,8 @@ const App: React.FC = () => {
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
 
   const dailyTransactions = useMemo(() => {
-    const dayStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime();
-    const dayEnd = endOfDay(selectedDate).getTime();
+    const dayStart = toEpochSeconds(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime());
+    const dayEnd = toEpochSeconds(endOfDay(selectedDate).getTime());
     return transactions
       .filter(t => t.timestamp >= dayStart && t.timestamp <= dayEnd)
       .sort((a, b) => a.timestamp - b.timestamp);
@@ -154,8 +175,8 @@ const App: React.FC = () => {
   const dailyStatsByCurrency = useMemo(() => getStatsByCurrency(dailyTransactions), [dailyTransactions]);
 
   const monthlyStatsByCurrency = useMemo(() => {
-    const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).getTime();
-    const end = endOfMonth(selectedDate).getTime();
+    const start = toEpochSeconds(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).getTime());
+    const end = toEpochSeconds(endOfMonth(selectedDate).getTime());
     const monthTxs = transactions.filter(t => t.timestamp >= start && t.timestamp <= end);
     return getStatsByCurrency(monthTxs);
   }, [transactions, selectedDate]);
@@ -310,7 +331,7 @@ const App: React.FC = () => {
                   <div className="px-5 py-2"><span className="text-[10px] text-cyan-400 font-black uppercase tracking-widest">搜尋結果 ({filteredTransactions.length})</span></div>
                   {filteredTransactions.map(tx => (
                     <div key={tx.id}>
-                      <div className="px-5 py-1 bg-white/5 border-l-2 border-cyan-500/50"><span className="text-[10px] text-gray-500 font-bold">{format(tx.timestamp, 'yyyy-MM-dd')}</span></div>
+                      <div className="px-5 py-1 bg-white/5 border-l-2 border-cyan-500/50"><span className="text-[10px] text-gray-500 font-bold">{format(new Date(toEpochMillis(tx.timestamp)), 'yyyy-MM-dd')}</span></div>
                       <TransactionItem transaction={tx} onClick={handleEditItem} />
                     </div>
                   ))}

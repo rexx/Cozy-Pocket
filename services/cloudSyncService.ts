@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { Transaction } from '../types';
+import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 
 type ResultStatus = 'success' | 'skipped' | 'error';
 
@@ -47,10 +48,11 @@ const toPayloadItem = (tx: Transaction) => ({
   name: tx.name || '',
   merchant: tx.merchant || '',
   note: tx.note || '',
-  timestamp: tx.timestamp,
+  timestamp: toEpochSeconds(tx.timestamp),
+  readableDateTime: tx.readableDateTime || formatReadableDateTime(tx.timestamp),
   paymentMethod: tx.paymentMethod,
   tags: tx.tags || '',
-  updatedAt: Number(tx.updatedAt || tx.timestamp || Date.now()),
+  updatedAt: Number(tx.updatedAt || toEpochMillis(tx.timestamp) || Date.now()),
   version: Number(tx.version || 1),
 });
 

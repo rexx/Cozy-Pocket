@@ -13,7 +13,7 @@
 
 ```typescript
 export interface Transaction {
-  id: string;
+  id: string; // Date.now() 產生的毫秒字串 ID
   type: '支出' | '收入';
   amount: number;
   currency: string;
@@ -21,11 +21,12 @@ export interface Transaction {
   subCategoryId?: string;
   name: string;
   note?: string;
-  timestamp: number;
+  timestamp: number; // Epoch seconds（交易時間）
+  readableDateTime?: string; // yyyy-MM-dd HH:mm（人類可讀）
   paymentMethod: string;
   merchant?: string;
   tags?: string;
-  updatedAt?: number;
+  updatedAt?: number; // Epoch milliseconds（最後更新時間）
   version?: number;
 }
 ```
@@ -58,11 +59,12 @@ this.version(1).stores({
   - `G: name`
   - `H: merchant`
   - `I: note`
-  - `J: timestamp`
-  - `K: paymentMethod`
-  - `L: tags`
-  - `M: updatedAt`（最後更新時間，Epoch ms）
-  - `N: version`（整筆版本號）
+  - `J: timestamp`（交易時間，Epoch seconds）
+  - `K: readableDateTime`（人類可讀時間，`yyyy-MM-dd HH:mm`）
+  - `L: paymentMethod`
+  - `M: tags`
+  - `N: updatedAt`（最後更新時間，Epoch milliseconds）
+  - `O: version`（整筆版本號）
 
 ## 4. API 規格（Phase 1）
 
@@ -101,7 +103,8 @@ this.version(1).stores({
       "name": "早餐",
       "merchant": "便利商店",
       "note": "三明治",
-      "timestamp": 1709000000000,
+      "timestamp": 1709000000,
+      "readableDateTime": "2024-02-27 08:53",
       "paymentMethod": "現金",
       "tags": "早餐 便利商店",
       "updatedAt": 1709000000000,

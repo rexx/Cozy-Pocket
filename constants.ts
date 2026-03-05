@@ -1,5 +1,6 @@
 import { format, addDays } from 'date-fns';
 import { Category, Transaction } from './types';
+import { toEpochSeconds } from './time';
 
 export const EXPENSE_CATEGORIES: Category[] = [
   { 
@@ -157,7 +158,7 @@ today.setSeconds(0, 0);
 const createTS = (daysOffset: number, timeStr: string) => {
   const d = addDays(today, daysOffset);
   const dateStr = format(d, 'yyyy-MM-dd');
-  return new Date(`${dateStr}T${timeStr}`).getTime();
+  return toEpochSeconds(new Date(`${dateStr}T${timeStr}`).getTime());
 };
 
 export const INITIAL_TRANSACTIONS: Transaction[] = [

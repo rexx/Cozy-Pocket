@@ -23,6 +23,7 @@ const SHEET_HEADERS = [
   'merchant',
   'note',
   'timestamp',
+  'readableDateTime',
   'paymentMethod',
   'tags',
   'updatedAt',
@@ -103,8 +104,10 @@ function processCreateItems(ss, items) {
       }
 
       const state = yearState[year];
-      const incomingUpdatedAt = toNumber(item.updatedAt, Number(item.timestamp || 0) || Date.now());
+      const incomingTimestamp = normalizeEpochSeconds(item.timestamp);
+      const incomingUpdatedAt = toNumber(item.updatedAt, incomingTimestamp > 0 ? incomingTimestamp * 1000 : Date.now());
       const incomingVersion = toNumber(item.version, 1);
+      const incomingReadableDateTime = String(item.readableDateTime || formatReadableDateTime(incomingTimestamp));
 
       const row = [
         id,
@@ -116,7 +119,8 @@ function processCreateItems(ss, items) {
         String(item.name || ''),
         String(item.merchant || ''),
         String(item.note || ''),
-        Number(item.timestamp || 0),
+        incomingTimestamp,
+        incomingReadableDateTime,
         String(item.paymentMethod || ''),
         String(item.tags || ''),
         incomingUpdatedAt,
@@ -184,9 +188,9 @@ function processCreateItems(ss, items) {
 }
 
 function deriveYear(item) {
-  const ts = Number(item.timestamp || 0);
+  const ts = normalizeEpochSeconds(item.timestamp);
   if (ts > 0 && isFinite(ts)) {
-    return String(new Date(ts).getFullYear());
+    return String(new Date(ts * 1000).getFullYear());
   }
   return String(new Date().getFullYear());
 }
@@ -222,8 +226,8 @@ function loadRecordMap(sheet) {
     map[id] = {
       row: i + 2,
       appendIndex: -1,
-      updatedAt: toNumber(row[12], 0),
-      version: toNumber(row[13], 0),
+      updatedAt: toNumber(row[13], 0),
+      version: toNumber(row[14], 0),
     };
   }
   return map;
@@ -241,6 +245,32 @@ function resolveSyncDecision(existing, incomingVersion, incomingUpdatedAt) {
 function toNumber(value, fallback) {
   const num = Number(value);
   return isFinite(num) ? num : fallback;
+}
+
+function normalizeEpochSeconds(value) {
+  const num = Number(value || 0);
+  if (!isFinite(num) || num <= 0) return 0;
+  return num >= 1000000000000 ? Math.floor(num / 1000) : Math.floor(num);
+}
+
+function formatReadableDateTime(epochSeconds) {
+  if (!epochSeconds) return '';
+  const d = new Date(epochSeconds * 1000);
+  return [
+    d.getFullYear(),
+    '-',
+    pad2(d.getMonth() + 1),
+    '-',
+    pad2(d.getDate()),
+    ' ',
+    pad2(d.getHours()),
+    ':',
+    pad2(d.getMinutes()),
+  ].join('');
+}
+
+function pad2(n) {
+  return n < 10 ? '0' + n : String(n);
 }
 
 function json(obj) {

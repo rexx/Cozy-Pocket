@@ -17,7 +17,7 @@ export interface Category {
 }
 
 export interface Transaction {
-  id: string;
+  id: string; // generated from Date.now(), millisecond-based string ID
   type: TransactionType;
   amount: number;
   currency: string; // New field
@@ -25,11 +25,12 @@ export interface Transaction {
   subCategoryId?: string; 
   name: string;
   note?: string;
-  timestamp: number;
+  timestamp: number; // transaction time in epoch seconds
+  readableDateTime?: string;
   paymentMethod: string;
   merchant?: string;
   tags?: string;
-  updatedAt?: number;
+  updatedAt?: number; // last update time in epoch milliseconds
   version?: number;
   syncStatus?: 'pending' | 'synced' | 'error';
   lastSyncError?: string;

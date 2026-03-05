@@ -4,6 +4,7 @@ import { Transaction } from '../types';
 import { CATEGORIES } from '../constants';
 import * as Icons from 'lucide-react';
 import { format } from 'date-fns';
+import { toEpochMillis } from '../time';
 
 const IconMap: Record<string, any> = {
   ...Icons
@@ -62,7 +63,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
         ? `-${currencySymbol}${Math.abs(displayAmount).toLocaleString()}` 
         : `${currencySymbol}${displayAmount.toLocaleString()}`);
 
-  const formattedTime = format(new Date(transaction.timestamp), 'HH:mm');
+  const formattedTime = format(new Date(toEpochMillis(transaction.timestamp)), 'HH:mm');
 
   return (
     <div 

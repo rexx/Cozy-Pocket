@@ -55,7 +55,8 @@ export interface Transaction {
   name: string;
   merchant?: string;
   note?: string;
-  timestamp: number; // Epoch milliseconds
+  timestamp: number; // Epoch seconds
+  readableDateTime?: string; // e.g. 2026-03-05 14:30
   paymentMethod: string;
   tags?: string;
   updatedAt?: number;
@@ -82,7 +83,7 @@ this.version(1).stores({
 *   整合 Gemini API，支援將自然語言輸入（如「午餐 120 現金」）結構化為帳務紀錄。
 
 ### 6.3 精確排序 (Precise Sorting)
-*   雖然 UI 介面僅讓使用者選擇至「分鐘」，但系統在存檔時會自動擷取當下的「秒數」與「毫秒」併入 `timestamp`。這解決了在同一分鐘內新增多筆交易時，畫面排序可能跳動的問題。
+*   雖然 UI 介面僅讓使用者選擇至「分鐘」，系統會將秒數固定為 `00` 後寫入 `timestamp`（Epoch 秒），並同步寫入 `readableDateTime` 方便人類閱讀。
 
 ---
 

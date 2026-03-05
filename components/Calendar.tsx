@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { 
+import {
   format, 
   endOfMonth, 
   endOfWeek, 
@@ -13,6 +13,7 @@ import {
   endOfDay
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Search, Settings } from 'lucide-react';
+import { toEpochSeconds } from '../time';
 
 interface CalendarProps {
   selectedDate: Date;
@@ -51,8 +52,8 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
 
   const hasTransactions = (day: Date) => {
     // Fix: replace missing startOfDay with manual date creation
-    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
-    const dayEnd = endOfDay(day).getTime();
+    const dayStart = toEpochSeconds(new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime());
+    const dayEnd = toEpochSeconds(endOfDay(day).getTime());
     return transactions.some(t => t.timestamp >= dayStart && t.timestamp <= dayEnd);
   };
 
