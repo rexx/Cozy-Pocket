@@ -11,7 +11,7 @@ interface DataManagementModalProps {
   onDataChange: () => void;
 }
 
-const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags"];
+const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
 const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
 const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange }) => {
@@ -71,7 +71,9 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
           t.timestamp,
           t.readableDateTime || formatReadableDateTime(t.timestamp),
           t.paymentMethod,
-          t.tags || ''
+          t.tags || '',
+          t.updatedAt || '',
+          t.version || ''
         ].map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
       ].join('\n');
 
@@ -146,6 +148,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
             let val = values[index] || '';
             if (header === 'amount') obj[header] = parseFloat(val);
             else if (header === 'timestamp') obj[header] = toEpochSeconds(parseInt(val, 10));
+            else if (header === 'updatedAt' || header === 'version') obj[header] = parseInt(val, 10);
             else obj[header] = val;
           });
           if (Number.isNaN(obj.timestamp) && obj.readableDateTime) {
