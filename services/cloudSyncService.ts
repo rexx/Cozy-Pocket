@@ -4,11 +4,17 @@ import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 
 type ResultStatus = 'success' | 'skipped' | 'error';
 
-interface SyncResultItem {
+export interface SyncResultItem {
   id: string;
   status: ResultStatus;
   message?: string;
 }
+export interface SyncProgress {
+  processed: number;
+  total: number;
+  failed: number;
+}
+type SyncProgressCallback = (progress: SyncProgress) => void;
 
 interface SyncApiResponse {
   status: 'success' | 'error' | 'unauthorized';
@@ -147,35 +153,74 @@ const syncCreateItemsWithConfig = async (
   }
 };
 
-export const syncCreateItems = async (items: Transaction[]): Promise<SyncResultItem[]> => {
+export const syncCreateItems = async (
+  items: Transaction[],
+  onProgress?: SyncProgressCallback
+): Promise<SyncResultItem[]> => {
   const config = await getSyncConfig();
+  const total = items.length;
+
+  onProgress?.({
+    processed: 0,
+    total,
+    failed: 0,
+  });
+
   if (!config) {
-    return items.map((item) => ({
+    const failedResults: SyncResultItem[] = items.map((item) => ({
       id: item.id,
       status: 'error',
       message: 'Sync config missing',
     }));
+    onProgress?.({
+      processed: total,
+      total,
+      failed: failedResults.length,
+    });
+    return failedResults;
   }
 
   const results = await syncCreateItemsWithConfig(config, items);
   await applyResultsToLocal(results);
+  onProgress?.({
+    processed: total,
+    total,
+    failed: results.filter((result) => result.status === 'error').length,
+  });
   return results;
 };
 
-export const syncPendingTransactions = async (): Promise<SyncResultItem[]> => {
+export const syncPendingTransactions = async (
+  onProgress?: SyncProgressCallback
+): Promise<SyncResultItem[]> => {
   const config = await getSyncConfig();
   if (!config) return [];
 
   const pending = (await db.transactions.toArray()).filter((tx) => tx.syncStatus !== 'synced');
   if (pending.length === 0) return [];
 
+  onProgress?.({
+    processed: 0,
+    total: pending.length,
+    failed: 0,
+  });
+
   const allResults: SyncResultItem[] = [];
+  let processed = 0;
+  let failed = 0;
 
   for (let i = 0; i < pending.length; i += BATCH_SIZE) {
     const batch = pending.slice(i, i + BATCH_SIZE);
     const batchResults = await syncCreateItemsWithConfig(config, batch);
     await applyResultsToLocal(batchResults);
     allResults.push(...batchResults);
+    processed += batch.length;
+    failed += batchResults.filter((result) => result.status === 'error').length;
+    onProgress?.({
+      processed,
+      total: pending.length,
+      failed,
+    });
   }
 
   return allResults;

@@ -9,7 +9,7 @@ import DataManagementModal from './components/DataManagementModal';
 import { Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES } from './constants';
 import { db } from './db';
-import { syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
+import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
@@ -41,6 +41,21 @@ const App: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
+  const [syncProgressUI, setSyncProgressUI] = useState<{
+    visible: boolean;
+    label: string;
+    processed: number;
+    total: number;
+    failed: number;
+  }>({
+    visible: false,
+    label: '',
+    processed: 0,
+    total: 0,
+    failed: 0,
+  });
+  const activeSyncTaskRef = useRef(0);
+  const syncHideTimerRef = useRef<number | null>(null);
 
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,7 +106,7 @@ const App: React.FC = () => {
       setTransactions(prev => [...examples, ...prev]);
 
       void (async () => {
-        const results = await syncCreateItems(examples);
+        const results = await runSyncWithProgress('同步範例資料', (onProgress) => syncCreateItems(examples, onProgress));
         const failedCount = results.filter(r => r.status === 'error').length;
         if (failedCount > 0) {
           setCapturedErrors(prev => [...prev, `Sync Error: 範例資料有 ${failedCount} 筆同步失敗`]);
@@ -138,7 +153,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isLoading) return;
     const runStartupSync = async () => {
-      const results = await syncPendingTransactions();
+      const results = await runSyncWithProgress('啟動補送同步', (onProgress) => syncPendingTransactions(onProgress));
       const failed = results.filter(r => r.status === 'error');
       if (failed.length > 0) {
         setCapturedErrors(prev => [...prev, `Sync Pending Error: ${failed.length} 筆待同步資料上傳失敗`]);
@@ -168,6 +183,46 @@ const App: React.FC = () => {
   }, []);
 
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
+  const runSyncWithProgress = useCallback(async <T,>(
+    label: string,
+    runner: (onProgress: (progress: SyncProgress) => void) => Promise<T>
+  ): Promise<T> => {
+    const taskId = Date.now();
+    activeSyncTaskRef.current = taskId;
+    if (syncHideTimerRef.current !== null) {
+      window.clearTimeout(syncHideTimerRef.current);
+      syncHideTimerRef.current = null;
+    }
+
+    const handleProgress = (progress: SyncProgress) => {
+      if (activeSyncTaskRef.current !== taskId) return;
+      setSyncProgressUI({
+        visible: true,
+        label,
+        processed: progress.processed,
+        total: progress.total,
+        failed: progress.failed,
+      });
+    };
+
+    try {
+      return await runner(handleProgress);
+    } finally {
+      if (activeSyncTaskRef.current === taskId) {
+        syncHideTimerRef.current = window.setTimeout(() => {
+          if (activeSyncTaskRef.current !== taskId) return;
+          setSyncProgressUI(prev => ({ ...prev, visible: false }));
+        }, 1800);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (syncHideTimerRef.current !== null) {
+        window.clearTimeout(syncHideTimerRef.current);
+      }
+    };
+  }, []);
 
   const dailyTransactions = useMemo(() => {
     const dayStart = toEpochSeconds(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate()).getTime());
@@ -231,8 +286,8 @@ const App: React.FC = () => {
         await db.transactions.add(transaction);
         setTransactions(prev => [transaction, ...prev]);
 
-        void (async () => {
-          const results = await syncCreateItems([transaction]);
+      void (async () => {
+          const results = await runSyncWithProgress('同步新交易', (onProgress) => syncCreateItems([transaction], onProgress));
           const failed = results.find(r => r.id === transaction.id && r.status === 'error');
           if (failed) {
             setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Create sync failed'}`]);
@@ -268,7 +323,7 @@ const App: React.FC = () => {
       setEditingTransaction(null);
 
       void (async () => {
-        const results = await syncCreateItems([merged]);
+        const results = await runSyncWithProgress('同步更新交易', (onProgress) => syncCreateItems([merged], onProgress));
         const failed = results.find(r => r.id === merged.id && r.status === 'error');
         if (failed) {
           setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Update sync failed'}`]);
@@ -317,6 +372,9 @@ const App: React.FC = () => {
 
   const dailyCurrencyCount = Object.keys(dailyStatsByCurrency).length;
   const monthlyCurrencyCount = Object.keys(monthlyStatsByCurrency).length;
+  const syncProgressPercent = syncProgressUI.total > 0
+    ? Math.round((syncProgressUI.processed / syncProgressUI.total) * 100)
+    : 0;
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
@@ -349,6 +407,22 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
+      {syncProgressUI.visible && (
+        <div className="flex-none px-4 pt-2 z-20">
+          <div className="bg-[#24273c]/90 border border-cyan-400/30 rounded-xl p-3 shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-cyan-300 font-black uppercase tracking-[0.12em]">{syncProgressUI.label}</span>
+              <span className="text-[10px] text-gray-300 font-bold tabular-nums">{syncProgressUI.processed}/{syncProgressUI.total} ({syncProgressPercent}%)</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-[#1a1c2c] overflow-hidden">
+              <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${syncProgressPercent}%` }} />
+            </div>
+            {syncProgressUI.failed > 0 && (
+              <p className="mt-2 text-[10px] text-rose-300 font-bold">失敗：{syncProgressUI.failed} 筆</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
         <div className="mt-2 space-y-1 pb-32">
