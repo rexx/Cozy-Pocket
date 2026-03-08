@@ -7,7 +7,7 @@ import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
 import DataManagementModal from './components/DataManagementModal';
 import { Transaction } from './types';
-import { INITIAL_TRANSACTIONS, CATEGORIES } from './constants';
+import { EXAMPLE_TRANSACTIONS, CATEGORIES } from './constants';
 import { db } from './db';
 import { syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
@@ -66,22 +66,51 @@ const App: React.FC = () => {
     }
   };
 
+  const buildExampleTransactions = (): Transaction[] => {
+    const now = Date.now();
+    return EXAMPLE_TRANSACTIONS.map((t, idx) => {
+      const normalizedTimestamp = toEpochSeconds(t.timestamp);
+      return {
+        ...t,
+        id: `${now}-${idx}-${Math.random().toString(36).slice(2, 8)}`,
+        currency: t.currency || 'TWD',
+        amount: t.type === '支出' ? -Math.abs(t.amount) : Math.abs(t.amount),
+        timestamp: normalizedTimestamp,
+        readableDateTime: t.readableDateTime || formatReadableDateTime(normalizedTimestamp),
+        updatedAt: now + idx,
+        version: 1,
+        syncStatus: 'pending'
+      };
+    });
+  };
+
+  const insertExampleTransactions = async () => {
+    try {
+      const examples = buildExampleTransactions();
+      await db.transactions.bulkAdd(examples);
+      setTransactions(prev => [...examples, ...prev]);
+
+      void (async () => {
+        const results = await syncCreateItems(examples);
+        const failedCount = results.filter(r => r.status === 'error').length;
+        if (failedCount > 0) {
+          setCapturedErrors(prev => [...prev, `Sync Error: 範例資料有 ${failedCount} 筆同步失敗`]);
+        }
+        await refreshData();
+      })();
+
+      return examples.length;
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `Insert Example Error: ${err.message}`]);
+      throw err;
+    }
+  };
+
   useEffect(() => {
     const initData = async () => {
       try {
         const count = await db.transactions.count();
-        if (count === 0) {
-          const signedInit = INITIAL_TRANSACTIONS.map(t => ({
-            ...t,
-            currency: t.currency || 'TWD',
-            amount: t.type === '支出' ? -Math.abs(t.amount) : Math.abs(t.amount),
-            readableDateTime: t.readableDateTime || formatReadableDateTime(t.timestamp),
-          }));
-          // Use bulkPut so repeated init calls (e.g. React StrictMode double effects)
-          // won't fail with duplicate-key constraint errors.
-          await db.transactions.bulkPut(signedInit as Transaction[]);
-          await db.settings.put({ key: 'defaultCurrency', value: 'TWD' });
-        } else {
+        if (count > 0) {
           const existing = await db.transactions.toArray();
           const normalized = existing.map(normalizeTransactionTime);
           const hasChanged = normalized.some((tx, idx) => (
@@ -91,6 +120,10 @@ const App: React.FC = () => {
           if (hasChanged) {
             await db.transactions.bulkPut(normalized);
           }
+        }
+        const defaultCurrencySetting = await db.settings.get('defaultCurrency');
+        if (!defaultCurrencySetting) {
+          await db.settings.put({ key: 'defaultCurrency', value: 'TWD' });
         }
         await refreshData();
       } catch (err: any) {
@@ -409,7 +442,11 @@ const App: React.FC = () => {
         <AddTransactionModal initialDate={selectedDate} editingTransaction={editingTransaction} onClose={() => setIsModalOpen(false)} onAdd={addTransaction} onUpdate={updateTransaction} onDelete={deleteTransaction} />
       )}
       {isSettingsOpen && (
-        <DataManagementModal onClose={() => setIsSettingsOpen(false)} onDataChange={refreshData} />
+        <DataManagementModal
+          onClose={() => setIsSettingsOpen(false)}
+          onDataChange={refreshData}
+          onInsertExamples={insertExampleTransactions}
+        />
       )}
     </div>
   );

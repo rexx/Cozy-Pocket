@@ -161,9 +161,8 @@ const createTS = (daysOffset: number, timeStr: string) => {
   return toEpochSeconds(new Date(`${dateStr}T${timeStr}`).getTime());
 };
 
-export const INITIAL_TRANSACTIONS: Transaction[] = [
+export const EXAMPLE_TRANSACTIONS: Omit<Transaction, 'id'>[] = [
   {
-    id: 's1',
     type: '支出',
     amount: 1280,
     currency: 'TWD',
@@ -175,7 +174,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '信用卡'
   },
   {
-    id: 's2',
     type: '支出',
     amount: 850,
     currency: 'TWD',
@@ -186,7 +184,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '電子支付'
   },
   {
-    id: 's3',
     type: '支出',
     amount: 155,
     currency: 'TWD',
@@ -198,7 +195,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '現金'
   },
   {
-    id: 's4',
     type: '支出',
     amount: 30,
     currency: 'TWD',
@@ -209,7 +205,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '電子支付'
   },
   {
-    id: 's5',
     type: '收入',
     amount: 12000,
     currency: 'TWD',
@@ -219,7 +214,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '轉帳'
   },
   {
-    id: 's6',
     type: '支出',
     amount: 145,
     currency: 'TWD',
@@ -231,7 +225,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '電子支付'
   },
   {
-    id: 's7',
     type: '支出',
     amount: 2350,
     currency: 'TWD',
@@ -245,7 +238,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '信用卡'
   },
   {
-    id: 's8',
     type: '支出',
     amount: 450,
     currency: 'TWD',
@@ -256,7 +248,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '現金'
   },
   {
-    id: 's9',
     type: '支出',
     amount: 89,
     currency: 'TWD',
@@ -268,7 +259,6 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [
     paymentMethod: '電子支付'
   },
   {
-    id: 's10',
     type: '支出',
     amount: 220,
     currency: 'TWD',

@@ -9,12 +9,13 @@ import { formatReadableDateTime, toEpochSeconds } from '../time';
 interface DataManagementModalProps {
   onClose: () => void;
   onDataChange: () => void;
+  onInsertExamples: () => Promise<number>;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
 const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
-const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange }) => {
+const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -188,6 +189,16 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     }
   };
 
+  const insertExamples = async () => {
+    try {
+      const count = await onInsertExamples();
+      onDataChange();
+      setStatus({ type: 'success', message: `已插入範例資料 (${count} 筆)` });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `插入範例資料失敗: ${err.message}` });
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
       <div className="flex-none">
@@ -265,6 +276,24 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
             className="w-full py-4 bg-red-500/20 border border-red-500/30 text-red-300 font-black rounded-2xl active:scale-[0.98] transition-all"
           >
             清除本機資料並重置
+          </button>
+        </div>
+
+        <div className="bg-[#252538] rounded-3xl p-6 border border-cyan-500/20 shadow-xl space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+              <Database size={22} />
+            </div>
+            <div>
+              <h2 className="font-bold text-white">範例資料</h2>
+              <p className="text-xs text-gray-500">手動插入預設範例交易</p>
+            </div>
+          </div>
+          <button
+            onClick={insertExamples}
+            className="w-full py-4 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-black rounded-2xl active:scale-[0.98] transition-all"
+          >
+            插入範例資料
           </button>
         </div>
 
