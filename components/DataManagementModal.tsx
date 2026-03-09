@@ -10,12 +10,13 @@ interface DataManagementModalProps {
   onClose: () => void;
   onDataChange: () => void;
   onInsertExamples: () => Promise<number>;
+  onTriggerSync: (label: string) => Promise<{ total: number; failed: number }>;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
 const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
-const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples }) => {
+const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -57,8 +58,21 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
         { key: 'syncApiUrl', value: syncApiUrl.trim() },
         { key: 'syncToken', value: syncToken.trim() }
       ]);
-      setStatus({ type: 'success', message: '同步設定已儲存' });
       onDataChange();
+      const syncResult = await onTriggerSync('同步設定後立即同步');
+      if (syncResult.failed > 0) {
+        setStatus({
+          type: 'error',
+          message: `同步設定已儲存，但同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
+        });
+      } else if (syncResult.total > 0) {
+        setStatus({
+          type: 'success',
+          message: `同步設定已儲存，並已同步 ${syncResult.total} 筆`,
+        });
+      } else {
+        setStatus({ type: 'success', message: '同步設定已儲存，沒有待同步資料' });
+      }
     } catch (err: any) {
       setStatus({ type: 'error', message: `同步設定儲存失敗: ${err.message}` });
     }
@@ -253,13 +267,25 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
       if (mode === 'overwrite') await db.transactions.clear();
       await db.transactions.bulkPut(importPreview.transactions);
       onDataChange();
-      if (mode === 'append' && overwrittenCount > 0) {
+      const syncResult = await onTriggerSync('匯入後立即同步');
+      const importBaseMessage = (mode === 'append' && overwrittenCount > 0)
+        ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`
+        : `匯入成功 (${importPreview.validRows} 筆)`;
+      if (syncResult.failed > 0) {
+        setStatus({
+          type: 'error',
+          message: `${importBaseMessage}；同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
+        });
+      } else if (syncResult.total > 0) {
         setStatus({
           type: 'success',
-          message: `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`,
+          message: `${importBaseMessage}；已同步 ${syncResult.total} 筆`,
         });
       } else {
-        setStatus({ type: 'success', message: `匯入成功 (${importPreview.validRows} 筆)` });
+        setStatus({
+          type: 'success',
+          message: `${importBaseMessage}；沒有待同步資料`,
+        });
       }
       setImportPreview(null);
       setSelectedImportFileName('');

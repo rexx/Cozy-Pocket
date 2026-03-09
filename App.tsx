@@ -70,7 +70,7 @@ const App: React.FC = () => {
     };
   };
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     try {
       const allTransactions = await db.transactions.toArray();
       setTransactions(allTransactions);
@@ -79,7 +79,7 @@ const App: React.FC = () => {
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
     }
-  };
+  }, []);
 
   const buildExampleTransactions = (): Transaction[] => {
     const now = Date.now();
@@ -151,21 +151,6 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
-    const runStartupSync = async () => {
-      const results = await runSyncWithProgress('啟動補送同步', (onProgress) => syncPendingTransactions(onProgress));
-      const failed = results.filter(r => r.status === 'error');
-      if (failed.length > 0) {
-        setCapturedErrors(prev => [...prev, `Sync Pending Error: ${failed.length} 筆待同步資料上傳失敗`]);
-      }
-      if (results.length > 0) {
-        await refreshData();
-      }
-    };
-    runStartupSync();
-  }, [isLoading]);
-
-  useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       const msg = `Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`;
       setCapturedErrors(prev => [...prev, msg]);
@@ -216,6 +201,23 @@ const App: React.FC = () => {
       }
     }
   }, []);
+  const triggerPendingSync = useCallback(async (
+    label: string
+  ): Promise<{ total: number; failed: number }> => {
+    const results = await runSyncWithProgress(label, (onProgress) => syncPendingTransactions(onProgress));
+    const failed = results.filter((r) => r.status === 'error');
+    if (failed.length > 0) {
+      setCapturedErrors(prev => [...prev, `Sync Pending Error: ${failed.length} 筆待同步資料上傳失敗`]);
+    }
+    if (results.length > 0) {
+      await refreshData();
+    }
+    return { total: results.length, failed: failed.length };
+  }, [refreshData, runSyncWithProgress]);
+  useEffect(() => {
+    if (isLoading) return;
+    void triggerPendingSync('啟動補送同步');
+  }, [isLoading, triggerPendingSync]);
   useEffect(() => {
     return () => {
       if (syncHideTimerRef.current !== null) {
@@ -520,6 +522,7 @@ const App: React.FC = () => {
           onClose={() => setIsSettingsOpen(false)}
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
+          onTriggerSync={triggerPendingSync}
         />
       )}
     </div>
