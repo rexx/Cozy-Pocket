@@ -24,6 +24,21 @@ interface TransactionItemProps {
   onClick: (transaction: Transaction) => void;
 }
 
+const SYNC_STATUS_UI: Record<'pending' | 'synced' | 'error', { className: string; title: string }> = {
+  pending: {
+    title: '待同步',
+    className: 'bg-amber-300'
+  },
+  synced: {
+    title: '已同步',
+    className: 'bg-emerald-300'
+  },
+  error: {
+    title: '同步失敗',
+    className: 'bg-rose-300'
+  }
+};
+
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick }) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
   const subCategory = category.subcategories?.find(s => s.id === transaction.subCategoryId);
@@ -64,6 +79,8 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
         : `${currencySymbol}${displayAmount.toLocaleString()}`);
 
   const formattedTime = format(new Date(toEpochMillis(transaction.timestamp)), 'HH:mm');
+  const syncStatus = transaction.syncStatus || 'pending';
+  const syncStatusUi = SYNC_STATUS_UI[syncStatus];
 
   return (
     <div 
@@ -82,9 +99,16 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
           <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
             {title}
           </h3>
-          <span className="text-[10px] text-gray-600 font-bold tabular-nums flex-shrink-0 ml-4">
-            {formattedTime}
-          </span>
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-4">
+            <span
+              title={syncStatusUi.title}
+              aria-label={syncStatusUi.title}
+              className={`inline-block w-1.5 h-1.5 rounded-full ${syncStatusUi.className}`}
+            />
+            <span className="text-[10px] text-gray-600 font-bold tabular-nums">
+              {formattedTime}
+            </span>
+          </div>
         </div>
         
         <div className="flex justify-between items-center">
