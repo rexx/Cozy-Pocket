@@ -21,6 +21,16 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
   const [syncApiUrl, setSyncApiUrl] = useState('');
   const [syncToken, setSyncToken] = useState('');
+  const [selectedImportFileName, setSelectedImportFileName] = useState('');
+  const [isParsingImportFile, setIsParsingImportFile] = useState(false);
+  const [importPreview, setImportPreview] = useState<{
+    transactions: Transaction[];
+    totalRows: number;
+    validRows: number;
+    invalidRows: number;
+    duplicateWithExistingCount: number;
+    duplicateInFileCount: number;
+  } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -129,49 +139,134 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     return result;
   };
 
-  const importFromCSV = async (mode: 'overwrite' | 'append') => {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const text = e.target?.result as string;
-        if (!text) throw new Error('檔案內容為空');
-        const lines = splitCSVIntoRows(text);
-        if (lines.length < 2) throw new Error('檔案格式不正確或無資料');
-        const parsedHeader = parseCSVLine(lines[0]);
-        const headers = parsedHeader.length > 0 ? parsedHeader : CSV_HEADERS;
-        const dataRows = lines.slice(1);
-        const parsedTransactions: Transaction[] = dataRows.map(line => {
-          const values = parseCSVLine(line);
-          const obj: any = {};
-          headers.forEach((header, index) => {
-            let val = values[index] || '';
-            if (header === 'amount') obj[header] = parseFloat(val);
-            else if (header === 'timestamp') obj[header] = toEpochSeconds(parseInt(val, 10));
-            else if (header === 'updatedAt' || header === 'version') obj[header] = parseInt(val, 10);
-            else obj[header] = val;
-          });
-          if (Number.isNaN(obj.timestamp) && obj.readableDateTime) {
-            obj.timestamp = toEpochSeconds(new Date(obj.readableDateTime).getTime());
-          }
-          if (!obj.readableDateTime && Number.isFinite(obj.timestamp)) {
-            obj.readableDateTime = formatReadableDateTime(obj.timestamp);
-          }
-          if (!obj.currency) obj.currency = 'TWD';
-          return obj as Transaction;
-        }).filter(t => !isNaN(t.amount) && !isNaN(t.timestamp));
-        if (parsedTransactions.length === 0) throw new Error('找不到有效的交易紀錄');
-        if (mode === 'overwrite') await db.transactions.clear();
-        await db.transactions.bulkPut(parsedTransactions);
-        onDataChange();
-        setStatus({ type: 'success', message: `匯入成功 (${parsedTransactions.length} 筆)` });
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      } catch (err: any) {
-        setStatus({ type: 'error', message: `匯入失敗: ${err.message}` });
+  const parseTransactionsFromCSV = async (text: string) => {
+    if (!text) throw new Error('檔案內容為空');
+    const lines = splitCSVIntoRows(text);
+    if (lines.length < 2) throw new Error('檔案格式不正確或無資料');
+
+    const parsedHeader = parseCSVLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
+    const headers = parsedHeader.length > 0 ? parsedHeader : CSV_HEADERS;
+    const dataRows = lines.slice(1);
+    const parsedTransactions: Transaction[] = dataRows.map(line => {
+      const values = parseCSVLine(line);
+      const obj: any = {};
+      headers.forEach((header, index) => {
+        const val = values[index] || '';
+        if (header === 'amount') obj[header] = parseFloat(val);
+        else if (header === 'timestamp') obj[header] = toEpochSeconds(parseInt(val, 10));
+        else if (header === 'updatedAt' || header === 'version') obj[header] = parseInt(val, 10);
+        else obj[header] = val;
+      });
+      if (Number.isNaN(obj.timestamp) && obj.readableDateTime) {
+        obj.timestamp = toEpochSeconds(new Date(obj.readableDateTime).getTime());
       }
+      if (!obj.readableDateTime && Number.isFinite(obj.timestamp)) {
+        obj.readableDateTime = formatReadableDateTime(obj.timestamp);
+      }
+      if (!obj.currency) obj.currency = 'TWD';
+      return obj as Transaction;
+    }).filter(t => !isNaN(t.amount) && !isNaN(t.timestamp));
+
+    const idCountMap = new Map<string, number>();
+    for (const tx of parsedTransactions) {
+      const count = idCountMap.get(tx.id) || 0;
+      idCountMap.set(tx.id, count + 1);
+    }
+    const duplicateInFileCount = Array.from(idCountMap.values()).filter((count) => count > 1).length;
+
+    const uniqueIds = Array.from(idCountMap.keys());
+    const existing = await db.transactions.bulkGet(uniqueIds);
+    const duplicateWithExistingCount = existing.filter(Boolean).length;
+
+    return {
+      transactions: parsedTransactions,
+      totalRows: dataRows.length,
+      validRows: parsedTransactions.length,
+      invalidRows: dataRows.length - parsedTransactions.length,
+      duplicateWithExistingCount,
+      duplicateInFileCount,
     };
-    reader.readAsText(file);
+  };
+
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setStatus({ type: 'idle', message: '' });
+    setImportPreview(null);
+    setSelectedImportFileName(file?.name || '');
+    if (!file) return;
+
+    try {
+      setIsParsingImportFile(true);
+      const text = await file.text();
+      const preview = await parseTransactionsFromCSV(text);
+      setImportPreview(preview);
+      if (preview.validRows === 0) {
+        setStatus({ type: 'error', message: '預覽完成，但找不到可匯入的有效交易紀錄' });
+      } else {
+        setStatus({ type: 'idle', message: '' });
+      }
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `檔案預覽失敗: ${err.message}` });
+    } finally {
+      setIsParsingImportFile(false);
+    }
+  };
+
+  const importFromPreview = async (mode: 'overwrite' | 'append') => {
+    if (!importPreview || importPreview.validRows === 0) {
+      setStatus({ type: 'error', message: '請先選擇可匯入的 CSV 檔案並完成預覽' });
+      return;
+    }
+
+    if (mode === 'overwrite') {
+      const firstConfirm = confirm(`將覆蓋目前所有資料，並匯入 ${importPreview.validRows} 筆。確定要繼續嗎？`);
+      if (!firstConfirm) return;
+      const secondConfirm = confirm('再次確認：此操作會先清空現有資料，且無法復原。確定要「完全覆蓋」嗎？');
+      if (!secondConfirm) return;
+    }
+
+    const hasDuplicateOverwriteRisk = (
+      (mode === 'append' && importPreview.duplicateWithExistingCount > 0) ||
+      importPreview.duplicateInFileCount > 0
+    );
+    if (hasDuplicateOverwriteRisk) {
+      const duplicateConfirm = confirm(
+        `偵測到重複 ID（既有 ${importPreview.duplicateWithExistingCount} 筆、檔案內 ${importPreview.duplicateInFileCount} 筆），這些資料會被覆蓋。確定要匯入嗎？`
+      );
+      if (!duplicateConfirm) return;
+    }
+    const finalConfirm = confirm(
+      mode === 'overwrite'
+        ? `最後確認：即將覆寫匯入 ${importPreview.validRows} 筆，確定執行？`
+        : `最後確認：即將附加匯入 ${importPreview.validRows} 筆，確定執行？`
+    );
+    if (!finalConfirm) return;
+
+    try {
+      let overwrittenCount = 0;
+      if (mode === 'append') {
+        const incomingIds = Array.from(new Set(importPreview.transactions.map((tx) => tx.id)));
+        const existing = await db.transactions.bulkGet(incomingIds);
+        overwrittenCount = existing.filter(Boolean).length;
+      }
+
+      if (mode === 'overwrite') await db.transactions.clear();
+      await db.transactions.bulkPut(importPreview.transactions);
+      onDataChange();
+      if (mode === 'append' && overwrittenCount > 0) {
+        setStatus({
+          type: 'success',
+          message: `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`,
+        });
+      } else {
+        setStatus({ type: 'success', message: `匯入成功 (${importPreview.validRows} 筆)` });
+      }
+      setImportPreview(null);
+      setSelectedImportFileName('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `匯入失敗: ${err.message}` });
+    }
   };
 
   const resetLocalData = async () => {
@@ -321,15 +416,32 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
             </div>
           </div>
           <div className="relative">
-            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={() => setStatus({ type: 'idle', message: '' })} />
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportFileChange} />
             <button onClick={() => fileInputRef.current?.click()} className="w-full py-4 bg-white/5 border border-white/10 text-white font-bold rounded-2xl active:bg-white/10 transition-all flex items-center justify-center gap-2">
-              <Database size={18} /> {fileInputRef.current?.files?.[0]?.name || '選擇 CSV 檔案'}
+              <Database size={18} /> {selectedImportFileName || '選擇 CSV 檔案'}
             </button>
           </div>
-          {fileInputRef.current?.files?.[0] && (
+          {isParsingImportFile && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-gray-300">
+              解析檔案中，正在建立匯入預覽...
+            </div>
+          )}
+          {importPreview && (
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 space-y-1">
+              <p className="text-xs font-black text-amber-300">匯入預覽</p>
+              <p className="text-xs text-gray-300">資料列：{importPreview.totalRows} 行</p>
+              <p className="text-xs text-emerald-300">可匯入：{importPreview.validRows} 筆</p>
+              <p className="text-xs text-amber-200">重複 ID（既有資料）：{importPreview.duplicateWithExistingCount} 筆</p>
+              <p className="text-xs text-amber-200">重複 ID（檔案內）：{importPreview.duplicateInFileCount} 筆</p>
+              {importPreview.invalidRows > 0 && (
+                <p className="text-xs text-red-300">略過無效資料：{importPreview.invalidRows} 筆</p>
+              )}
+            </div>
+          )}
+          {importPreview && importPreview.validRows > 0 && (
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <button onClick={() => importFromCSV('append')} className="py-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl active:scale-95 transition-all">追加匯入</button>
-              <button onClick={() => { if(confirm('警告：完全覆蓋將會刪除目前所有的記帳紀錄，確定要繼續嗎？')) { importFromCSV('overwrite'); } }} className="py-3 bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold rounded-xl active:scale-95 transition-all">完全覆蓋</button>
+              <button onClick={() => importFromPreview('append')} className="py-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-xl active:scale-95 transition-all">附加匯入</button>
+              <button onClick={() => importFromPreview('overwrite')} className="py-3 bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold rounded-xl active:scale-95 transition-all">覆寫匯入</button>
             </div>
           )}
         </div>
