@@ -6,6 +6,7 @@ import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
 import DataManagementModal from './components/DataManagementModal';
+import SyncProgressPage from './components/SyncProgressPage';
 import { Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES } from './constants';
 import { db } from './db';
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSyncProgressPageOpen, setIsSyncProgressPageOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -181,6 +183,7 @@ const App: React.FC = () => {
 
     const handleProgress = (progress: SyncProgress) => {
       if (activeSyncTaskRef.current !== taskId) return;
+      void refreshData();
       setSyncProgressUI({
         visible: true,
         label,
@@ -200,7 +203,7 @@ const App: React.FC = () => {
         }, 1800);
       }
     }
-  }, []);
+  }, [refreshData]);
   const triggerPendingSync = useCallback(async (
     label: string
   ): Promise<{ total: number; failed: number }> => {
@@ -411,7 +414,12 @@ const App: React.FC = () => {
       </div>
       {syncProgressUI.visible && (
         <div className="flex-none px-4 pt-2 z-20">
-          <div className="bg-[#24273c]/90 border border-cyan-400/30 rounded-xl p-3 shadow-lg">
+          <button
+            onClick={() => setIsSyncProgressPageOpen(true)}
+            className="w-full text-left bg-[#24273c]/90 border border-cyan-400/30 rounded-xl p-3 shadow-lg active:scale-[0.995] transition-transform"
+            aria-label="開啟同步狀態頁"
+            title="開啟同步狀態頁"
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] text-cyan-300 font-black uppercase tracking-[0.12em]">{syncProgressUI.label}</span>
               <span className="text-[10px] text-gray-300 font-bold tabular-nums">{syncProgressUI.processed}/{syncProgressUI.total} ({syncProgressPercent}%)</span>
@@ -422,7 +430,7 @@ const App: React.FC = () => {
             {syncProgressUI.failed > 0 && (
               <p className="mt-2 text-[10px] text-rose-300 font-bold">失敗：{syncProgressUI.failed} 筆</p>
             )}
-          </div>
+          </button>
         </div>
       )}
 
@@ -505,11 +513,13 @@ const App: React.FC = () => {
       </div>
 
       {!isSearchMode && (
-        <div className="fixed bottom-8 right-8 z-50">
+        <>
+          <div className="fixed bottom-8 right-8 z-50">
           <button onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }} className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(34,211,238,0.4)] active:scale-90 transition-all hover:brightness-110">
             <Plus size={36} strokeWidth={2.5} />
           </button>
-        </div>
+          </div>
+        </>
       )}
 
       <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-40"></div>
@@ -523,6 +533,17 @@ const App: React.FC = () => {
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
+          onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
+        />
+      )}
+      {isSyncProgressPageOpen && (
+        <SyncProgressPage
+          transactions={transactions}
+          onClose={() => setIsSyncProgressPageOpen(false)}
+          onSyncNow={async () => {
+            await triggerPendingSync('同步狀態頁手動同步');
+          }}
+          isSyncing={syncProgressUI.visible}
         />
       )}
     </div>

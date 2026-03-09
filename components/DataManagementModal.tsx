@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Trash2 } from 'lucide-react';
+import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Trash2, CloudUpload } from 'lucide-react';
 import { Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
@@ -11,12 +11,13 @@ interface DataManagementModalProps {
   onDataChange: () => void;
   onInsertExamples: () => Promise<number>;
   onTriggerSync: (label: string) => Promise<{ total: number; failed: number }>;
+  onOpenSyncProgress: () => void;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
 const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
-const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync }) => {
+const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync, onOpenSyncProgress }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -378,6 +379,13 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
               className="w-full py-3 bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black rounded-xl active:scale-95 transition-all"
             >
               儲存同步設定
+            </button>
+            <button
+              onClick={onOpenSyncProgress}
+              className="w-full py-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-black rounded-xl active:scale-95 transition-all inline-flex items-center justify-center gap-2"
+            >
+              <CloudUpload size={14} />
+              開啟同步狀態頁
             </button>
           </div>
         </div>

@@ -29,6 +29,23 @@ interface SyncConfig {
 
 const BATCH_SIZE = 50;
 
+const setSyncStatusForItems = async (
+  items: Transaction[],
+  syncStatus: Transaction['syncStatus'],
+  lastSyncError?: string
+) => {
+  for (const item of items) {
+    const existing = await db.transactions.get(item.id);
+    if (!existing) continue;
+    await db.transactions.put({
+      ...existing,
+      syncStatus,
+      lastSyncError,
+      updatedAt: existing.updatedAt || Date.now(),
+    });
+  }
+};
+
 const getSyncConfig = async (): Promise<SyncConfig | null> => {
   const [apiUrlSetting, tokenSetting] = await Promise.all([
     db.settings.get('syncApiUrl'),
@@ -180,6 +197,13 @@ export const syncCreateItems = async (
     return failedResults;
   }
 
+  await setSyncStatusForItems(items, 'syncing', undefined);
+  onProgress?.({
+    processed: 0,
+    total,
+    failed: 0,
+  });
+
   const results = await syncCreateItemsWithConfig(config, items);
   await applyResultsToLocal(results);
   onProgress?.({
@@ -211,6 +235,12 @@ export const syncPendingTransactions = async (
 
   for (let i = 0; i < pending.length; i += BATCH_SIZE) {
     const batch = pending.slice(i, i + BATCH_SIZE);
+    await setSyncStatusForItems(batch, 'syncing', undefined);
+    onProgress?.({
+      processed,
+      total: pending.length,
+      failed,
+    });
     const batchResults = await syncCreateItemsWithConfig(config, batch);
     await applyResultsToLocal(batchResults);
     allResults.push(...batchResults);

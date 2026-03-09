@@ -1,0 +1,118 @@
+import React, { useMemo } from 'react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { Transaction } from '../types';
+import { toEpochMillis } from '../time';
+import TransactionItem from './TransactionItem';
+
+interface SyncProgressPageProps {
+  transactions: Transaction[];
+  onClose: () => void;
+  onSyncNow: () => Promise<void>;
+  isSyncing: boolean;
+}
+
+type SyncStatusKey = 'pending' | 'syncing' | 'synced' | 'error';
+
+const STATUS_META: Record<SyncStatusKey, { label: string }> = {
+  pending: {
+    label: '待同步',
+  },
+  syncing: {
+    label: '同步中',
+  },
+  synced: {
+    label: '已同步',
+  },
+  error: {
+    label: '失敗',
+  },
+};
+
+const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClose, onSyncNow, isSyncing }) => {
+  const groupedCounts = useMemo(() => {
+    const buckets: Record<SyncStatusKey, Transaction[]> = {
+      pending: [],
+      syncing: [],
+      synced: [],
+      error: [],
+    };
+
+    for (const tx of transactions) {
+      const status: SyncStatusKey = tx.syncStatus === 'syncing'
+        ? 'syncing'
+        : tx.syncStatus === 'synced'
+          ? 'synced'
+          : tx.syncStatus === 'error'
+            ? 'error'
+            : 'pending';
+      buckets[status].push(tx);
+    }
+    return {
+      pending: buckets.pending.length,
+      syncing: buckets.syncing.length,
+      synced: buckets.synced.length,
+      error: buckets.error.length,
+    };
+  }, [transactions]);
+
+  const sortedTransactions = useMemo(() => (
+    [...transactions].sort((a, b) => toEpochMillis(b.timestamp) - toEpochMillis(a.timestamp))
+  ), [transactions]);
+
+  const statusOrder: SyncStatusKey[] = ['pending', 'syncing', 'error', 'synced'];
+
+  return (
+    <div className="fixed inset-0 z-[90] bg-[#1a1c2c] text-slate-200">
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 bg-[#1e1e2d]">
+          <div className="flex items-center gap-3">
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white transition-colors">
+              <ArrowLeft size={22} />
+            </button>
+            <div>
+              <h2 className="text-base font-black text-white tracking-wide">同步狀態</h2>
+              <p className="text-[10px] text-gray-500 font-bold">待同步與同步結果總覽</p>
+            </div>
+          </div>
+          <button
+            onClick={onSyncNow}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-2 text-[11px] font-black px-3 py-2 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+            {isSyncing ? '同步中' : '同步待同步'}
+          </button>
+        </div>
+
+        <div className="px-4 py-3 border-b border-white/5 grid grid-cols-4 gap-2 bg-[#1c1f30]">
+          {statusOrder.map((statusKey) => (
+            <div key={statusKey} className="rounded-xl border border-white/10 bg-[#24273c]/60 px-2 py-2 text-center">
+              <p className="text-[10px] text-gray-400 font-bold">{STATUS_META[statusKey].label}</p>
+              <p className="text-sm font-black text-white mt-1 tabular-nums">{groupedCounts[statusKey]}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4">
+          {sortedTransactions.length > 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-[#24273c]/40 overflow-hidden">
+              {sortedTransactions.map((tx) => (
+                <TransactionItem
+                  key={tx.id}
+                  transaction={tx}
+                  onClick={() => {}}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-[11px] text-gray-600 font-bold text-center">
+              目前沒有同步資料
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SyncProgressPage;

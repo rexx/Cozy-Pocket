@@ -32,7 +32,7 @@ export interface Transaction {
   tags?: string;
   updatedAt?: number; // last update time in epoch milliseconds
   version?: number;
-  syncStatus?: 'pending' | 'synced' | 'error';
+  syncStatus?: 'pending' | 'syncing' | 'synced' | 'error';
   lastSyncError?: string;
 }
 

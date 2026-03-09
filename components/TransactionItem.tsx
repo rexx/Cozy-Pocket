@@ -24,10 +24,14 @@ interface TransactionItemProps {
   onClick: (transaction: Transaction) => void;
 }
 
-const SYNC_STATUS_UI: Record<'pending' | 'synced' | 'error', { className: string; title: string }> = {
+const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { className: string; title: string }> = {
   pending: {
     title: '待同步',
     className: 'bg-amber-300'
+  },
+  syncing: {
+    title: '同步中',
+    className: 'bg-sky-300'
   },
   synced: {
     title: '已同步',
