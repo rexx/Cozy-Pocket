@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { format, isSameDay, endOfMonth, isWithinInterval, endOfDay } from 'date-fns';
-import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers } from 'lucide-react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import { format, isSameDay, endOfMonth, isWithinInterval, endOfDay, addDays } from 'date-fns';
+import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
@@ -58,10 +58,50 @@ const App: React.FC = () => {
   });
   const activeSyncTaskRef = useRef(0);
   const syncHideTimerRef = useRef<number | null>(null);
+  const listViewportRef = useRef<HTMLDivElement>(null);
+  const [dateNavTop, setDateNavTop] = useState<number | null>(null);
 
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useLayoutEffect(() => {
+    let rafId = 0;
+    const updateDateNavTop = () => {
+      const viewportEl = listViewportRef.current;
+      if (!viewportEl) {
+        setDateNavTop(Math.round(window.innerHeight / 2));
+        return;
+      }
+      const rect = viewportEl.getBoundingClientRect();
+      if (rect.height <= 0) {
+        setDateNavTop(Math.round(window.innerHeight / 2));
+        return;
+      }
+      const mid = rect.top + rect.height / 2;
+      setDateNavTop(Math.round(mid));
+    };
+
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateDateNavTop);
+    };
+
+    scheduleUpdate();
+    window.addEventListener('resize', scheduleUpdate);
+
+    let observer: ResizeObserver | null = null;
+    if (listViewportRef.current && 'ResizeObserver' in window) {
+      observer = new ResizeObserver(scheduleUpdate);
+      observer.observe(listViewportRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', scheduleUpdate);
+      if (observer) observer.disconnect();
+      cancelAnimationFrame(rafId);
+    };
+  }, [isSearchMode, syncProgressUI.visible, transactions.length]);
 
   const normalizeTransactionTime = (tx: Transaction): Transaction => {
     const normalizedTimestamp = toEpochSeconds(tx.timestamp);
@@ -434,7 +474,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
+      <div ref={listViewportRef} className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
         <div className="mt-2 space-y-1 pb-32">
           {isSearchMode ? (
             <>
@@ -514,6 +554,29 @@ const App: React.FC = () => {
 
       {!isSearchMode && (
         <>
+          {dateNavTop !== null && (
+            <div
+              className="fixed left-6 right-6 -translate-y-1/2 z-40 pointer-events-none"
+              style={{ top: `${dateNavTop}px` }}
+            >
+              <button
+                onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+                className="pointer-events-auto absolute left-0 w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+                aria-label="切換到昨天"
+                title="昨天"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                className="pointer-events-auto absolute right-0 w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+                aria-label="切換到明天"
+                title="明天"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
           <div className="fixed bottom-8 right-8 z-50">
           <button onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }} className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(34,211,238,0.4)] active:scale-90 transition-all hover:brightness-110">
             <Plus size={36} strokeWidth={2.5} />
