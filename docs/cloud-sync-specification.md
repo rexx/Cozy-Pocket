@@ -28,8 +28,13 @@ export interface Transaction {
   tags?: string;
   updatedAt?: number; // Epoch milliseconds（最後更新時間）
   version?: number;
+  syncStatus?: 'pending' | 'syncing' | 'synced' | 'error'; // 本地同步追蹤狀態
+  lastSyncError?: string; // 最近一次同步錯誤訊息（本地欄位）
 }
 ```
+
+- `syncStatus`、`lastSyncError` 為前端本地追蹤欄位，用於 UI 顯示與補送流程。
+- 這兩個欄位目前不寫入 Google Sheets，也不包含在 API `items[]` payload 中。
 
 ### 2.2 Dexie 結構
 來源：[db.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/db.ts)
@@ -191,13 +196,49 @@ this.version(1).stores({
 - 觸發：使用者在 App 新增一筆交易成功寫入本地後。
 - 行為：呼叫 `create`，`items` 只帶該 1 筆。
 
-2. 啟動補送未完成資料（Startup Pending Sync）
+2. 更新交易後立即同步（Immediate Update Sync）
+- 觸發：使用者編輯既有交易並成功寫回本地後。
+- 行為：沿用 `create` API 單筆 upsert；前端會先將 `version + 1`、更新 `updatedAt`，並把 `syncStatus` 重設為 `pending`。
+
+3. 匯入後立即同步（Import Sync）
+- 觸發：使用者從 CSV 匯入資料成功寫入本地後。
+- 行為：呼叫 `syncPending` 補送所有尚未同步完成的資料；支援 append 與 overwrite 匯入模式。
+
+4. 儲存同步設定後立即同步（Config Save Sync）
+- 觸發：使用者儲存 `syncApiUrl` 與 `syncToken` 後。
+- 行為：立即執行 `syncPending`，嘗試補送既有待同步資料。
+
+5. 插入範例資料後立即同步（Example Seed Sync）
+- 觸發：使用者插入範例交易後。
+- 行為：對新插入的範例資料執行同步。
+
+6. 啟動補送未完成資料（Startup Pending Sync）
 - 觸發：App 啟動後執行 `syncPending`（掃描待同步資料）。
 - 行為：以 `create` 分批補送待同步資料。
+
+7. 同步狀態頁手動同步（Manual Retry from Sync Progress Page）
+- 觸發：使用者在同步狀態頁點擊「同步待同步」。
+- 行為：執行 `syncPending`，重新嘗試所有 `syncStatus !== 'synced'` 的資料。
 
 ## 6. `syncPending` 定義
 - `syncPending` 是「補發機制」：
   - 在 App 啟動時，掃描本地尚未成功上傳的交易，逐筆重送到雲端。
+- 前端目前將 `syncStatus !== 'synced'` 的資料都視為待補送項目，包含 `pending`、`syncing`、`error`。
+- 批次大小目前固定為 `50` 筆。
+
+## 6.1 前端同步狀態機（目前實作）
+- 初始或待重送：`pending`
+- 送出中：`syncing`
+- API 回傳 `success` 或 `skipped`：標記為 `synced`
+- API 回傳 item `error`、整體 `status !== success`、缺少 `results[]`、缺少單筆結果、非 JSON 回應、網路錯誤：標記為 `error`，並寫入 `lastSyncError`
+
+## 6.2 使用者可見同步 UI
+- 交易列表中的每筆交易會顯示一個同步狀態點：
+  - `pending`：待同步
+  - `syncing`：同步中
+  - `synced`：已同步
+  - `error`：同步失敗
+- App 另提供「同步狀態頁」，顯示四種狀態的筆數統計、完整交易列表，以及手動同步待同步資料的入口。
 
 ## 7. Sync Conflict Matrix
 

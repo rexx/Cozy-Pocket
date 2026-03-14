@@ -25,9 +25,15 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 
 ---
 
-## 3. 雲端同步規格 (Cloud Sync Specification) - 未來實作項目
+## 3. 雲端同步規格 (Cloud Sync Specification)
 
-雲端同步規格已獨立整理至：[Cloud Sync Specification](docs/cloud-sync-specification.md)
+目前已實作 **Phase 1（create + pending sync）** 的雲端同步流程：
+*   透過 Google Apps Script 將資料自動備份至 Google Sheets。
+*   新增、更新、匯入、插入範例資料後會觸發同步。
+*   App 啟動後會自動補送尚未同步完成的資料。
+*   交易列表會顯示同步狀態點，且可從「同步狀態頁」查看待同步 / 同步中 / 已同步 / 失敗總覽。
+
+完整規格請見：[Cloud Sync Specification](docs/cloud-sync-specification.md)
 
 ---
 
@@ -61,6 +67,8 @@ export interface Transaction {
   tags?: string;
   updatedAt?: number;
   version?: number;
+  syncStatus?: 'pending' | 'syncing' | 'synced' | 'error';
+  lastSyncError?: string;
 }
 ```
 
@@ -84,6 +92,11 @@ this.version(1).stores({
 
 ### 6.3 精確排序 (Precise Sorting)
 *   雖然 UI 介面僅讓使用者選擇至「分鐘」，系統會將秒數固定為 `00` 後寫入 `timestamp`（Epoch 秒），並同步寫入 `readableDateTime` 方便人類閱讀。
+
+### 6.4 同步狀態追蹤
+*   每筆交易在本地端會保存 `syncStatus` 與 `lastSyncError`，用來追蹤同步進度與錯誤訊息。
+*   `syncStatus` 為本地 UI / 補送機制使用的狀態欄位，不屬於上傳到 Google Sheets 的 payload 欄位。
+*   目前同步狀態包含：`pending`、`syncing`、`synced`、`error`。
 
 ---
 
@@ -112,3 +125,17 @@ App 內建重置按鈕：
 * `localStorage.clear()`
 * 刪除 `CozyPocketDB`（IndexedDB）
 * 自動重新載入頁面
+
+---
+
+## 9. 雲端同步行為
+
+目前會在以下時機觸發同步：
+
+1. 新增交易後立即同步
+2. 更新交易後立即同步
+3. 匯入 CSV 後立即同步
+4. 儲存 Sync API URL / Token 後立即同步既有待同步資料
+5. 插入範例資料後立即同步
+6. App 啟動後自動補送未同步完成資料
+7. 使用者可從「資料與設定」開啟「同步狀態頁」，手動重新同步待同步資料
