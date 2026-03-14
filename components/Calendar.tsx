@@ -20,10 +20,20 @@ interface CalendarProps {
   onDateSelect: (date: Date) => void;
   onSearchClick: () => void;
   onSettingsClick: () => void;
+  onSyncProgressClick?: () => void;
+  isSyncProgressVisible?: boolean;
   transactions: any[];
 }
 
-const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearchClick, onSettingsClick, transactions }) => {
+const Calendar: React.FC<CalendarProps> = ({
+  selectedDate,
+  onDateSelect,
+  onSearchClick,
+  onSettingsClick,
+  onSyncProgressClick,
+  isSyncProgressVisible = false,
+  transactions
+}) => {
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
   const today = new Date();
   const isCurrentlyToday = isSameDay(safeDate, today);
@@ -98,6 +108,36 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
         </div>
 
         <div className="flex items-center gap-1 justify-self-end">
+          {isSyncProgressVisible && (
+            <button
+              onClick={onSyncProgressClick}
+              className="relative text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
+              title="開啟同步狀態頁"
+              aria-label="開啟同步狀態頁"
+            >
+              <svg className="h-5 w-5 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="15.5"
+                  fill="none"
+                  className="stroke-white/10"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="15.5"
+                  fill="none"
+                  className="stroke-cyan-400 animate-spin origin-center"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray="24 76"
+                  pathLength="100"
+                />
+              </svg>
+            </button>
+          )}
           <button 
             onClick={onSettingsClick}
             className="text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"

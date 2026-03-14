@@ -391,6 +391,8 @@ const App: React.FC = () => {
             onDateSelect={setSelectedDate}
             onSearchClick={toggleSearchMode}
             onSettingsClick={() => setIsSettingsOpen(true)}
+            onSyncProgressClick={() => setIsSyncProgressPageOpen(true)}
+            isSyncProgressVisible={syncProgressUI.visible}
             transactions={transactions}
           />
         ) : (
@@ -411,28 +413,6 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
-      {syncProgressUI.visible && (
-        <div className="flex-none px-4 pt-2 z-20">
-          <button
-            onClick={() => setIsSyncProgressPageOpen(true)}
-            className="w-full text-left bg-[#24273c]/90 border border-cyan-400/30 rounded-xl p-3 shadow-lg active:scale-[0.995] transition-transform"
-            aria-label="開啟同步狀態頁"
-            title="開啟同步狀態頁"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-cyan-300 font-black uppercase tracking-[0.12em]">{syncProgressUI.label}</span>
-              <span className="text-[10px] text-gray-300 font-bold tabular-nums">{syncProgressUI.processed}/{syncProgressUI.total} ({syncProgressPercent}%)</span>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-[#1a1c2c] overflow-hidden">
-              <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${syncProgressPercent}%` }} />
-            </div>
-            {syncProgressUI.failed > 0 && (
-              <p className="mt-2 text-[10px] text-rose-300 font-bold">失敗：{syncProgressUI.failed} 筆</p>
-            )}
-          </button>
-        </div>
-      )}
-
       <div className="flex-1 min-h-0 relative overflow-hidden">
         {!isSearchMode && (
           <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">
