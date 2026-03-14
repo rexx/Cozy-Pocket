@@ -12,12 +12,13 @@ interface DataManagementModalProps {
   onInsertExamples: () => Promise<number>;
   onTriggerSync: (label: string) => Promise<{ total: number; failed: number }>;
   onOpenSyncProgress: () => void;
+  onNotify: (message: string) => void;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
 const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
-const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync, onOpenSyncProgress }) => {
+const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync, onOpenSyncProgress, onNotify }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -62,16 +63,19 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
       onDataChange();
       const syncResult = await onTriggerSync('同步設定後立即同步');
       if (syncResult.failed > 0) {
+        onNotify('同步設定已儲存');
         setStatus({
           type: 'error',
           message: `同步設定已儲存，但同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
         });
       } else if (syncResult.total > 0) {
+        onNotify('同步設定已儲存');
         setStatus({
           type: 'success',
           message: `同步設定已儲存，並已同步 ${syncResult.total} 筆`,
         });
       } else {
+        onNotify('同步設定已儲存');
         setStatus({ type: 'success', message: '同步設定已儲存，沒有待同步資料' });
       }
     } catch (err: any) {

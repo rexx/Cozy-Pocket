@@ -33,6 +33,14 @@ const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ err
   );
 };
 
+const SuccessToast: React.FC<{ message: string }> = ({ message }) => (
+  <div className="fixed left-1/2 bottom-28 z-[9998] -translate-x-1/2 animate-slide-up pointer-events-none">
+    <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 shadow-2xl backdrop-blur-md">
+      <p className="text-sm font-bold text-emerald-200 whitespace-nowrap">{message}</p>
+    </div>
+  </div>
+);
+
 const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -61,6 +69,8 @@ const App: React.FC = () => {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastHideTimerRef = useRef<number | null>(null);
 
   const normalizeTransactionTime = (tx: Transaction): Transaction => {
     const normalizedTimestamp = toEpochSeconds(tx.timestamp);
@@ -169,6 +179,17 @@ const App: React.FC = () => {
   }, []);
 
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    if (toastHideTimerRef.current !== null) {
+      window.clearTimeout(toastHideTimerRef.current);
+    }
+    toastHideTimerRef.current = window.setTimeout(() => {
+      setToastMessage('');
+      toastHideTimerRef.current = null;
+    }, 1800);
+  }, []);
+
   const runSyncWithProgress = useCallback(async <T,>(
     label: string,
     runner: (onProgress: (progress: SyncProgress) => void) => Promise<T>
@@ -224,6 +245,9 @@ const App: React.FC = () => {
     return () => {
       if (syncHideTimerRef.current !== null) {
         window.clearTimeout(syncHideTimerRef.current);
+      }
+      if (toastHideTimerRef.current !== null) {
+        window.clearTimeout(toastHideTimerRef.current);
       }
     };
   }, []);
@@ -289,16 +313,17 @@ const App: React.FC = () => {
         } as Transaction;
         await db.transactions.add(transaction);
         setTransactions(prev => [transaction, ...prev]);
+        showToast('已儲存新紀錄');
 
       void (async () => {
           const results = await runSyncWithProgress('同步新交易', (onProgress) => syncCreateItems([transaction], onProgress));
           const failed = results.find(r => r.id === transaction.id && r.status === 'error');
           if (failed) {
             setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Create sync failed'}`]);
-          }
-          await refreshData();
-        })();
-        return;
+        }
+        await refreshData();
+      })();
+        return true;
       } catch (err: any) {
         if (err.name === 'ConstraintError' || err.message.includes('already exists')) {
           attempts++;
@@ -308,6 +333,7 @@ const App: React.FC = () => {
         break;
       }
     }
+    return false;
   };
 
   const updateTransaction = async (updatedTx: Transaction) => {
@@ -325,6 +351,7 @@ const App: React.FC = () => {
       await db.transactions.put(merged);
       setTransactions(prev => prev.map(t => t.id === updatedTx.id ? merged : t));
       setEditingTransaction(null);
+      showToast('已儲存修改');
 
       void (async () => {
         const results = await runSyncWithProgress('同步更新交易', (onProgress) => syncCreateItems([merged], onProgress));
@@ -334,8 +361,10 @@ const App: React.FC = () => {
         }
         await refreshData();
       })();
+      return true;
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `Update Error: ${err.message}`]);
+      return false;
     }
   };
 
@@ -383,6 +412,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+      {toastMessage && <SuccessToast message={toastMessage} />}
       
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         {!isSearchMode ? (
@@ -531,6 +561,7 @@ const App: React.FC = () => {
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
           onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
+          onNotify={showToast}
         />
       )}
       {isSyncProgressPageOpen && (

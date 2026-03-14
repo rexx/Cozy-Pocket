@@ -24,8 +24,8 @@ const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
 interface AddTransactionModalProps {
   onClose: () => void;
-  onAdd: (transaction: Omit<Transaction, 'id'>) => void;
-  onUpdate?: (transaction: Transaction) => void;
+  onAdd: (transaction: Omit<Transaction, 'id'>) => Promise<boolean>;
+  onUpdate?: (transaction: Transaction) => Promise<boolean>;
   onDelete?: (id: string) => void;
   initialDate: Date;
   editingTransaction?: Transaction | null;
@@ -175,7 +175,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const parsedAmount = parseFloat(amount || '0');
     if (isNaN(parsedAmount)) return alert("請輸入有效的數字");
     if (!categoryId) return alert("請選擇類別");
@@ -216,11 +216,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     };
 
     if (isEditing && onUpdate && editingTransaction) {
-      onUpdate({ ...data, id: editingTransaction.id } as Transaction);
+      const saved = await onUpdate({ ...data, id: editingTransaction.id } as Transaction);
+      if (saved) onClose();
     } else {
-      onAdd(data);
+      const saved = await onAdd(data);
+      if (saved) onClose();
     }
-    onClose();
   };
 
   const handleDelete = () => {
