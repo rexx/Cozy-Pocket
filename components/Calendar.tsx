@@ -71,7 +71,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
   return (
     <div className="bg-[#1a1c2c] p-4 pb-4 select-none">
       {/* Header Layout: <, 今, [date], ⚙️, 🔍, > */}
-      <div className="grid grid-cols-3 items-center mb-6 px-1">
+      <div className="grid grid-cols-3 items-center mb-4 px-1">
         
         {/* Left Side Group: < and 今 */}
         <div className="flex items-center gap-1 justify-self-start">
@@ -127,7 +127,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-y-3 text-center">
+      <div className="grid grid-cols-7 gap-y-1 text-center">
         {weekDays.map(day => (
           <span key={day} className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{day}</span>
         ))}
