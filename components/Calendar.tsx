@@ -47,6 +47,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
   const nextMonth = () => onDateSelect(addMonths(safeDate, 1));
   const prevMonth = () => onDateSelect(addMonths(safeDate, -1));
   const goToToday = () => onDateSelect(new Date());
+  const monthNavButtonClassName = 'pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all';
 
   const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -70,15 +71,8 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
 
   return (
     <div className="bg-[#1a1c2c] p-4 pb-4 select-none">
-      {/* Header Layout: <, 今, [date], ⚙️, 🔍, > */}
       <div className="grid grid-cols-3 items-center mb-4 px-1">
-        
-        {/* Left Side Group: < and 今 */}
         <div className="flex items-center gap-1 justify-self-start">
-          <button onClick={prevMonth} className="text-gray-500 p-2 active:scale-75 transition-transform">
-            <ChevronLeft size={24} />
-          </button>
-          
           <div className="w-9 flex justify-center">
             {!isCurrentlyToday && (
               <button 
@@ -90,8 +84,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
             )}
           </div>
         </div>
-        
-        {/* Center: Date Picker - Perfectly Centered */}
+
         <div className="flex justify-center">
           <div className="relative">
             <input 
@@ -104,7 +97,6 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
           </div>
         </div>
 
-        {/* Right Side Group: ⚙️, 🔍 and > */}
         <div className="flex items-center gap-1 justify-self-end">
           <button 
             onClick={onSettingsClick}
@@ -120,51 +112,68 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
           >
             <Search size={22} />
           </button>
-          
-          <button onClick={nextMonth} className="text-gray-500 p-2 active:scale-75 transition-transform">
-            <ChevronRight size={24} />
-          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-y-1 text-center">
-        {weekDays.map(day => (
-          <span key={day} className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{day}</span>
-        ))}
-        {calendarDays.map((day, i) => {
-          const isSelected = isSameDay(day, safeDate);
-          const isCurrentMonth = isSameMonth(day, monthStart);
-          const isRecordedDay = hasTransactions(day);
-          const dayOfWeek = getDay(day); 
-          
-          let dayTextColor = 'text-gray-500';
-          if (isCurrentMonth) {
-            dayTextColor = 'text-gray-200';
-            if (dayOfWeek === 6) dayTextColor = 'text-emerald-500/80';
-            if (dayOfWeek === 0) dayTextColor = 'text-red-500/80';
-          } else {
-            dayTextColor = 'text-gray-700';
-          }
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between px-2">
+          <button
+            onClick={prevMonth}
+            className={monthNavButtonClassName}
+            aria-label="切換到上個月"
+            title="上個月"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            onClick={nextMonth}
+            className={monthNavButtonClassName}
+            aria-label="切換到下個月"
+            title="下個月"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
 
-          return (
-            <div 
-              key={i} 
-              onClick={() => onDateSelect(day)}
-              className="relative flex flex-col items-center justify-center cursor-pointer py-1"
-            >
-              <div className={`
-                w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300
-                ${isSelected ? 'bg-cyan-500 text-black font-bold shadow-[0_0_12px_rgba(34,211,238,0.5)] scale-110' : ''}
-                ${!isSelected && isRecordedDay ? 'bg-gray-500/15' : ''}
-                ${!isSelected && isCurrentMonth && isSameDay(day, new Date()) ? 'border border-white/20' : ''}
-              `}>
-                <span className={`text-sm ${isSelected ? 'text-black' : dayTextColor}`}>
-                  {format(day, 'd')}
-                </span>
+        <div className="grid grid-cols-7 gap-y-1 text-center">
+          {weekDays.map(day => (
+            <span key={day} className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{day}</span>
+          ))}
+          {calendarDays.map((day, i) => {
+            const isSelected = isSameDay(day, safeDate);
+            const isCurrentMonth = isSameMonth(day, monthStart);
+            const isRecordedDay = hasTransactions(day);
+            const dayOfWeek = getDay(day); 
+            
+            let dayTextColor = 'text-gray-500';
+            if (isCurrentMonth) {
+              dayTextColor = 'text-gray-200';
+              if (dayOfWeek === 6) dayTextColor = 'text-emerald-500/80';
+              if (dayOfWeek === 0) dayTextColor = 'text-red-500/80';
+            } else {
+              dayTextColor = 'text-gray-700';
+            }
+
+            return (
+              <div 
+                key={i} 
+                onClick={() => onDateSelect(day)}
+                className="relative flex flex-col items-center justify-center cursor-pointer py-1"
+              >
+                <div className={`
+                  w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300
+                  ${isSelected ? 'bg-cyan-500 text-black font-bold shadow-[0_0_12px_rgba(34,211,238,0.5)] scale-110' : ''}
+                  ${!isSelected && isRecordedDay ? 'bg-gray-500/15' : ''}
+                  ${!isSelected && isCurrentMonth && isSameDay(day, new Date()) ? 'border border-white/20' : ''}
+                `}>
+                  <span className={`text-sm ${isSelected ? 'text-black' : dayTextColor}`}>
+                    {format(day, 'd')}
+                  </span>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
