@@ -134,6 +134,7 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
         {calendarDays.map((day, i) => {
           const isSelected = isSameDay(day, safeDate);
           const isCurrentMonth = isSameMonth(day, monthStart);
+          const isRecordedDay = hasTransactions(day);
           const dayOfWeek = getDay(day); 
           
           let dayTextColor = 'text-gray-500';
@@ -154,15 +155,13 @@ const Calendar: React.FC<CalendarProps> = ({ selectedDate, onDateSelect, onSearc
               <div className={`
                 w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300
                 ${isSelected ? 'bg-cyan-500 text-black font-bold shadow-[0_0_12px_rgba(34,211,238,0.5)] scale-110' : ''}
+                ${!isSelected && isRecordedDay ? 'bg-gray-500/15' : ''}
                 ${!isSelected && isCurrentMonth && isSameDay(day, new Date()) ? 'border border-white/20' : ''}
               `}>
                 <span className={`text-sm ${isSelected ? 'text-black' : dayTextColor}`}>
                   {format(day, 'd')}
                 </span>
               </div>
-              {hasTransactions(day) && !isSelected && (
-                <div className="absolute bottom-0 w-1 h-1 bg-cyan-400 rounded-full"></div>
-              )}
             </div>
           );
         })}
