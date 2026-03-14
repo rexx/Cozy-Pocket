@@ -1,22 +1,13 @@
 
 import React from 'react';
 import { Transaction } from '../types';
-import { CATEGORIES } from '../constants';
+import { CATEGORIES, formatCurrencyAmount } from '../constants';
 import * as Icons from 'lucide-react';
 import { format } from 'date-fns';
 import { toEpochMillis } from '../time';
 
 const IconMap: Record<string, any> = {
   ...Icons
-};
-
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  'TWD': '$',
-  'USD': '$',
-  'JPY': '¥',
-  'EUR': '€',
-  'HKD': '$',
-  'CNY': '¥'
 };
 
 interface TransactionItemProps {
@@ -74,13 +65,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
   }
 
   const displayAmount = isIncome ? transaction.amount : -transaction.amount;
-  const currencySymbol = CURRENCY_SYMBOLS[transaction.currency] || transaction.currency;
-  
-  const formattedAmount = Math.abs(displayAmount) < 0.0001 
-    ? `${currencySymbol}0` 
-    : (displayAmount < 0 
-        ? `-${currencySymbol}${Math.abs(displayAmount).toLocaleString()}` 
-        : `${currencySymbol}${displayAmount.toLocaleString()}`);
+  const formattedAmount = `${displayAmount < 0 ? '-' : ''}${formatCurrencyAmount(displayAmount, transaction.currency)}`;
 
   const formattedTime = format(new Date(toEpochMillis(transaction.timestamp)), 'HH:mm');
   const syncStatus = transaction.syncStatus || 'pending';

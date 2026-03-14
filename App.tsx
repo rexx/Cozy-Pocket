@@ -8,7 +8,7 @@ import AddTransactionModal from './components/AddTransactionModal';
 import DataManagementModal from './components/DataManagementModal';
 import SyncProgressPage from './components/SyncProgressPage';
 import { Transaction } from './types';
-import { EXAMPLE_TRANSACTIONS, CATEGORIES } from './constants';
+import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
@@ -85,8 +85,12 @@ const App: React.FC = () => {
     try {
       const allTransactions = await db.transactions.toArray();
       setTransactions(allTransactions);
-      const setting = await db.settings.get('defaultCurrency');
-      if (setting) setDefaultCurrency(setting.value);
+      const [defaultCurrencySetting, enabledCurrenciesSetting] = await Promise.all([
+        db.settings.get('defaultCurrency'),
+        db.settings.get('enabledCurrencies')
+      ]);
+      const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
+      setDefaultCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
     }
@@ -147,10 +151,16 @@ const App: React.FC = () => {
             await db.transactions.bulkPut(normalized);
           }
         }
-        const defaultCurrencySetting = await db.settings.get('defaultCurrency');
-        if (!defaultCurrencySetting) {
-          await db.settings.put({ key: 'defaultCurrency', value: 'TWD' });
-        }
+        const [defaultCurrencySetting, enabledCurrenciesSetting] = await Promise.all([
+          db.settings.get('defaultCurrency'),
+          db.settings.get('enabledCurrencies')
+        ]);
+        const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
+        const safeDefaultCurrency = getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies);
+        await db.settings.bulkPut([
+          { key: 'enabledCurrencies', value: enabledCurrencies },
+          { key: 'defaultCurrency', value: safeDefaultCurrency }
+        ]);
         await refreshData();
       } catch (err: any) {
         setCapturedErrors(prev => [...prev, `DB Init Error: ${err.message}`]);
@@ -389,9 +399,8 @@ const App: React.FC = () => {
     if (!isSearchMode) setTimeout(() => searchInputRef.current?.focus(), 100);
   };
 
-  const formatStatAmount = (val: number, isExpense: boolean, currency: string) => {
-    if (Math.abs(val) < 0.0001) return `${currency} 0`;
-    return `${currency} ${val.toLocaleString()}`;
+  const formatStatAmount = (val: number, currency: string) => {
+    return formatCurrencyAmount(val, currency, { withSpace: true });
   };
 
   if (isLoading) {
@@ -515,12 +524,12 @@ const App: React.FC = () => {
                     {Object.entries(monthlyStatsByCurrency).length > 0 ? (
                       Object.entries(monthlyStatsByCurrency).map(([curr, stats]: [string, any]) => (
                         <div key={curr} className="mb-2 last:mb-0">
-                          <div className="text-rose-400/80 font-bold text-[11px] tabular-nums truncate">+{formatStatAmount(stats.income, false, curr)}</div>
-                          <div className="text-emerald-400/80 font-bold text-[11px] tabular-nums truncate">-{formatStatAmount(stats.expense, true, curr)}</div>
+                          <div className="text-rose-400/80 font-bold text-[11px] tabular-nums truncate">+{formatStatAmount(stats.income, curr)}</div>
+                          <div className="text-emerald-400/80 font-bold text-[11px] tabular-nums truncate">-{formatStatAmount(stats.expense, curr)}</div>
                         </div>
                       )).slice(0, 2)
                     ) : (
-                      <div className="text-gray-700 font-bold text-[11px]">$0</div>
+                      <div className="text-gray-700 font-bold text-[11px]">{formatStatAmount(0, defaultCurrency)}</div>
                     )}
                     {monthlyCurrencyCount > 2 && <div className="text-[8px] text-gray-600 font-black">+ 更多幣別</div>}
                   </div>
@@ -533,12 +542,12 @@ const App: React.FC = () => {
                     {Object.entries(dailyStatsByCurrency).length > 0 ? (
                       Object.entries(dailyStatsByCurrency).map(([curr, stats]: [string, any]) => (
                         <div key={curr} className="mb-3 last:mb-0">
-                          <div className="text-rose-400 font-black text-lg tabular-nums tracking-tighter leading-none">+{formatStatAmount(stats.income, false, curr)}</div>
-                          <div className="text-emerald-400 font-black text-lg tabular-nums tracking-tighter leading-none">-{formatStatAmount(stats.expense, true, curr)}</div>
+                          <div className="text-rose-400 font-black text-lg tabular-nums tracking-tighter leading-none">+{formatStatAmount(stats.income, curr)}</div>
+                          <div className="text-emerald-400 font-black text-lg tabular-nums tracking-tighter leading-none">-{formatStatAmount(stats.expense, curr)}</div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-gray-700 font-black text-xl">$0</div>
+                      <div className="text-gray-700 font-black text-xl">{formatStatAmount(0, defaultCurrency)}</div>
                     )}
                   </div>
                 </div>

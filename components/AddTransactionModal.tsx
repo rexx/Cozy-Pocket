@@ -7,7 +7,7 @@ import {
   Sparkles, Loader2, Globe
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../constants';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import { Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 import { parseTransactionWithAI } from '../services/geminiService';
@@ -19,8 +19,6 @@ const IconMap: Record<string, any> = {
   Back: RotateCcw,
   Add: Plus
 };
-
-const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
 
 interface AddTransactionModalProps {
   onClose: () => void;
@@ -54,6 +52,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
   const [amount, setAmount] = useState(getInitialAmount());
   const [currency, setCurrency] = useState(editingTransaction?.currency || 'TWD');
+  const [availableCurrencies, setAvailableCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
   const [isSubView, setIsSubView] = useState(isEditing && editingTransaction?.type === '支出');
   const [categoryId, setCategoryId] = useState<string | undefined>(editingTransaction?.categoryId);
   const [subCategoryId, setSubCategoryId] = useState<string | undefined>(editingTransaction?.subCategoryId);
@@ -78,11 +77,21 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const hasApiKey = !!process.env.API_KEY;
 
   useEffect(() => {
-    if (!isEditing) {
-      db.settings.get('defaultCurrency').then(setting => {
-        if (setting) setCurrency(setting.value);
-      });
-    }
+    let isMounted = true;
+    Promise.all([
+      db.settings.get('defaultCurrency'),
+      db.settings.get('enabledCurrencies')
+    ]).then(([defaultCurrencySetting, enabledCurrenciesSetting]) => {
+      if (!isMounted) return;
+      const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
+      setAvailableCurrencies(enabledCurrencies);
+      if (!isEditing) {
+        setCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [isEditing]);
 
   useLayoutEffect(() => {
@@ -110,8 +119,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const handleBackToMain = () => setIsSubView(false);
 
   const toggleCurrency = () => {
-    const currentIndex = CURRENCIES.indexOf(currency);
-    setCurrency(CURRENCIES[(currentIndex + 1) % CURRENCIES.length]);
+    const cyclingCurrencies = availableCurrencies.length > 0 ? availableCurrencies : [...SUPPORTED_CURRENCIES];
+    const currentIndex = cyclingCurrencies.indexOf(currency);
+    setCurrency(cyclingCurrencies[(currentIndex + 1 + cyclingCurrencies.length) % cyclingCurrencies.length]);
   };
 
   const handleAiSubmit = async (e: React.FormEvent) => {
@@ -123,8 +133,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       const result = await parseTransactionWithAI(aiInput);
       if (result) {
         if (result.type) setActiveTab(result.type as TransactionType);
-        if (result.currency && CURRENCIES.includes(result.currency.toUpperCase())) {
-          setCurrency(result.currency.toUpperCase());
+        const normalizedCurrency = result.currency?.toUpperCase();
+        if (normalizedCurrency && availableCurrencies.includes(normalizedCurrency)) {
+          setCurrency(normalizedCurrency);
         }
         if (result.amount !== undefined && result.amount !== null) {
           setAmount(Math.abs(result.amount).toString());

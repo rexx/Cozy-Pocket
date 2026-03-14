@@ -2,6 +2,50 @@ import { format, addDays } from 'date-fns';
 import { Category, Transaction } from './types';
 import { toEpochSeconds } from './time';
 
+export const SUPPORTED_CURRENCIES = ['TWD', 'JPY', 'USD', 'THB', 'HKD', 'CNY', 'EUR'] as const;
+
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  TWD: '$',
+  USD: 'US$',
+  JPY: '¥',
+  EUR: '€',
+  HKD: 'HK$',
+  CNY: 'CN¥',
+  THB: '฿',
+};
+
+export const getCurrencyDisplay = (currency: string): string => {
+  return CURRENCY_SYMBOLS[currency] || currency;
+};
+
+export const formatCurrencyAmount = (
+  amount: number,
+  currency: string,
+  options?: { withSpace?: boolean }
+): string => {
+  const prefix = getCurrencyDisplay(currency);
+  const absoluteAmount = Math.abs(amount);
+  const separator = options?.withSpace ? ' ' : '';
+  return `${prefix}${separator}${absoluteAmount.toLocaleString()}`;
+};
+
+export const getEnabledCurrencies = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [...SUPPORTED_CURRENCIES];
+  const selected = new Set(
+    value
+      .map((item) => String(item).toUpperCase())
+      .filter((item) => SUPPORTED_CURRENCIES.includes(item as typeof SUPPORTED_CURRENCIES[number]))
+  );
+  const normalized = SUPPORTED_CURRENCIES.filter((currency) => selected.has(currency));
+  return normalized.length > 0 ? normalized : [...SUPPORTED_CURRENCIES];
+};
+
+export const getPreferredCurrency = (value: unknown, enabledCurrencies: string[]): string => {
+  const normalized = String(value || '').toUpperCase();
+  if (enabledCurrencies.includes(normalized)) return normalized;
+  return enabledCurrencies[0] || SUPPORTED_CURRENCIES[0];
+};
+
 export const EXPENSE_CATEGORIES: Category[] = [
   { 
     id: 'food', name: '飲食', icon: 'Utensils', color: '#eecf8e',

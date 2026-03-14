@@ -5,7 +5,7 @@ const transactionSchema = {
   type: Type.OBJECT,
   properties: {
     amount: { type: Type.NUMBER, description: "The cost/amount of the transaction" },
-    currency: { type: Type.STRING, description: "The currency code, e.g., TWD, USD, JPY, EUR, HKD, CNY. Default to TWD if not specified." },
+    currency: { type: Type.STRING, description: "The currency code, e.g., TWD, USD, JPY, EUR, HKD, CNY, THB. Default to TWD if not specified." },
     type: { type: Type.STRING, description: "Either '支出' (expense) or '收入' (income)" },
     merchant: { type: Type.STRING, description: "Where the purchase was made" },
     note: { type: Type.STRING, description: "Detailed description or items bought" },
@@ -34,7 +34,7 @@ export async function parseTransactionWithAI(text: string) {
       config: {
         responseMimeType: "application/json",
         responseSchema: transactionSchema,
-        systemInstruction: "You are a specialized accountant. Correctly map the user's input to Category, SubCategory and Currency. Example: '吃午餐 100' -> currency: TWD, amount: 100. 'Ramen 1500yen' -> currency: JPY, amount: 1500.",
+        systemInstruction: "You are a specialized accountant. Correctly map the user's input to Category, SubCategory and Currency. Example: '吃午餐 100' -> currency: TWD, amount: 100. 'Ramen 1500yen' -> currency: JPY, amount: 1500. '泰奶 120 baht' -> currency: THB, amount: 120.",
       },
     });
 

@@ -5,6 +5,7 @@ import { Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
+import { SUPPORTED_CURRENCIES, getCurrencyDisplay, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 
 interface DataManagementModalProps {
   onClose: () => void;
@@ -16,12 +17,11 @@ interface DataManagementModalProps {
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
-const CURRENCIES = ['TWD', 'USD', 'JPY', 'EUR', 'HKD', 'CNY'];
-
 const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync, onOpenSyncProgress, onNotify }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
+  const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
   const [syncApiUrl, setSyncApiUrl] = useState('');
   const [syncToken, setSyncToken] = useState('');
   const [selectedImportFileName, setSelectedImportFileName] = useState('');
@@ -38,10 +38,13 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
   useEffect(() => {
     Promise.all([
       db.settings.get('defaultCurrency'),
+      db.settings.get('enabledCurrencies'),
       db.settings.get('syncApiUrl'),
       db.settings.get('syncToken')
-    ]).then(([currencySetting, apiUrlSetting, tokenSetting]) => {
-      if (currencySetting) setDefaultCurrency(currencySetting.value);
+    ]).then(([currencySetting, enabledCurrenciesSetting, apiUrlSetting, tokenSetting]) => {
+      const nextEnabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
+      setEnabledCurrencies(nextEnabledCurrencies);
+      setDefaultCurrency(getPreferredCurrency(currencySetting?.value, nextEnabledCurrencies));
       if (apiUrlSetting?.value) setSyncApiUrl(apiUrlSetting.value);
       if (tokenSetting?.value) setSyncToken(tokenSetting.value);
     });
@@ -51,6 +54,29 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     const newVal = e.target.value;
     setDefaultCurrency(newVal);
     await db.settings.put({ key: 'defaultCurrency', value: newVal });
+    onDataChange();
+  };
+
+  const handleEnabledCurrencyToggle = async (currency: string) => {
+    const isEnabled = enabledCurrencies.includes(currency);
+    if (isEnabled && enabledCurrencies.length === 1) {
+      setStatus({ type: 'error', message: '至少要保留一個可用幣別' });
+      return;
+    }
+
+    const nextEnabledCurrencies = isEnabled
+      ? enabledCurrencies.filter((item) => item !== currency)
+      : SUPPORTED_CURRENCIES.filter((item) => item === currency || enabledCurrencies.includes(item));
+    const nextDefaultCurrency = getPreferredCurrency(defaultCurrency, nextEnabledCurrencies);
+
+    setEnabledCurrencies(nextEnabledCurrencies);
+    setDefaultCurrency(nextDefaultCurrency);
+    setStatus({ type: 'idle', message: '' });
+
+    await db.settings.bulkPut([
+      { key: 'enabledCurrencies', value: nextEnabledCurrencies },
+      { key: 'defaultCurrency', value: nextDefaultCurrency }
+    ]);
     onDataChange();
   };
 
@@ -325,6 +351,8 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
     }
   };
 
+  const getCurrencyOptionLabel = (currency: string) => `${currency} (${getCurrencyDisplay(currency)})`;
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
       <div className="flex-none">
@@ -354,8 +382,34 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
               onChange={handleDefaultCurrencyChange}
               className="bg-[#1a1c2c] text-white text-sm font-bold px-3 py-2 rounded-xl focus:outline-none border border-white/10"
             >
-              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {enabledCurrencies.map(c => <option key={c} value={c}>{getCurrencyOptionLabel(c)}</option>)}
             </select>
+          </div>
+          <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-300">循環選單幣別</span>
+              <span className="text-[11px] text-gray-500 font-bold">{enabledCurrencies.length} / {SUPPORTED_CURRENCIES.length}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {SUPPORTED_CURRENCIES.map((currency) => {
+                const checked = enabledCurrencies.includes(currency);
+                return (
+                  <label
+                    key={currency}
+                    className={`flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-bold transition-all ${checked ? 'border-cyan-500/40 bg-cyan-500/10 text-white' : 'border-white/5 bg-[#1a1c2c] text-gray-500'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => void handleEnabledCurrencyToggle(currency)}
+                      className="h-4 w-4 accent-cyan-400"
+                    />
+                    <span>{getCurrencyOptionLabel(currency)}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-gray-500">未勾選的幣別不會出現在新增交易的循環切換中。</p>
           </div>
           <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-3">
             <div className="space-y-1">
