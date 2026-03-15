@@ -36,6 +36,23 @@ export interface Transaction {
   lastSyncError?: string;
 }
 
+export interface SuggestionItem {
+  value: string;
+  count: number;
+  lastUsedAt: number;
+}
+
+export interface SuggestionIndex {
+  merchants: SuggestionItem[];
+  names: SuggestionItem[];
+  tags: SuggestionItem[];
+  byCategory: Record<string, {
+    merchants: SuggestionItem[];
+    names: SuggestionItem[];
+    tags: SuggestionItem[];
+  }>;
+}
+
 export interface MonthlyStats {
   totalIncome: number;
   totalExpense: number;

@@ -7,7 +7,7 @@ import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
 import DataManagementModal from './components/DataManagementModal';
 import SyncProgressPage from './components/SyncProgressPage';
-import { Transaction } from './types';
+import { SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
@@ -40,6 +40,79 @@ const SuccessToast: React.FC<{ message: string }> = ({ message }) => (
     </div>
   </div>
 );
+
+const normalizeSuggestionValue = (value: string) => value.trim();
+
+const buildSuggestions = (
+  transactions: Transaction[],
+  extractor: (tx: Transaction) => string[]
+): SuggestionItem[] => {
+  const map = new Map<string, SuggestionItem>();
+
+  for (const tx of transactions) {
+    const values = extractor(tx);
+    for (const rawValue of values) {
+      const value = normalizeSuggestionValue(rawValue);
+      if (!value) continue;
+
+      const existing = map.get(value);
+      if (existing) {
+        existing.count += 1;
+        existing.lastUsedAt = Math.max(existing.lastUsedAt, tx.timestamp);
+      } else {
+        map.set(value, {
+          value,
+          count: 1,
+          lastUsedAt: tx.timestamp,
+        });
+      }
+    }
+  }
+
+  return Array.from(map.values()).sort((a, b) => {
+    if (b.lastUsedAt !== a.lastUsedAt) return b.lastUsedAt - a.lastUsedAt;
+    if (b.count !== a.count) return b.count - a.count;
+    return a.value.localeCompare(b.value);
+  });
+};
+
+const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
+  const empty = { merchants: [], names: [], tags: [] };
+  const grouped = transactions.reduce<Record<string, Transaction[]>>((acc, tx) => {
+    const key = tx.categoryId?.trim();
+    if (!key) return acc;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(tx);
+    return acc;
+  }, {});
+
+  const byCategory = Object.fromEntries(
+    Object.entries(grouped).map(([categoryId, categoryTransactions]) => [
+      categoryId,
+      {
+        merchants: buildSuggestions(categoryTransactions, (tx) => tx.merchant ? [tx.merchant] : []),
+        names: buildSuggestions(categoryTransactions, (tx) => tx.name ? [tx.name] : []),
+        tags: buildSuggestions(categoryTransactions, (tx) => (
+          tx.tags
+            ? tx.tags.split(/\s+/).map((tag) => tag.replace(/^#+/, '')).filter(Boolean)
+            : []
+        )),
+      }
+    ])
+  );
+
+  return {
+    ...empty,
+    merchants: buildSuggestions(transactions, (tx) => tx.merchant ? [tx.merchant] : []),
+    names: buildSuggestions(transactions, (tx) => tx.name ? [tx.name] : []),
+    tags: buildSuggestions(transactions, (tx) => (
+      tx.tags
+        ? tx.tags.split(/\s+/).map((tag) => tag.replace(/^#+/, '')).filter(Boolean)
+        : []
+    )),
+    byCategory,
+  };
+};
 
 const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -307,6 +380,8 @@ const App: React.FC = () => {
     return getStatsByCurrency(monthTxs);
   }, [transactions, selectedDate]);
 
+  const suggestionIndex = useMemo<SuggestionIndex>(() => buildSuggestionIndex(transactions), [transactions]);
+
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     let attempts = 0;
     const maxAttempts = 10;
@@ -561,7 +636,15 @@ const App: React.FC = () => {
       <div className="fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-40"></div>
 
       {isModalOpen && (
-        <AddTransactionModal initialDate={selectedDate} editingTransaction={editingTransaction} onClose={() => setIsModalOpen(false)} onAdd={addTransaction} onUpdate={updateTransaction} onDelete={deleteTransaction} />
+        <AddTransactionModal
+          initialDate={selectedDate}
+          editingTransaction={editingTransaction}
+          onClose={() => setIsModalOpen(false)}
+          onAdd={addTransaction}
+          onUpdate={updateTransaction}
+          onDelete={deleteTransaction}
+          suggestions={suggestionIndex}
+        />
       )}
       {isSettingsOpen && (
         <DataManagementModal

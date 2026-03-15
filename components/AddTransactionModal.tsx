@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect, useMemo } from 'react';
 import { 
   X, Check, Trash2, Plus, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
-import { Transaction, TransactionType } from '../types';
+import { SuggestionItem, SuggestionIndex, Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 import { parseTransactionWithAI } from '../services/geminiService';
 import { db } from '../db';
@@ -27,6 +27,7 @@ interface AddTransactionModalProps {
   onDelete?: (id: string) => void;
   initialDate: Date;
   editingTransaction?: Transaction | null;
+  suggestions: SuggestionIndex;
 }
 
 const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ 
@@ -35,7 +36,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onUpdate,
   onDelete,
   initialDate, 
-  editingTransaction 
+  editingTransaction,
+  suggestions
 }) => {
   const isEditing = !!editingTransaction;
   const safeInitialDate = (initialDate && isValid(initialDate)) ? initialDate : new Date();
@@ -75,6 +77,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [aiInput, setAiInput] = useState('');
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const hasApiKey = !!process.env.API_KEY;
+  const suggestionLimit = 6;
 
   useEffect(() => {
     let isMounted = true;
@@ -263,6 +266,81 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const PaymentIcon = getPaymentIcon(paymentMethod);
   const categoriesToDisplay = activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const currentMainCat = EXPENSE_CATEGORIES.find(c => c.id === categoryId);
+  const scopedSuggestions = categoryId ? suggestions.byCategory[categoryId] : undefined;
+  const activeSuggestions = scopedSuggestions || suggestions;
+
+  const getFilteredSuggestions = (
+    items: SuggestionItem[],
+    rawQuery: string,
+    excludedValues: Set<string>
+  ) => {
+    const query = rawQuery.trim().toLowerCase();
+    return items
+      .filter((item) => {
+        const normalizedValue = item.value.trim();
+        if (!normalizedValue) return false;
+        if (excludedValues.has(normalizedValue.toLowerCase())) return false;
+        return query === '' || normalizedValue.toLowerCase().includes(query);
+      })
+      .slice(0, suggestionLimit);
+  };
+
+  const merchantSuggestions = useMemo(() => (
+    getFilteredSuggestions(
+      activeSuggestions.merchants,
+      merchant,
+      new Set(merchant.trim() ? [merchant.trim().toLowerCase()] : [])
+    )
+  ), [activeSuggestions.merchants, merchant]);
+
+  const nameSuggestions = useMemo(() => (
+    getFilteredSuggestions(
+      activeSuggestions.names,
+      name,
+      new Set(name.trim() ? [name.trim().toLowerCase()] : [])
+    )
+  ), [activeSuggestions.names, name]);
+
+  const tagSuggestions = useMemo(() => {
+    const excluded = new Set(tagList.map((tag) => tag.trim().toLowerCase()).filter(Boolean));
+    return getFilteredSuggestions(activeSuggestions.tags, tagInput, excluded);
+  }, [activeSuggestions.tags, tagInput, tagList]);
+
+  const SuggestionChips = ({
+    items,
+    onSelect,
+    formatValue = (value: string) => value,
+    tone = 'default',
+  }: {
+    items: SuggestionItem[];
+    onSelect: (value: string) => void;
+    formatValue?: (value: string) => string;
+    tone?: 'default' | 'tag';
+  }) => {
+    if (items.length === 0) return null;
+
+    const chipClassName = tone === 'tag'
+      ? 'border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/40 hover:text-cyan-200'
+      : 'border border-white/10 bg-white/5 text-gray-300 hover:border-white/20 hover:text-white';
+
+    return (
+      <div className="mt-2">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {items.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => onSelect(item.value)}
+              className={`max-w-full shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition-all active:scale-95 ${chipClassName}`}
+              title={item.value}
+            >
+              <span className="block truncate">{formatValue(item.value)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
@@ -372,13 +450,19 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
-            <Store size={16} className="text-gray-500" />
-            <input type="text" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="商家" className="bg-transparent text-white text-right focus:outline-none w-full font-bold placeholder-gray-700 text-sm ml-2" />
+          <div>
+            <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
+              <Store size={16} className="text-gray-500" />
+              <input type="text" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="商家" className="bg-transparent text-white text-right focus:outline-none w-full font-bold placeholder-gray-700 text-sm ml-2" />
+            </div>
+            <SuggestionChips items={merchantSuggestions} onSelect={setMerchant} />
           </div>
-          <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
-            <Tag size={16} className="text-gray-500" />
-            <input type="text" placeholder="名稱" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2" />
+          <div>
+            <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
+              <Tag size={16} className="text-gray-500" />
+              <input type="text" placeholder="名稱" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2" />
+            </div>
+            <SuggestionChips items={nameSuggestions} onSelect={setName} />
           </div>
         </div>
 
@@ -415,6 +499,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               className="flex-1 bg-transparent text-sm font-bold focus:outline-none placeholder-gray-600 text-white"
             />
           </div>
+          <SuggestionChips
+            items={tagSuggestions}
+            onSelect={(value) => setTagList((prev) => prev.includes(value) ? prev : [...prev, value])}
+            formatValue={(value) => `#${value}`}
+            tone="tag"
+          />
         </div>
 
         <div className="bg-[#252538] rounded-2xl p-5 min-h-[140px] border border-white/5 shadow-lg">
