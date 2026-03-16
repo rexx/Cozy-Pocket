@@ -2,13 +2,10 @@
 import React from 'react';
 import { Transaction } from '../types';
 import { CATEGORIES, formatCurrencyAmount } from '../constants';
-import * as Icons from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import { toEpochMillis } from '../time';
-
-const IconMap: Record<string, any> = {
-  ...Icons
-};
+import { categoryIconMap } from './categoryIcons';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -40,7 +37,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
   const isIncome = transaction.type === '收入';
 
   const iconName = (!isIncome && subCategory) ? subCategory.icon : category.icon;
-  const IconComp = IconMap[iconName] || Icons.MoreHorizontal;
+  const IconComp = categoryIconMap[iconName] || MoreHorizontal;
 
   let title = '';
   if (transaction.name) {

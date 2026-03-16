@@ -6,19 +6,14 @@ import {
   Store, Tag, Banknote, CreditCard, SmartphoneNfc, ArrowLeftRight,
   Sparkles, Loader2, Globe
 } from 'lucide-react';
-import * as Icons from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import { SuggestionItem, SuggestionIndex, Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
-import { parseTransactionWithAI } from '../services/geminiService';
 import { db } from '../db';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
+import { categoryIconMap } from './categoryIcons';
 
-const IconMap: Record<string, any> = {
-  ...Icons,
-  Back: RotateCcw,
-  Add: Plus
-};
+const IconMap = categoryIconMap;
 
 interface AddTransactionModalProps {
   onClose: () => void;
@@ -133,6 +128,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     setIsAiProcessing(true);
     try {
+      const { parseTransactionWithAI } = await import('../services/geminiService');
       const result = await parseTransactionWithAI(aiInput);
       if (result) {
         if (result.type) setActiveTab(result.type as TransactionType);
