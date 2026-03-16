@@ -47,7 +47,10 @@ const buildSuggestions = (
   transactions: Transaction[],
   extractor: (tx: Transaction) => string[]
 ): SuggestionItem[] => {
-  const map = new Map<string, SuggestionItem>();
+  const map = new Map<string, SuggestionItem & {
+    categoryIdSet: Set<string>;
+    subCategoryIdSet: Set<string>;
+  }>();
 
   for (const tx of transactions) {
     const values = extractor(tx);
@@ -59,17 +62,29 @@ const buildSuggestions = (
       if (existing) {
         existing.count += 1;
         existing.lastUsedAt = Math.max(existing.lastUsedAt, tx.timestamp);
+        if (tx.categoryId) existing.categoryIdSet.add(tx.categoryId);
+        if (tx.subCategoryId) existing.subCategoryIdSet.add(tx.subCategoryId);
       } else {
         map.set(value, {
           value,
           count: 1,
           lastUsedAt: tx.timestamp,
+          categoryIds: tx.categoryId ? [tx.categoryId] : [],
+          subCategoryIds: tx.subCategoryId ? [tx.subCategoryId] : [],
+          categoryIdSet: new Set(tx.categoryId ? [tx.categoryId] : []),
+          subCategoryIdSet: new Set(tx.subCategoryId ? [tx.subCategoryId] : []),
         });
       }
     }
   }
 
-  return Array.from(map.values()).sort((a, b) => {
+  return Array.from(map.values()).map((item) => ({
+    value: item.value,
+    count: item.count,
+    lastUsedAt: item.lastUsedAt,
+    categoryIds: Array.from(item.categoryIdSet).sort(),
+    subCategoryIds: Array.from(item.subCategoryIdSet).sort(),
+  })).sort((a, b) => {
     if (b.lastUsedAt !== a.lastUsedAt) return b.lastUsedAt - a.lastUsedAt;
     if (b.count !== a.count) return b.count - a.count;
     return a.value.localeCompare(b.value);
@@ -77,32 +92,7 @@ const buildSuggestions = (
 };
 
 const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
-  const empty = { merchants: [], names: [], tags: [] };
-  const grouped = transactions.reduce<Record<string, Transaction[]>>((acc, tx) => {
-    const key = tx.categoryId?.trim();
-    if (!key) return acc;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(tx);
-    return acc;
-  }, {});
-
-  const byCategory = Object.fromEntries(
-    Object.entries(grouped).map(([categoryId, categoryTransactions]) => [
-      categoryId,
-      {
-        merchants: buildSuggestions(categoryTransactions, (tx) => tx.merchant ? [tx.merchant] : []),
-        names: buildSuggestions(categoryTransactions, (tx) => tx.name ? [tx.name] : []),
-        tags: buildSuggestions(categoryTransactions, (tx) => (
-          tx.tags
-            ? tx.tags.split(/\s+/).map((tag) => tag.replace(/^#+/, '')).filter(Boolean)
-            : []
-        )),
-      }
-    ])
-  );
-
   return {
-    ...empty,
     merchants: buildSuggestions(transactions, (tx) => tx.merchant ? [tx.merchant] : []),
     names: buildSuggestions(transactions, (tx) => tx.name ? [tx.name] : []),
     tags: buildSuggestions(transactions, (tx) => (
@@ -110,7 +100,6 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
         ? tx.tags.split(/\s+/).map((tag) => tag.replace(/^#+/, '')).filter(Boolean)
         : []
     )),
-    byCategory,
   };
 };
 

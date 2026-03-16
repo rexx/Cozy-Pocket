@@ -7,7 +7,7 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 
 ## 1. 專案概述 (Project Overview)
 *   **設計理念**：深色調 (Dark Mode) 美感、隱私優先、極致互動體驗。
-*   **核心功能**：智慧日曆、AI 智慧解析、離線優先 (IndexedDB)、資料匯入匯出。
+*   **核心功能**：智慧日曆、AI 智慧解析、離線優先 (IndexedDB)、資料匯入匯出、歷史輸入建議。
 *   **雲端同步 (Cloud Sync)**：透過 Google Apps Script 將資料自動備份至 Google Sheets。
 
 ---
@@ -97,6 +97,13 @@ this.version(1).stores({
 *   每筆交易在本地端會保存 `syncStatus` 與 `lastSyncError`，用來追蹤同步進度與錯誤訊息。
 *   `syncStatus` 為本地 UI / 補送機制使用的狀態欄位，不屬於上傳到 Google Sheets 的 payload 欄位。
 *   目前同步狀態包含：`pending`、`syncing`、`synced`、`error`。
+
+### 6.5 輸入建議排序
+*   新增／編輯記帳時，`merchant`、`name`、`tags` 會根據歷史交易產生建議 chips。
+*   建議來源來自目前本機已載入的 `transactions`，不另外建立建議資料表。
+*   每個建議值會累積出現次數、最近使用時間、曾出現過的主類別與子類別。
+*   建議排序優先序為：字串 match、子類別 match、主類別 match、頻率，最後才用最近使用時間與字串穩定排序做 tie-break。
+*   未命中目前輸入字串的項目仍會保留在後方；`tags` 已存在於當前 `tagList` 的值會排除，避免重複加入。
 
 ---
 

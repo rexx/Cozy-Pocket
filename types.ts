@@ -40,17 +40,14 @@ export interface SuggestionItem {
   value: string;
   count: number;
   lastUsedAt: number;
+  categoryIds: string[];
+  subCategoryIds: string[];
 }
 
 export interface SuggestionIndex {
   merchants: SuggestionItem[];
   names: SuggestionItem[];
   tags: SuggestionItem[];
-  byCategory: Record<string, {
-    merchants: SuggestionItem[];
-    names: SuggestionItem[];
-    tags: SuggestionItem[];
-  }>;
 }
 
 export interface MonthlyStats {

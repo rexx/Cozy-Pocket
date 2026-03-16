@@ -266,45 +266,68 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const PaymentIcon = getPaymentIcon(paymentMethod);
   const categoriesToDisplay = activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const currentMainCat = EXPENSE_CATEGORIES.find(c => c.id === categoryId);
-  const scopedSuggestions = categoryId ? suggestions.byCategory[categoryId] : undefined;
-  const activeSuggestions = scopedSuggestions || suggestions;
 
-  const getFilteredSuggestions = (
+  const getTextMatchRank = (value: string, rawQuery: string) => {
+    const query = rawQuery.trim().toLowerCase();
+    if (!query) return 0;
+    const normalizedValue = value.trim().toLowerCase();
+    if (normalizedValue === query) return 3;
+    if (normalizedValue.startsWith(query)) return 2;
+    if (normalizedValue.includes(query)) return 1;
+    return 0;
+  };
+
+  const getRankedSuggestions = (
     items: SuggestionItem[],
     rawQuery: string,
     excludedValues: Set<string>
   ) => {
-    const query = rawQuery.trim().toLowerCase();
     return items
       .filter((item) => {
         const normalizedValue = item.value.trim();
         if (!normalizedValue) return false;
         if (excludedValues.has(normalizedValue.toLowerCase())) return false;
-        return query === '' || normalizedValue.toLowerCase().includes(query);
+        return true;
+      })
+      .sort((a, b) => {
+        const textMatchDiff = getTextMatchRank(b.value, rawQuery) - getTextMatchRank(a.value, rawQuery);
+        if (textMatchDiff !== 0) return textMatchDiff;
+
+        const subCategoryMatchA = !!subCategoryId && a.subCategoryIds.includes(subCategoryId);
+        const subCategoryMatchB = !!subCategoryId && b.subCategoryIds.includes(subCategoryId);
+        if (subCategoryMatchA !== subCategoryMatchB) return Number(subCategoryMatchB) - Number(subCategoryMatchA);
+
+        const categoryMatchA = !!categoryId && a.categoryIds.includes(categoryId);
+        const categoryMatchB = !!categoryId && b.categoryIds.includes(categoryId);
+        if (categoryMatchA !== categoryMatchB) return Number(categoryMatchB) - Number(categoryMatchA);
+
+        if (b.count !== a.count) return b.count - a.count;
+        if (b.lastUsedAt !== a.lastUsedAt) return b.lastUsedAt - a.lastUsedAt;
+        return a.value.localeCompare(b.value);
       })
       .slice(0, suggestionLimit);
   };
 
   const merchantSuggestions = useMemo(() => (
-    getFilteredSuggestions(
-      activeSuggestions.merchants,
+    getRankedSuggestions(
+      suggestions.merchants,
       merchant,
-      new Set(merchant.trim() ? [merchant.trim().toLowerCase()] : [])
+      new Set()
     )
-  ), [activeSuggestions.merchants, merchant]);
+  ), [categoryId, merchant, subCategoryId, suggestions.merchants]);
 
   const nameSuggestions = useMemo(() => (
-    getFilteredSuggestions(
-      activeSuggestions.names,
+    getRankedSuggestions(
+      suggestions.names,
       name,
-      new Set(name.trim() ? [name.trim().toLowerCase()] : [])
+      new Set()
     )
-  ), [activeSuggestions.names, name]);
+  ), [categoryId, name, subCategoryId, suggestions.names]);
 
   const tagSuggestions = useMemo(() => {
     const excluded = new Set(tagList.map((tag) => tag.trim().toLowerCase()).filter(Boolean));
-    return getFilteredSuggestions(activeSuggestions.tags, tagInput, excluded);
-  }, [activeSuggestions.tags, tagInput, tagList]);
+    return getRankedSuggestions(suggestions.tags, tagInput, excluded);
+  }, [categoryId, subCategoryId, suggestions.tags, tagInput, tagList]);
 
   const SuggestionChips = ({
     items,
