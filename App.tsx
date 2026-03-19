@@ -110,6 +110,8 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
   };
 };
 
+const FORCE_SHOW_OFFLINE_BANNER = false;
+
 const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -144,6 +146,8 @@ const App: React.FC = () => {
   const toastHideTimerRef = useRef<number | null>(null);
   const offlineBannerTimerRef = useRef<number | null>(null);
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
+  const shouldShowOfflineBanner = isOfflineMode || FORCE_SHOW_OFFLINE_BANNER;
+  const shouldRenderOfflineBanner = shouldShowOfflineBanner && !isModalOpen && !isSettingsOpen && !isSyncProgressPageOpen;
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
     if (toastHideTimerRef.current !== null) {
@@ -279,7 +283,7 @@ const App: React.FC = () => {
       offlineBannerTimerRef.current = null;
     }
 
-    if (isOfflineMode) {
+    if (shouldRenderOfflineBanner) {
       setIsOfflineBannerCompact(false);
       offlineBannerTimerRef.current = window.setTimeout(() => {
         setIsOfflineBannerCompact(true);
@@ -295,7 +299,7 @@ const App: React.FC = () => {
         offlineBannerTimerRef.current = null;
       }
     };
-  }, [isOfflineMode]);
+  }, [shouldRenderOfflineBanner]);
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -551,7 +555,7 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       {toastMessage && <SuccessToast message={toastMessage} />}
-      {isOfflineMode && (
+      {shouldRenderOfflineBanner && (
         <div
           className={`fixed z-[9997] transition-all duration-300 ease-out ${
             isOfflineBannerCompact
