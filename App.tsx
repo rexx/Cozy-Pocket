@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { format, isSameDay, endOfMonth, isWithinInterval, endOfDay, addDays } from 'date-fns';
-import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers, ChevronLeft, ChevronRight, CloudOff } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
@@ -140,7 +140,9 @@ const App: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [isOfflineMode, setIsOfflineMode] = useState(isOffline());
+  const [isOfflineBannerCompact, setIsOfflineBannerCompact] = useState(false);
   const toastHideTimerRef = useRef<number | null>(null);
+  const offlineBannerTimerRef = useRef<number | null>(null);
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -272,6 +274,30 @@ const App: React.FC = () => {
   }, [showToast]);
 
   useEffect(() => {
+    if (offlineBannerTimerRef.current !== null) {
+      window.clearTimeout(offlineBannerTimerRef.current);
+      offlineBannerTimerRef.current = null;
+    }
+
+    if (isOfflineMode) {
+      setIsOfflineBannerCompact(false);
+      offlineBannerTimerRef.current = window.setTimeout(() => {
+        setIsOfflineBannerCompact(true);
+        offlineBannerTimerRef.current = null;
+      }, 2500);
+    } else {
+      setIsOfflineBannerCompact(false);
+    }
+
+    return () => {
+      if (offlineBannerTimerRef.current !== null) {
+        window.clearTimeout(offlineBannerTimerRef.current);
+        offlineBannerTimerRef.current = null;
+      }
+    };
+  }, [isOfflineMode]);
+
+  useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       const msg = `Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`;
       setCapturedErrors(prev => [...prev, msg]);
@@ -350,6 +376,9 @@ const App: React.FC = () => {
       }
       if (toastHideTimerRef.current !== null) {
         window.clearTimeout(toastHideTimerRef.current);
+      }
+      if (offlineBannerTimerRef.current !== null) {
+        window.clearTimeout(offlineBannerTimerRef.current);
       }
     };
   }, []);
@@ -523,9 +552,23 @@ const App: React.FC = () => {
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       {toastMessage && <SuccessToast message={toastMessage} />}
       {isOfflineMode && (
-        <div className="fixed top-0 left-1/2 z-[9997] -translate-x-1/2 pt-3">
-          <div className="rounded-full border border-amber-400/30 bg-amber-500/15 px-4 py-2 text-[11px] font-black tracking-wide text-amber-200 backdrop-blur-md">
-            離線模式：可繼續記帳，AI 與同步暫停
+        <div
+          className={`fixed z-[9997] transition-all duration-300 ease-out ${
+            isOfflineBannerCompact
+              ? 'left-4 top-5'
+              : 'left-1/2 top-3 -translate-x-1/2'
+          }`}
+        >
+          <div
+            className={`rounded-full border border-amber-400/30 bg-amber-500/15 px-4 py-2 font-black tracking-wide text-amber-200 backdrop-blur-md transition-all duration-300 ${
+              isOfflineBannerCompact ? 'text-[10px] shadow-lg' : 'text-[11px]'
+            }`}
+          >
+            {isOfflineBannerCompact ? (
+              <div className="flex items-center justify-center">
+                <CloudOff size={14} />
+              </div>
+            ) : '離線模式：可繼續記帳，AI 與同步暫停'}
           </div>
         </div>
       )}
