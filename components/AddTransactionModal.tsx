@@ -10,6 +10,7 @@ import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabled
 import { SuggestionItem, SuggestionIndex, Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 import { db } from '../db';
+import { isOffline } from '../services/networkService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 import { categoryIconMap } from './categoryIcons';
 
@@ -71,6 +72,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [tagInput, setTagInput] = useState('');
   const [aiInput, setAiInput] = useState('');
   const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [aiError, setAiError] = useState('');
   const hasApiKey = !!process.env.API_KEY;
   const suggestionLimit = 6;
 
@@ -127,6 +129,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (!aiInput.trim() || isAiProcessing) return;
 
     setIsAiProcessing(true);
+    setAiError('');
     try {
       const { parseTransactionWithAI } = await import('../services/geminiService');
       const result = await parseTransactionWithAI(aiInput);
@@ -150,8 +153,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         setPaymentMethod(result.paymentMethod || "現金");
         setAiInput('');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("AI Error:", err);
+      setAiError(err?.message || 'AI 解析失敗，請稍後再試');
     } finally {
       setIsAiProcessing(false);
     }
@@ -394,8 +398,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   placeholder="AI 快速填寫，例：拉麵 1500日圓 現金..."
                   className="bg-transparent text-xs font-medium text-white w-full focus:outline-none placeholder-gray-600"
                   value={aiInput}
-                  onChange={(e) => setAiInput(e.target.value)}
-                  disabled={isAiProcessing}
+                  onChange={(e) => {
+                    setAiInput(e.target.value);
+                    if (aiError) setAiError('');
+                  }}
+                  disabled={isAiProcessing || isOffline()}
                 />
                 {aiInput && !isAiProcessing && (
                   <button type="submit" className="ml-2 text-[10px] font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/20">
@@ -404,6 +411,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 )}
               </div>
             </form>
+            {isOffline() && (
+              <p className="mt-2 px-1 text-[11px] font-bold text-amber-300">
+                目前離線，AI 解析暫時不可用。
+              </p>
+            )}
+            {!isOffline() && aiError && (
+              <p className="mt-2 px-1 text-[11px] font-bold text-red-300">
+                {aiError}
+              </p>
+            )}
           </div>
         )}
 

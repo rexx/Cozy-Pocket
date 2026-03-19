@@ -1,5 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { isOffline } from './networkService';
 
 const transactionSchema = {
   type: Type.OBJECT,
@@ -26,6 +27,10 @@ const transactionSchema = {
 };
 
 export async function parseTransactionWithAI(text: string) {
+  if (isOffline()) {
+    throw new Error('目前離線，AI 解析需要網路連線');
+  }
+
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
@@ -43,6 +48,6 @@ export async function parseTransactionWithAI(text: string) {
     }
   } catch (error) {
     console.error("AI Parsing Error:", error);
-    return null;
+    throw error;
   }
 }

@@ -11,13 +11,14 @@ interface DataManagementModalProps {
   onClose: () => void;
   onDataChange: () => void;
   onInsertExamples: () => Promise<number>;
-  onTriggerSync: (label: string) => Promise<{ total: number; failed: number }>;
+  onTriggerSync: (label: string) => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
   onOpenSyncProgress: () => void;
   onNotify: (message: string) => void;
+  isOffline: boolean;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
-const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync, onOpenSyncProgress, onNotify }) => {
+const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync, onOpenSyncProgress, onNotify, isOffline }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -88,7 +89,13 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
       ]);
       onDataChange();
       const syncResult = await onTriggerSync('同步設定後立即同步');
-      if (syncResult.failed > 0) {
+      if (syncResult.skippedOffline) {
+        onNotify('同步設定已儲存');
+        setStatus({
+          type: 'success',
+          message: '同步設定已儲存；目前離線，待恢復連線後再同步',
+        });
+      } else if (syncResult.failed > 0) {
         onNotify('同步設定已儲存');
         setStatus({
           type: 'error',
@@ -302,7 +309,12 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
       const importBaseMessage = (mode === 'append' && overwrittenCount > 0)
         ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`
         : `匯入成功 (${importPreview.validRows} 筆)`;
-      if (syncResult.failed > 0) {
+      if (syncResult.skippedOffline) {
+        setStatus({
+          type: 'success',
+          message: `${importBaseMessage}；目前離線，待恢復連線後再同步`,
+        });
+      } else if (syncResult.failed > 0) {
         setStatus({
           type: 'error',
           message: `${importBaseMessage}；同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
@@ -445,6 +457,11 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
               <CloudUpload size={14} />
               開啟同步狀態頁
             </button>
+            {isOffline && (
+              <p className="text-[11px] text-amber-300 font-bold">
+                目前離線，可先記帳；同步會在恢復連線後再執行。
+              </p>
+            )}
           </div>
         </div>
 

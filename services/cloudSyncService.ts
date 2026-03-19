@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { Transaction } from '../types';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
+import { isOffline } from './networkService';
 
 type ResultStatus = 'success' | 'skipped' | 'error';
 
@@ -125,6 +126,13 @@ const syncCreateItemsWithConfig = async (
   items: Transaction[]
 ): Promise<SyncResultItem[]> => {
   if (items.length === 0) return [];
+  if (isOffline()) {
+    return items.map((item) => ({
+      id: item.id,
+      status: 'error',
+      message: 'Device offline',
+    }));
+  }
 
   try {
     const payload = JSON.stringify({
@@ -196,6 +204,19 @@ export const syncCreateItems = async (
     });
     return failedResults;
   }
+  if (isOffline()) {
+    const offlineResults: SyncResultItem[] = items.map((item) => ({
+      id: item.id,
+      status: 'error',
+      message: 'Device offline',
+    }));
+    onProgress?.({
+      processed: total,
+      total,
+      failed: offlineResults.length,
+    });
+    return offlineResults;
+  }
 
   await setSyncStatusForItems(items, 'syncing', undefined);
   onProgress?.({
@@ -219,6 +240,7 @@ export const syncPendingTransactions = async (
 ): Promise<SyncResultItem[]> => {
   const config = await getSyncConfig();
   if (!config) return [];
+  if (isOffline()) return [];
 
   const pending = (await db.transactions.toArray()).filter((tx) => tx.syncStatus !== 'synced');
   if (pending.length === 0) return [];

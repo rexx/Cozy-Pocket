@@ -9,6 +9,7 @@ interface SyncProgressPageProps {
   onClose: () => void;
   onSyncNow: () => Promise<void>;
   isSyncing: boolean;
+  isOffline: boolean;
 }
 
 type SyncStatusKey = 'pending' | 'syncing' | 'synced' | 'error';
@@ -28,7 +29,7 @@ const STATUS_META: Record<SyncStatusKey, { label: string }> = {
   },
 };
 
-const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClose, onSyncNow, isSyncing }) => {
+const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClose, onSyncNow, isSyncing, isOffline }) => {
   const groupedCounts = useMemo(() => {
     const buckets: Record<SyncStatusKey, Transaction[]> = {
       pending: [],
@@ -76,13 +77,18 @@ const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClo
           </div>
           <button
             onClick={onSyncNow}
-            disabled={isSyncing}
+            disabled={isSyncing || isOffline}
             className="inline-flex items-center gap-2 text-[11px] font-black px-3 py-2 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-            {isSyncing ? '同步中' : '同步待同步'}
+            {isSyncing ? '同步中' : isOffline ? '離線中' : '同步待同步'}
           </button>
         </div>
+        {isOffline && (
+          <div className="px-4 py-2 border-b border-amber-400/10 bg-amber-500/10 text-[11px] font-bold text-amber-200">
+            目前離線，待同步資料會保留在本機，恢復連線後再手動或自動補送。
+          </div>
+        )}
 
         <div className="px-4 py-3 border-b border-white/5 grid grid-cols-4 gap-2 bg-[#1c1f30]">
           {statusOrder.map((statusKey) => (

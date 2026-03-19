@@ -5,6 +5,7 @@
 - 功能範圍：**僅 `create + sync`**。
 - `id` 來源：**前端產生並送出**。
 - 本次不做：`get/update/delete`、`keepalive`、`Service Worker Background Sync`、OAuth。
+- 離線策略：**核心記帳可離線，雲同步不在離線時強行送出**。
 
 ## 2. 目前本地資料模型（以程式碼為準）
 
@@ -190,6 +191,7 @@ this.version(1).stores({
    - `incoming.version === existing.version` 且 `incoming.updatedAt === existing.updatedAt`：視為重送（`skipped`）
    - 其餘情況：回傳衝突錯誤（`error`, `message: "Conflict: stale version"`）
 5. 前端依 `results[]` 逐筆更新同步狀態（`success/skipped/error`）。
+6. 若裝置離線，前端不送出 `create` 請求，資料維持在本地 `pending` 狀態，待下次有網路時補送。
 
 ### 5.1 Phase 1 `create` 使用情境 / 觸發條件
 1. 新增交易後立即同步（Immediate Create Sync）
@@ -211,26 +213,31 @@ this.version(1).stores({
 5. 插入範例資料後立即同步（Example Seed Sync）
 - 觸發：使用者插入範例交易後。
 - 行為：對新插入的範例資料執行同步。
+- 離線例外：若目前離線，只插入本地資料，不立刻送出同步。
 
 6. 啟動補送未完成資料（Startup Pending Sync）
 - 觸發：App 啟動後執行 `syncPending`（掃描待同步資料）。
 - 行為：以 `create` 分批補送待同步資料。
+- 離線例外：若目前離線，直接跳過，不標記為失敗。
 
 7. 同步狀態頁手動同步（Manual Retry from Sync Progress Page）
 - 觸發：使用者在同步狀態頁點擊「同步待同步」。
 - 行為：執行 `syncPending`，重新嘗試所有 `syncStatus !== 'synced'` 的資料。
+- 離線例外：按鈕應停用，並提示需恢復連線後再重試。
 
 ## 6. `syncPending` 定義
 - `syncPending` 是「補發機制」：
   - 在 App 啟動時，掃描本地尚未成功上傳的交易，逐筆重送到雲端。
 - 前端目前將 `syncStatus !== 'synced'` 的資料都視為待補送項目，包含 `pending`、`syncing`、`error`。
 - 批次大小目前固定為 `50` 筆。
+- 若瀏覽器 `navigator.onLine === false`，`syncPending` 直接返回空結果，不修改本地資料。
 
 ## 6.1 前端同步狀態機（目前實作）
 - 初始或待重送：`pending`
 - 送出中：`syncing`
 - API 回傳 `success` 或 `skipped`：標記為 `synced`
 - API 回傳 item `error`、整體 `status !== success`、缺少 `results[]`、缺少單筆結果、非 JSON 回應、網路錯誤：標記為 `error`，並寫入 `lastSyncError`
+- 離線時不進入 `syncing`，維持 `pending`，避免把暫時離線誤判為同步失敗。
 
 ## 6.2 使用者可見同步 UI
 - 交易列表中的每筆交易會顯示一個同步狀態點：
@@ -239,6 +246,7 @@ this.version(1).stores({
   - `synced`：已同步
   - `error`：同步失敗
 - App 另提供「同步狀態頁」，顯示四種狀態的筆數統計、完整交易列表，以及手動同步待同步資料的入口。
+- 若目前離線，同步狀態頁會顯示離線提示，並停用「同步待同步」按鈕。
 
 ## 7. Sync Conflict Matrix
 

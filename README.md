@@ -39,11 +39,12 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 
 ## 4. 技術棧 (Tech Stack)
 *   **前端框架**：React 19
-*   **樣式處理**：Tailwind CSS
+*   **樣式處理**：Tailwind CSS v4（本地建置，非 CDN）
 *   **資料庫**：Dexie.js (IndexedDB)
 *   **日期處理**：date-fns
 *   **圖示庫**：Lucide React
 *   **人工智慧**：@google/genai (Gemini 3 Flash)
+*   **PWA**：Vite PWA Plugin + Service Worker precache
 
 ---
 
@@ -89,6 +90,7 @@ this.version(1).stores({
 
 ### 6.2 AI 解析
 *   整合 Gemini API，支援將自然語言輸入（如「午餐 120 現金」）結構化為帳務紀錄。
+*   若裝置目前離線，AI 解析會直接顯示不可用提示，不會阻塞記帳流程。
 
 ### 6.3 精確排序 (Precise Sorting)
 *   雖然 UI 介面僅讓使用者選擇至「分鐘」，系統會將秒數固定為 `00` 後寫入 `timestamp`（Epoch 秒），並同步寫入 `readableDateTime` 方便人類閱讀。
@@ -97,6 +99,13 @@ this.version(1).stores({
 *   每筆交易在本地端會保存 `syncStatus` 與 `lastSyncError`，用來追蹤同步進度與錯誤訊息。
 *   `syncStatus` 為本地 UI / 補送機制使用的狀態欄位，不屬於上傳到 Google Sheets 的 payload 欄位。
 *   目前同步狀態包含：`pending`、`syncing`、`synced`、`error`。
+*   離線時新增／編輯／匯入資料仍會先落在 IndexedDB，並保持 `pending`，待恢復連線後補送。
+
+### 6.6 PWA / iOS 離線模式
+*   專案現在會在 production build 產生 Service Worker，precache app shell、manifest 與 icon 資產。
+*   GitHub Pages 部署路徑固定為 `https://rexx.github.io/Cozy-Pocket/`，Vite `base` 與 manifest `scope/start_url` 已對齊此路徑。
+*   iOS Safari 首次上線開啟後，可透過「加入主畫面」安裝；之後離線仍可開啟 app 與操作本機資料。
+*   離線模式下可瀏覽、新增、編輯、刪除交易；雲同步與 AI 解析暫停。
 
 ### 6.5 輸入建議排序
 *   新增／編輯記帳時，`merchant`、`name`、`tags` 會根據歷史交易產生建議 chips。
@@ -111,11 +120,24 @@ this.version(1).stores({
 1. `npm install`
 2. `npm run dev`
 3. 開啟 `http://localhost:5173/`
+4. production build：`npm run build`
 
 若需要讓同網段裝置也能連線：
 
 ```bash
 npm run dev -- --host 0.0.0.0 --port 5173
+```
+
+GitHub Pages 部署目標：
+
+```text
+https://rexx.github.io/Cozy-Pocket/
+```
+
+PWA icon 與 manifest 會直接從 `/Cozy-Pocket/<filename>` 提供，例如：
+
+```text
+https://rexx.github.io/Cozy-Pocket/android-chrome-192x192.png
 ```
 
 ---
@@ -146,3 +168,7 @@ App 內建重置按鈕：
 5. 插入範例資料後立即同步
 6. App 啟動後自動補送未同步完成資料
 7. 使用者可從「資料與設定」開啟「同步狀態頁」，手動重新同步待同步資料
+
+補充：
+*   若目前離線，上述同步會改為跳過並保留 `pending` 狀態，不視為資料遺失。
+*   恢復連線後，App 啟動補送或手動同步都會重新嘗試待同步資料。

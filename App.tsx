@@ -11,6 +11,7 @@ import { SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
+import { isOffline } from './services/networkService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
@@ -40,6 +41,12 @@ const SuccessToast: React.FC<{ message: string }> = ({ message }) => (
     </div>
   </div>
 );
+
+interface TriggerSyncResult {
+  total: number;
+  failed: number;
+  skippedOffline: boolean;
+}
 
 const normalizeSuggestionValue = (value: string) => value.trim();
 
@@ -132,7 +139,19 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [isOfflineMode, setIsOfflineMode] = useState(isOffline());
   const toastHideTimerRef = useRef<number | null>(null);
+  const clearErrors = useCallback(() => setCapturedErrors([]), []);
+  const showToast = useCallback((message: string) => {
+    setToastMessage(message);
+    if (toastHideTimerRef.current !== null) {
+      window.clearTimeout(toastHideTimerRef.current);
+    }
+    toastHideTimerRef.current = window.setTimeout(() => {
+      setToastMessage('');
+      toastHideTimerRef.current = null;
+    }, 1800);
+  }, []);
 
   const normalizeTransactionTime = (tx: Transaction): Transaction => {
     const normalizedTimestamp = toEpochSeconds(tx.timestamp);
@@ -183,6 +202,9 @@ const App: React.FC = () => {
       setTransactions(prev => [...examples, ...prev]);
 
       void (async () => {
+        if (isOffline()) {
+          return;
+        }
         const results = await runSyncWithProgress('同步範例資料', (onProgress) => syncCreateItems(examples, onProgress));
         const failedCount = results.filter(r => r.status === 'error').length;
         if (failedCount > 0) {
@@ -234,6 +256,22 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const handleOnlineStateChange = () => {
+      const offline = isOffline();
+      setIsOfflineMode(offline);
+      showToast(offline ? '目前為離線模式，雲同步與 AI 暫停' : '已恢復連線，可再次同步');
+    };
+
+    window.addEventListener('online', handleOnlineStateChange);
+    window.addEventListener('offline', handleOnlineStateChange);
+
+    return () => {
+      window.removeEventListener('online', handleOnlineStateChange);
+      window.removeEventListener('offline', handleOnlineStateChange);
+    };
+  }, [showToast]);
+
+  useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       const msg = `Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`;
       setCapturedErrors(prev => [...prev, msg]);
@@ -248,18 +286,6 @@ const App: React.FC = () => {
       window.removeEventListener('error', handleError);
       window.removeEventListener('unhandledrejection', handleRejection);
     };
-  }, []);
-
-  const clearErrors = useCallback(() => setCapturedErrors([]), []);
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    if (toastHideTimerRef.current !== null) {
-      window.clearTimeout(toastHideTimerRef.current);
-    }
-    toastHideTimerRef.current = window.setTimeout(() => {
-      setToastMessage('');
-      toastHideTimerRef.current = null;
-    }, 1800);
   }, []);
 
   const runSyncWithProgress = useCallback(async <T,>(
@@ -298,7 +324,11 @@ const App: React.FC = () => {
   }, [refreshData]);
   const triggerPendingSync = useCallback(async (
     label: string
-  ): Promise<{ total: number; failed: number }> => {
+  ): Promise<TriggerSyncResult> => {
+    if (isOffline()) {
+      return { total: 0, failed: 0, skippedOffline: true };
+    }
+
     const results = await runSyncWithProgress(label, (onProgress) => syncPendingTransactions(onProgress));
     const failed = results.filter((r) => r.status === 'error');
     if (failed.length > 0) {
@@ -307,7 +337,7 @@ const App: React.FC = () => {
     if (results.length > 0) {
       await refreshData();
     }
-    return { total: results.length, failed: failed.length };
+    return { total: results.length, failed: failed.length, skippedOffline: false };
   }, [refreshData, runSyncWithProgress]);
   useEffect(() => {
     if (isLoading) return;
@@ -390,9 +420,12 @@ const App: React.FC = () => {
         showToast('已儲存新紀錄');
 
       void (async () => {
-          const results = await runSyncWithProgress('同步新交易', (onProgress) => syncCreateItems([transaction], onProgress));
-          const failed = results.find(r => r.id === transaction.id && r.status === 'error');
-          if (failed) {
+        if (isOffline()) {
+          return;
+        }
+        const results = await runSyncWithProgress('同步新交易', (onProgress) => syncCreateItems([transaction], onProgress));
+        const failed = results.find(r => r.id === transaction.id && r.status === 'error');
+        if (failed) {
             setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Create sync failed'}`]);
         }
         await refreshData();
@@ -428,6 +461,9 @@ const App: React.FC = () => {
       showToast('已儲存修改');
 
       void (async () => {
+        if (isOffline()) {
+          return;
+        }
         const results = await runSyncWithProgress('同步更新交易', (onProgress) => syncCreateItems([merged], onProgress));
         const failed = results.find(r => r.id === merged.id && r.status === 'error');
         if (failed) {
@@ -486,6 +522,13 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       {toastMessage && <SuccessToast message={toastMessage} />}
+      {isOfflineMode && (
+        <div className="fixed top-0 left-1/2 z-[9997] -translate-x-1/2 pt-3">
+          <div className="rounded-full border border-amber-400/30 bg-amber-500/15 px-4 py-2 text-[11px] font-black tracking-wide text-amber-200 backdrop-blur-md">
+            離線模式：可繼續記帳，AI 與同步暫停
+          </div>
+        </div>
+      )}
       
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         {!isSearchMode ? (
@@ -643,6 +686,7 @@ const App: React.FC = () => {
           onTriggerSync={triggerPendingSync}
           onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
           onNotify={showToast}
+          isOffline={isOfflineMode}
         />
       )}
       {isSyncProgressPageOpen && (
@@ -653,6 +697,7 @@ const App: React.FC = () => {
             await triggerPendingSync('同步狀態頁手動同步');
           }}
           isSyncing={syncProgressUI.visible}
+          isOffline={isOfflineMode}
         />
       )}
     </div>
