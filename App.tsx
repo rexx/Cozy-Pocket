@@ -512,7 +512,7 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full w-full bg-[#1a1c2c] items-center justify-center">
+      <div className="flex flex-col min-h-[100dvh] w-full bg-[#1a1c2c] items-center justify-center">
         <div className="w-12 h-12 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin"></div>
         <p className="mt-4 text-gray-500 font-bold text-xs uppercase tracking-widest">載入中...</p>
       </div>
@@ -526,7 +526,7 @@ const App: React.FC = () => {
     : 0;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+    <div className="flex flex-col min-h-[100dvh] w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       {toastMessage && <SuccessToast message={toastMessage} />}
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
