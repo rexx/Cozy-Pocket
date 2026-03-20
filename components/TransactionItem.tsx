@@ -12,22 +12,22 @@ interface TransactionItemProps {
   onClick: (transaction: Transaction) => void;
 }
 
-const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { className: string; title: string }> = {
+const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { dotClassName: string; title: string }> = {
   pending: {
     title: '待同步',
-    className: 'bg-amber-300'
+    dotClassName: 'bg-amber-300'
   },
   syncing: {
     title: '同步中',
-    className: 'bg-sky-300'
+    dotClassName: 'border border-gray-400 bg-transparent'
   },
   synced: {
     title: '已同步',
-    className: 'bg-emerald-300'
+    dotClassName: 'bg-emerald-300'
   },
   error: {
     title: '同步失敗',
-    className: 'bg-rose-300'
+    dotClassName: 'bg-rose-300'
   }
 };
 
@@ -89,7 +89,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
             <span
               title={syncStatusUi.title}
               aria-label={syncStatusUi.title}
-              className={`inline-block w-1.5 h-1.5 rounded-full ${syncStatusUi.className}`}
+              className={`inline-block w-1.5 h-1.5 rounded-full ${syncStatusUi.dotClassName}`}
             />
             <span className="text-[10px] text-gray-600 font-bold tabular-nums">
               {formattedTime}
