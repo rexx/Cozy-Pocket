@@ -366,7 +366,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
   const getCurrencyOptionLabel = (currency: string) => `${currency} (${getCurrencyDisplay(currency)})`;
 
   return (
-    <div className="safe-area-inset fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
+    <div className="safe-area-frame fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
       <div className="flex-none">
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
           <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform"><X size={26} /></button>
