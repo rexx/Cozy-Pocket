@@ -99,7 +99,7 @@ const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClo
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4">
           {sortedTransactions.length > 0 ? (
             <div className="rounded-2xl border border-white/10 bg-[#24273c]/40 overflow-hidden">
               {sortedTransactions.map((tx) => (

@@ -383,7 +383,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-8 space-y-4 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
+      <div className="flex-1 overflow-y-auto px-4 pt-6 space-y-4 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         
         {hasApiKey && !isEditing && (
           <div className="px-2 mb-2">

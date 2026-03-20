@@ -375,7 +375,7 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pt-8 pb-4 space-y-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c]">
+      <div className="flex-1 overflow-y-auto px-6 pt-8 space-y-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c]">
         
         <div className="bg-[#252538] rounded-3xl p-6 border border-white/5 shadow-xl space-y-4">
           <div className="flex items-center gap-3">
