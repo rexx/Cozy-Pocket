@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { format, isSameDay, endOfMonth, isWithinInterval, endOfDay, addDays } from 'date-fns';
-import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers, ChevronLeft, ChevronRight, CloudOff } from 'lucide-react';
+import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
@@ -110,8 +110,6 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
   };
 };
 
-const FORCE_SHOW_OFFLINE_BANNER = false;
-
 const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -142,12 +140,8 @@ const App: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [isOfflineMode, setIsOfflineMode] = useState(isOffline());
-  const [isOfflineBannerCompact, setIsOfflineBannerCompact] = useState(false);
   const toastHideTimerRef = useRef<number | null>(null);
-  const offlineBannerTimerRef = useRef<number | null>(null);
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
-  const shouldShowOfflineBanner = isOfflineMode || FORCE_SHOW_OFFLINE_BANNER;
-  const shouldRenderOfflineBanner = shouldShowOfflineBanner && !isModalOpen && !isSettingsOpen && !isSyncProgressPageOpen;
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
     if (toastHideTimerRef.current !== null) {
@@ -262,10 +256,14 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (isOffline()) {
+      showToast('目前為離線模式，雲端同步與 AI 暫停');
+    }
+
     const handleOnlineStateChange = () => {
       const offline = isOffline();
       setIsOfflineMode(offline);
-      showToast(offline ? '目前為離線模式，雲同步與 AI 暫停' : '已恢復連線，可再次同步');
+      showToast(offline ? '目前為離線模式，雲端同步與 AI 暫停' : '已恢復連線，可再次同步');
     };
 
     window.addEventListener('online', handleOnlineStateChange);
@@ -276,30 +274,6 @@ const App: React.FC = () => {
       window.removeEventListener('offline', handleOnlineStateChange);
     };
   }, [showToast]);
-
-  useEffect(() => {
-    if (offlineBannerTimerRef.current !== null) {
-      window.clearTimeout(offlineBannerTimerRef.current);
-      offlineBannerTimerRef.current = null;
-    }
-
-    if (shouldRenderOfflineBanner) {
-      setIsOfflineBannerCompact(false);
-      offlineBannerTimerRef.current = window.setTimeout(() => {
-        setIsOfflineBannerCompact(true);
-        offlineBannerTimerRef.current = null;
-      }, 2500);
-    } else {
-      setIsOfflineBannerCompact(false);
-    }
-
-    return () => {
-      if (offlineBannerTimerRef.current !== null) {
-        window.clearTimeout(offlineBannerTimerRef.current);
-        offlineBannerTimerRef.current = null;
-      }
-    };
-  }, [shouldRenderOfflineBanner]);
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -380,9 +354,6 @@ const App: React.FC = () => {
       }
       if (toastHideTimerRef.current !== null) {
         window.clearTimeout(toastHideTimerRef.current);
-      }
-      if (offlineBannerTimerRef.current !== null) {
-        window.clearTimeout(offlineBannerTimerRef.current);
       }
     };
   }, []);
@@ -555,28 +526,6 @@ const App: React.FC = () => {
     <div className="flex flex-col h-screen w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       {toastMessage && <SuccessToast message={toastMessage} />}
-      {shouldRenderOfflineBanner && (
-        <div
-          className={`fixed z-[9997] transition-all duration-300 ease-out ${
-            isOfflineBannerCompact
-              ? 'left-4 top-5'
-              : 'left-1/2 top-3 -translate-x-1/2'
-          }`}
-        >
-          <div
-            className={`rounded-full border border-amber-400/30 bg-amber-500/15 px-4 py-2 font-black tracking-wide text-amber-200 backdrop-blur-md transition-all duration-300 ${
-              isOfflineBannerCompact ? 'text-[10px] shadow-lg' : 'text-[11px]'
-            }`}
-          >
-            {isOfflineBannerCompact ? (
-              <div className="flex items-center justify-center">
-                <CloudOff size={14} />
-              </div>
-            ) : '離線模式：可繼續記帳，AI 與同步暫停'}
-          </div>
-        </div>
-      )}
-      
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         {!isSearchMode ? (
           <Calendar 
@@ -586,6 +535,7 @@ const App: React.FC = () => {
             onSettingsClick={() => setIsSettingsOpen(true)}
             onSyncProgressClick={() => setIsSyncProgressPageOpen(true)}
             isSyncProgressVisible={syncProgressUI.visible}
+            isOffline={isOfflineMode}
             transactions={transactions}
           />
         ) : (

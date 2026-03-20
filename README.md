@@ -105,7 +105,7 @@ this.version(1).stores({
 *   專案現在會在 production build 產生 Service Worker，precache app shell、manifest 與 icon 資產。
 *   GitHub Pages 部署路徑固定為 `https://rexx.github.io/Cozy-Pocket/`，Vite `base` 與 manifest `scope/start_url` 已對齊此路徑。
 *   iOS Safari 首次上線開啟後，可透過「加入主畫面」安裝；之後離線仍可開啟 app 與操作本機資料。
-*   離線模式下可瀏覽、新增、編輯、刪除交易；雲同步與 AI 解析暫停。
+*   離線模式下可瀏覽、新增、編輯、刪除交易；雲端同步與 AI 解析暫停。
 
 ### 6.5 輸入建議排序
 *   新增／編輯記帳時，`merchant`、`name`、`tags` 會根據歷史交易產生建議 chips。

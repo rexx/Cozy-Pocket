@@ -12,7 +12,7 @@ import {
   isValid,
   endOfDay
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Search, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Settings, CloudOff } from 'lucide-react';
 import { toEpochSeconds } from '../time';
 
 interface CalendarProps {
@@ -22,6 +22,7 @@ interface CalendarProps {
   onSettingsClick: () => void;
   onSyncProgressClick?: () => void;
   isSyncProgressVisible?: boolean;
+  isOffline?: boolean;
   transactions: any[];
 }
 
@@ -32,6 +33,7 @@ const Calendar: React.FC<CalendarProps> = ({
   onSettingsClick,
   onSyncProgressClick,
   isSyncProgressVisible = false,
+  isOffline = false,
   transactions
 }) => {
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
@@ -108,7 +110,15 @@ const Calendar: React.FC<CalendarProps> = ({
         </div>
 
         <div className="flex items-center gap-1 justify-self-end">
-          {isSyncProgressVisible && (
+          {isOffline ? (
+            <div
+              className="text-amber-300 p-2"
+              title="目前離線，雲端同步與 AI 暫停"
+              aria-label="目前離線，雲端同步與 AI 暫停"
+            >
+              <CloudOff size={20} />
+            </div>
+          ) : isSyncProgressVisible && (
             <button
               onClick={onSyncProgressClick}
               className="relative text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
