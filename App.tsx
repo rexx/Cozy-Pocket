@@ -588,7 +588,7 @@ const App: React.FC = () => {
           </div>
         )}
         <div className="overflow-y-auto no-scrollbar overscroll-contain h-full min-h-0">
-          <div className="mt-2 space-y-1 pb-16">
+          <div className="mt-2 space-y-1 pb-4">
           {isSearchMode ? (
             <>
               {searchQuery.trim() === '' ? (
@@ -621,7 +621,7 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              <div className="px-6 pt-12 pb-16">
+              <div className="px-6 pt-12 pb-8">
                 <div className="bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl">
                   <div className="flex-1 border-r border-white/5 pr-4 space-y-1.5 opacity-60">
                     <div className="flex items-center justify-between mb-1">
@@ -667,7 +667,7 @@ const App: React.FC = () => {
       </div>
       <div
         className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#1a1c2c] to-transparent pointer-events-none z-40"
-        style={{ height: 'calc(6rem + var(--safe-area-bottom))' }}
+        style={{ height: '6rem' }}
       ></div>
 
       {isModalOpen && (
