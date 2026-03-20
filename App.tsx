@@ -526,10 +526,10 @@ const App: React.FC = () => {
     : 0;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200 outline-2 outline-red-500">
+    <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
       {toastMessage && <SuccessToast message={toastMessage} />}
-      <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40 outline-2 outline-emerald-400">
+      <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         {!isSearchMode ? (
           <Calendar 
             selectedDate={selectedDate} 
@@ -559,7 +559,7 @@ const App: React.FC = () => {
           </div>
         )}
       </div>
-      <div className="flex-1 min-h-0 relative overflow-hidden outline-2 outline-cyan-400">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
         {!isSearchMode && (
           <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">
             <button
@@ -587,8 +587,8 @@ const App: React.FC = () => {
             </button>
           </div>
         )}
-        <div className="overflow-y-auto no-scrollbar overscroll-contain h-full min-h-0 outline-2 outline-amber-300">
-          <div className="mt-2 space-y-1 outline-2 outline-fuchsia-500">
+        <div className="overflow-y-auto no-scrollbar overscroll-contain h-full min-h-0">
+          <div className="mt-2 space-y-1">
           {isSearchMode ? (
             <>
               {searchQuery.trim() === '' ? (
