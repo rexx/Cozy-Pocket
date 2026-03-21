@@ -82,7 +82,7 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   return (
-    <div className="bg-[#1a1c2c] p-4 pt-2 select-none">
+    <div className="bg-[#1a1c2c] p-4 pt-0 select-none">
       <div className="grid grid-cols-3 items-center mb-4 px-1">
         <div className="flex items-center gap-1 justify-self-start">
           <div className="w-9 flex justify-center">

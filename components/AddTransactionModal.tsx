@@ -370,7 +370,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       <div className="flex-none">
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
           <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform"><X size={26} /></button>
-          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? `修改${activeTab}` : '新增項目'}</h1>
+          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? '修改項目' : '新增項目'}</h1>
           <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform"><Check size={26} strokeWidth={2.5} /></button>
         </div>
         <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
@@ -383,8 +383,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pt-6 space-y-4 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
-        
+      <div className="flex-1 overflow-y-auto px-4 pt-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
+        <div className="min-h-[calc(100%+1px)] space-y-4 pb-10">
         {hasApiKey && !isEditing && (
           <div className="px-2 mb-2">
             <form onSubmit={handleAiSubmit} className="relative group">
@@ -544,7 +544,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         <div className="bg-[#252538] rounded-2xl p-5 min-h-[140px] border border-white/5 shadow-lg">
-          <textarea placeholder="點擊輸入備註..." value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-transparent resize-none text-sm focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed" />
+          <textarea placeholder="輸入備註..." value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-transparent resize-none text-sm focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed" />
         </div>
 
         {isEditing && (
@@ -552,6 +552,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <Trash2 size={20} /><span>刪除這筆紀錄</span>
           </button>
         )}
+        </div>
       </div>
     </div>
   );

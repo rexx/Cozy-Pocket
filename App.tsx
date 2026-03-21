@@ -588,7 +588,7 @@ const App: React.FC = () => {
           </div>
         )}
         <div className="overflow-y-auto no-scrollbar overscroll-contain h-full min-h-0">
-          <div className="mt-2 space-y-1">
+          <div className="mt-2 min-h-[calc(100%+1px)] space-y-1">
           {isSearchMode ? (
             <>
               {searchQuery.trim() === '' ? (
