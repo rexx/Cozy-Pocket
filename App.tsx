@@ -1,17 +1,19 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { format, isSameDay, endOfMonth, isWithinInterval, endOfDay, addDays } from 'date-fns';
+import { format, isSameDay, isWithinInterval, endOfDay, addDays } from 'date-fns';
 import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
 import DataManagementModal from './components/DataManagementModal';
 import SyncProgressPage from './components/SyncProgressPage';
+import MonthlyStatsPage from './components/MonthlyStatsPage';
 import { SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { isOffline } from './services/networkService';
+import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
@@ -114,6 +116,7 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
 };
 
 const App: React.FC = () => {
+  const [activeView, setActiveView] = useState<'home' | 'stats'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -387,23 +390,10 @@ const App: React.FC = () => {
     }).sort((a, b) => b.timestamp - a.timestamp);
   }, [transactions, searchQuery, isSearchMode]);
 
-  const getStatsByCurrency = (txs: Transaction[]) => {
-    return txs.reduce((acc, curr) => {
-      const cur = curr.currency || 'TWD';
-      if (!acc[cur]) acc[cur] = { income: 0, expense: 0 };
-      if (curr.type === '收入') acc[cur].income += Math.abs(curr.amount);
-      else acc[cur].expense += Math.abs(curr.amount);
-      return acc;
-    }, {} as Record<string, { income: number, expense: number }>);
-  };
-
   const dailyStatsByCurrency = useMemo(() => getStatsByCurrency(dailyTransactions), [dailyTransactions]);
 
   const monthlyStatsByCurrency = useMemo(() => {
-    const start = toEpochSeconds(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1).getTime());
-    const end = toEpochSeconds(endOfMonth(selectedDate).getTime());
-    const monthTxs = transactions.filter(t => t.timestamp >= start && t.timestamp <= end);
-    return getStatsByCurrency(monthTxs);
+    return getStatsByCurrency(getMonthTransactions(transactions, selectedDate));
   }, [transactions, selectedDate]);
 
   const suggestionIndex = useMemo<SuggestionIndex>(() => buildSuggestionIndex(transactions), [transactions]);
@@ -525,6 +515,54 @@ const App: React.FC = () => {
     ? Math.round((syncProgressUI.processed / syncProgressUI.total) * 100)
     : 0;
 
+  if (activeView === 'stats') {
+    return (
+      <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        {toastMessage && <SuccessToast message={toastMessage} />}
+        <MonthlyStatsPage
+          transactions={transactions}
+          initialDate={selectedDate}
+          defaultCurrency={defaultCurrency}
+          onBack={() => setActiveView('home')}
+        />
+        {isModalOpen && (
+          <AddTransactionModal
+            initialDate={selectedDate}
+            editingTransaction={editingTransaction}
+            onClose={() => setIsModalOpen(false)}
+            onAdd={addTransaction}
+            onUpdate={updateTransaction}
+            onDelete={deleteTransaction}
+            suggestions={suggestionIndex}
+          />
+        )}
+        {isSettingsOpen && (
+          <DataManagementModal
+            onClose={() => setIsSettingsOpen(false)}
+            onDataChange={refreshData}
+            onInsertExamples={insertExampleTransactions}
+            onTriggerSync={triggerPendingSync}
+            onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
+            onNotify={showToast}
+            isOffline={isOfflineMode}
+          />
+        )}
+        {isSyncProgressPageOpen && (
+          <SyncProgressPage
+            transactions={transactions}
+            onClose={() => setIsSyncProgressPageOpen(false)}
+            onSyncNow={async () => {
+              await triggerPendingSync('同步狀態頁手動同步');
+            }}
+            isSyncing={syncProgressUI.visible}
+            isOffline={isOfflineMode}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
@@ -622,7 +660,11 @@ const App: React.FC = () => {
               )}
 
               <div className="px-6 pt-12">
-                <div className="bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('stats')}
+                  className="w-full bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl text-left transition-all hover:border-cyan-500/20 hover:bg-[#2a2d44]/70 active:scale-[0.99]"
+                >
                   <div className="flex-1 border-r border-white/5 pr-4 space-y-1.5 opacity-60">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-gray-500 text-[9px] font-black uppercase tracking-[0.1em]">本月</span>
@@ -657,6 +699,15 @@ const App: React.FC = () => {
                       <div className="text-gray-700 font-black text-xl">{formatStatAmount(0, defaultCurrency)}</div>
                     )}
                   </div>
+                </button>
+                <div className="mt-3 flex items-center justify-end px-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveView('stats')}
+                    className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-400/80 transition-colors hover:text-cyan-300"
+                  >
+                    查看月份統計
+                  </button>
                 </div>
                 <p className="text-center text-[10px] text-gray-700 font-bold uppercase tracking-[0.4em] mt-12 opacity-15">Cozy Pocket • Minimalism</p>
               </div>
