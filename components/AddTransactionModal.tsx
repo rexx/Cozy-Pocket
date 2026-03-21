@@ -52,9 +52,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [amount, setAmount] = useState(getInitialAmount());
   const [currency, setCurrency] = useState(editingTransaction?.currency || 'TWD');
   const [availableCurrencies, setAvailableCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
-  const [isSubView, setIsSubView] = useState(isEditing && editingTransaction?.type === '支出');
+  const [isSubView, setIsSubView] = useState(false);
   const [categoryId, setCategoryId] = useState<string | undefined>(editingTransaction?.categoryId);
   const [subCategoryId, setSubCategoryId] = useState<string | undefined>(editingTransaction?.subCategoryId);
+  const [isCategoryCollapsed, setIsCategoryCollapsed] = useState(
+    editingTransaction?.type === '支出'
+      ? !!(editingTransaction?.categoryId && editingTransaction?.subCategoryId)
+      : !!editingTransaction?.categoryId
+  );
   const [name, setName] = useState(editingTransaction?.name || ''); 
   const [note, setNote] = useState(editingTransaction?.note || ''); 
   const [merchant, setMerchant] = useState(editingTransaction?.merchant || ''); 
@@ -104,6 +109,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const handleTabChange = (tab: TransactionType) => {
     setActiveTab(tab);
     setIsSubView(false);
+    setIsCategoryCollapsed(false);
     if (!isEditing) {
       setCategoryId(undefined);
       setSubCategoryId(undefined);
@@ -112,12 +118,32 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleMainCategoryClick = (id: string) => {
     setCategoryId(id);
-    if (activeTab === '支出') setIsSubView(true);
-    else setSubCategoryId(undefined);
+    if (activeTab === '支出') {
+      setSubCategoryId(undefined);
+      setIsSubView(true);
+      setIsCategoryCollapsed(false);
+    } else {
+      setSubCategoryId(undefined);
+      setIsSubView(false);
+      setIsCategoryCollapsed(true);
+    }
   };
 
-  const handleSubCategoryClick = (id: string) => setSubCategoryId(id);
-  const handleBackToMain = () => setIsSubView(false);
+  const handleSubCategoryClick = (id: string) => {
+    setSubCategoryId(id);
+    setIsSubView(false);
+    setIsCategoryCollapsed(true);
+  };
+
+  const handleBackToMain = () => {
+    setIsSubView(false);
+    setIsCategoryCollapsed(false);
+  };
+
+  const handleExpandCategoryPicker = () => {
+    setIsCategoryCollapsed(false);
+    setIsSubView(false);
+  };
 
   const toggleCurrency = () => {
     const cyclingCurrencies = availableCurrencies.length > 0 ? availableCurrencies : [...SUPPORTED_CURRENCIES];
@@ -135,7 +161,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       const { parseTransactionWithAI } = await import('../services/geminiService');
       const result = await parseTransactionWithAI(aiInput);
       if (result) {
-        if (result.type) setActiveTab(result.type as TransactionType);
+        const nextType = (result.type as TransactionType) || activeTab;
+        if (result.type) setActiveTab(nextType);
         const normalizedCurrency = result.currency?.toUpperCase();
         if (normalizedCurrency && availableCurrencies.includes(normalizedCurrency)) {
           setCurrency(normalizedCurrency);
@@ -145,7 +172,20 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         }
         if (result.categoryId) {
           setCategoryId(result.categoryId);
-          if (result.type === '支出') setIsSubView(true);
+          if (nextType === '支出') {
+            if (result.subCategoryId) {
+              setIsSubView(false);
+              setIsCategoryCollapsed(true);
+            } else {
+              setSubCategoryId(undefined);
+              setIsSubView(true);
+              setIsCategoryCollapsed(false);
+            }
+          } else {
+            setSubCategoryId(undefined);
+            setIsSubView(false);
+            setIsCategoryCollapsed(true);
+          }
         }
         if (result.subCategoryId) setSubCategoryId(result.subCategoryId);
         setName(result.name || result.merchant || "");
@@ -197,6 +237,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (activeTab === '支出' && !subCategoryId) {
       alert("請選擇子類別");
       setIsSubView(true);
+      setIsCategoryCollapsed(false);
       return;
     }
     
@@ -266,7 +307,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const PaymentIcon = getPaymentIcon(paymentMethod);
   const categoriesToDisplay = activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-  const currentMainCat = EXPENSE_CATEGORIES.find(c => c.id === categoryId);
+  const currentMainCat = categoriesToDisplay.find(c => c.id === categoryId);
+  const currentSubCategory = currentMainCat?.subcategories?.find(item => item.id === subCategoryId);
+  const collapsedCategoryIcon = activeTab === '支出' && currentSubCategory
+    ? currentSubCategory.icon
+    : currentMainCat?.icon;
 
   const getTextMatchRank = (value: string, rawQuery: string) => {
     const query = rawQuery.trim().toLowerCase();
@@ -379,14 +424,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </button>
           )}
         />
-        <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
-          {['支出', '收入'].map((tab) => (
-            <button key={tab} onClick={() => handleTabChange(tab as TransactionType)} className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>
-              {tab}
-              {activeTab === tab && <div className={`absolute bottom-0 left-4 right-4 h-1 rounded-t-full ${activeTab === '收入' ? 'bg-rose-500 shadow-rose-500/30' : 'bg-emerald-500 shadow-emerald-500/30'}`}></div>}
-            </button>
-          ))}
-        </div>
+        {!isCategoryCollapsed && (
+          <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
+            {['支出', '收入'].map((tab) => (
+              <button key={tab} onClick={() => handleTabChange(tab as TransactionType)} className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>
+                {tab}
+                {activeTab === tab && <div className={`absolute bottom-0 left-4 right-4 h-1 rounded-t-full ${activeTab === '收入' ? 'bg-rose-500 shadow-rose-500/30' : 'bg-emerald-500 shadow-emerald-500/30'}`}></div>}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pt-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
@@ -430,8 +477,36 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
 
-        <div className="px-2 min-h-[180px] mb-6">
-          {activeTab === '支出' && isSubView && currentMainCat ? (
+        <div className={`${isCategoryCollapsed ? 'mb-3' : 'px-2 mb-6 min-h-[180px]'}`}>
+          {isCategoryCollapsed && currentMainCat ? (
+            <button
+              type="button"
+              onClick={handleExpandCategoryPicker}
+              className="w-full rounded-3xl border border-white/10 bg-[#252538] px-3 py-3 shadow-lg transition-all active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: currentMainCat.color }}
+                >
+                  {(() => {
+                    const IconComp = (collapsedCategoryIcon && IconMap[collapsedCategoryIcon]) || MoreHorizontal;
+                    return <IconComp size={22} color="white" strokeWidth={2.5} />;
+                  })()}
+                </div>
+                <div className="min-w-0 text-left">
+                  {activeTab === '支出' && currentSubCategory ? (
+                    <div className="flex items-baseline gap-3 text-left">
+                      <div className="truncate text-xl font-black leading-none text-white">{currentSubCategory.name}</div>
+                      <div className="truncate text-sm font-bold leading-none text-gray-400">{currentMainCat.name}</div>
+                    </div>
+                  ) : (
+                    <div className="truncate text-xl font-black leading-none text-white">{currentMainCat.name}</div>
+                  )}
+                </div>
+              </div>
+            </button>
+          ) : activeTab === '支出' && isSubView && currentMainCat ? (
             <div className="grid grid-cols-5 gap-x-2 gap-y-6">
               <button onClick={handleBackToMain} className="flex flex-col items-center gap-2 group">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white/5">
