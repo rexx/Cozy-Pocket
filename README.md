@@ -106,6 +106,8 @@ this.version(1).stores({
 *   GitHub Pages 部署路徑固定為 `https://rexx.github.io/Cozy-Pocket/`，Vite `base` 與 manifest `scope/start_url` 已對齊此路徑。
 *   iOS Safari 首次上線開啟後，可透過「加入主畫面」安裝；之後離線仍可開啟 app 與操作本機資料。
 *   離線模式下可瀏覽、新增、編輯、刪除交易；雲端同步與 AI 解析暫停。
+*   iOS standalone PWA 目前**不要**使用 `viewport-fit=cover`，也**不需要** `env(safe-area-inset-*)`。
+*   詳細排版注意事項請見：[PWA Layout Gotchas](docs/pwa-layout-gotchas.md)
 
 ### 6.5 輸入建議排序
 *   新增／編輯記帳時，`merchant`、`name`、`tags` 會根據歷史交易產生建議 chips。
