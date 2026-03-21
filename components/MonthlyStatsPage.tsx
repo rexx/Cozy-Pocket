@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrencyAmount } from '../constants';
 import { Transaction } from '../types';
 import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency } from '../services/statsService';
+import PageHeader from './PageHeader';
 
 interface MonthlyStatsPageProps {
   transactions: Transaction[];
@@ -56,41 +57,30 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const formatStatAmount = (value: number, currency: string) => (
     formatCurrencyAmount(value, currency, { withSpace: true })
   );
+  const monthNavButtonClassName = 'pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#24273c]/80 text-gray-300 shadow-lg transition-all hover:text-white active:scale-90';
 
   return (
     <div className="flex h-full w-full flex-col bg-[#1a1c2c] text-slate-200">
-      <div className="flex items-center justify-between border-b border-white/5 px-5 pb-4 pt-5">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm font-bold text-gray-300 transition-colors hover:text-white"
-        >
-          <ArrowLeft size={18} />
-          返回
-        </button>
-        <div className="text-center">
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-cyan-400/80">Monthly Stats</p>
-          <h1 className="mt-1 text-lg font-black tracking-tight text-white">月份統計</h1>
-        </div>
-        <div className="w-12" />
-      </div>
+      <PageHeader
+        title="月份統計"
+        leftAction={<ArrowLeft size={26} />}
+        onLeftAction={onBack}
+      />
 
       <div className="border-b border-white/5 px-5 py-4">
         <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#24273c]/80 px-3 py-3 shadow-lg">
           <button
             onClick={() => setSelectedMonth((prev) => addMonths(prev, -1))}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-gray-300 transition-all hover:text-white active:scale-90"
+            className={monthNavButtonClassName}
             aria-label="切換到上個月"
             title="上個月"
           >
             <ChevronLeft size={18} />
           </button>
-          <div className="text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">目前月份</p>
-            <p className="mt-1 text-xl font-black tracking-tight text-white">{format(selectedMonth, 'yyyy 年 MM 月')}</p>
-          </div>
+          <p className="text-center text-xl font-black tracking-tight text-white">{format(selectedMonth, 'yyyy 年 MM 月')}</p>
           <button
             onClick={() => setSelectedMonth((prev) => addMonths(prev, 1))}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-gray-300 transition-all hover:text-white active:scale-90"
+            className={monthNavButtonClassName}
             aria-label="切換到下個月"
             title="下個月"
           >
@@ -102,7 +92,6 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
       <div className="border-b border-white/5 px-5 py-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">Tag 篩選</p>
-          <p className="text-xs font-bold text-gray-500">{selectedTag ? `#${selectedTag}` : '全部'}</p>
         </div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           <button

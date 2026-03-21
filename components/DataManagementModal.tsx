@@ -6,6 +6,7 @@ import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
 import { SUPPORTED_CURRENCIES, getCurrencyDisplay, getEnabledCurrencies, getPreferredCurrency } from '../constants';
+import PageHeader from './PageHeader';
 
 interface DataManagementModalProps {
   onClose: () => void;
@@ -368,11 +369,11 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
       <div className="flex-none">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
-          <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform"><X size={26} /></button>
-          <h1 className="text-lg font-bold text-white tracking-wide">資料與設定</h1>
-          <div className="w-10"></div>
-        </div>
+        <PageHeader
+          title="資料與設定"
+          leftAction={<X size={26} />}
+          onLeftAction={onClose}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pt-8 space-y-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c]">

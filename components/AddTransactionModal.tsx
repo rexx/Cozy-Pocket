@@ -13,6 +13,7 @@ import { db } from '../db';
 import { isOffline } from '../services/networkService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 import { categoryIconMap } from './categoryIcons';
+import PageHeader from './PageHeader';
 
 const IconMap = categoryIconMap;
 
@@ -368,11 +369,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
       <div className="flex-none">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-white/5 bg-[#1e1e2d]">
-          <button onClick={onClose} className="p-2 text-gray-400 active:scale-90 transition-transform"><X size={26} /></button>
-          <h1 className="text-lg font-bold text-white tracking-wide">{isEditing ? '修改項目' : '新增項目'}</h1>
-          <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform"><Check size={26} strokeWidth={2.5} /></button>
-        </div>
+        <PageHeader
+          title={isEditing ? '修改項目' : '新增項目'}
+          leftAction={<X size={26} />}
+          onLeftAction={onClose}
+          rightSlot={(
+            <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform">
+              <Check size={26} strokeWidth={2.5} />
+            </button>
+          )}
+        />
         <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
           {['支出', '收入'].map((tab) => (
             <button key={tab} onClick={() => handleTabChange(tab as TransactionType)} className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>

@@ -700,15 +700,6 @@ const App: React.FC = () => {
                     )}
                   </div>
                 </button>
-                <div className="mt-3 flex items-center justify-end px-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('stats')}
-                    className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-400/80 transition-colors hover:text-cyan-300"
-                  >
-                    查看月份統計
-                  </button>
-                </div>
                 <p className="text-center text-[10px] text-gray-700 font-bold uppercase tracking-[0.4em] mt-12 opacity-15">Cozy Pocket • Minimalism</p>
               </div>
             </>
