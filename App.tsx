@@ -17,7 +17,7 @@ import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
   if (errors.length === 0) return null;
   return (
-    <div className="safe-area-top fixed top-0 left-0 right-0 z-[9999] bg-red-600/95 text-white p-4 text-xs font-mono max-h-[40vh] overflow-y-auto shadow-2xl backdrop-blur-md">
+    <div className="fixed top-0 left-0 right-0 z-[9999] bg-red-600/95 text-white p-4 text-xs font-mono max-h-[40vh] overflow-y-auto shadow-2xl backdrop-blur-md">
       <div className="flex justify-between items-center mb-2 sticky top-0 bg-red-600 py-1">
         <div className="flex items-center gap-2">
           <AlertCircle size={14} />
@@ -37,7 +37,7 @@ const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ err
 const SuccessToast: React.FC<{ message: string }> = ({ message }) => (
   <div
     className="fixed left-1/2 z-[9998] -translate-x-1/2 animate-slide-up pointer-events-none"
-    style={{ bottom: 'calc(7rem + var(--safe-area-bottom))' }}
+    style={{ bottom: '7rem' }}
   >
     <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 shadow-2xl backdrop-blur-md">
       <p className="text-sm font-bold text-emerald-200 whitespace-nowrap">{message}</p>

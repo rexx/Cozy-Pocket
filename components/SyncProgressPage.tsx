@@ -63,7 +63,7 @@ const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClo
   const statusOrder: SyncStatusKey[] = ['pending', 'syncing', 'error', 'synced'];
 
   return (
-    <div className="safe-area-frame fixed inset-0 z-[90] bg-[#1a1c2c] text-slate-200">
+    <div className="fixed inset-0 z-[90] bg-[#1a1c2c] text-slate-200">
       <div className="h-full flex flex-col">
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 bg-[#1e1e2d]">
           <div className="flex items-center gap-3">
