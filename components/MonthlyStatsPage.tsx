@@ -92,46 +92,48 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
       />
 
       <div className="border-b border-white/5 px-5 py-4">
-        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#24273c]/60 p-1">
-          {[
-            { id: 'month', label: '月份' },
-            { id: 'year', label: '年份' },
-          ].map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setPeriodMode(option.id as StatsPeriodMode)}
-              className={`rounded-[0.9rem] px-3 py-2 text-sm font-black transition-all ${
-                periodMode === option.id
-                  ? 'bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+        <div className="rounded-2xl border border-white/10 bg-[#24273c]/80 p-3 shadow-lg">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#1f2334]/80 p-1">
+            {[
+              { id: 'month', label: '月份' },
+              { id: 'year', label: '年份' },
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setPeriodMode(option.id as StatsPeriodMode)}
+                className={`rounded-[0.9rem] px-3 py-2 text-sm font-black transition-all ${
+                  periodMode === option.id
+                    ? 'bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
 
-      <div className="border-b border-white/5 px-5 py-4">
-        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#24273c]/80 px-3 py-3 shadow-lg">
-          <button
-            onClick={() => movePeriod(-1)}
-            className={monthNavButtonClassName}
-            aria-label={periodMode === 'month' ? '切換到上個月' : '切換到上一年'}
-            title={periodMode === 'month' ? '上個月' : '上一年'}
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <p className="text-center text-xl font-black tracking-tight text-white">{periodLabel}</p>
-          <button
-            onClick={() => movePeriod(1)}
-            className={monthNavButtonClassName}
-            aria-label={periodMode === 'month' ? '切換到下個月' : '切換到下一年'}
-            title={periodMode === 'month' ? '下個月' : '下一年'}
-          >
-            <ChevronRight size={18} />
-          </button>
+          <div className="my-3 h-px bg-white/8" />
+
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => movePeriod(-1)}
+              className={monthNavButtonClassName}
+              aria-label={periodMode === 'month' ? '切換到上個月' : '切換到上一年'}
+              title={periodMode === 'month' ? '上個月' : '上一年'}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <p className="text-center text-xl font-black tracking-tight text-white">{periodLabel}</p>
+            <button
+              onClick={() => movePeriod(1)}
+              className={monthNavButtonClassName}
+              aria-label={periodMode === 'month' ? '切換到下個月' : '切換到下一年'}
+              title={periodMode === 'month' ? '下個月' : '下一年'}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
