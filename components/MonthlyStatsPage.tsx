@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { addMonths, format } from 'date-fns';
+import { addMonths, addYears, format } from 'date-fns';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrencyAmount } from '../constants';
 import { Transaction, TransactionType } from '../types';
-import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency } from '../services/statsService';
+import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
+
+type StatsPeriodMode = 'month' | 'year';
 
 interface MonthlyStatsPageProps {
   transactions: Transaction[];
@@ -22,37 +24,40 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   onBack,
   onTransactionClick,
 }) => {
-  const [selectedMonth, setSelectedMonth] = useState(initialDate);
+  const [periodMode, setPeriodMode] = useState<StatsPeriodMode>('month');
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedTag, setSelectedTag] = useState('');
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
 
   useEffect(() => {
-    setSelectedMonth(initialDate);
+    setSelectedDate(initialDate);
   }, [initialDate]);
 
-  const monthTransactions = useMemo(
-    () => getMonthTransactions(transactions, selectedMonth),
-    [transactions, selectedMonth]
+  const periodTransactions = useMemo(
+    () => (periodMode === 'month'
+      ? getMonthTransactions(transactions, selectedDate)
+      : getYearTransactions(transactions, selectedDate)),
+    [transactions, selectedDate, periodMode]
   );
 
-  const monthTags = useMemo(
-    () => getMonthTags(monthTransactions),
-    [monthTransactions]
+  const periodTags = useMemo(
+    () => getMonthTags(periodTransactions),
+    [periodTransactions]
   );
 
   useEffect(() => {
-    if (selectedTag && !monthTags.includes(selectedTag)) {
+    if (selectedTag && !periodTags.includes(selectedTag)) {
       setSelectedTag('');
     }
-  }, [monthTags, selectedTag]);
+  }, [periodTags, selectedTag]);
 
   useEffect(() => {
     setExpandedSectionKey(null);
-  }, [selectedMonth, selectedTag]);
+  }, [selectedDate, selectedTag, periodMode]);
 
   const filteredTransactions = useMemo(
-    () => filterTransactionsByTag(monthTransactions, selectedTag),
-    [monthTransactions, selectedTag]
+    () => filterTransactionsByTag(periodTransactions, selectedTag),
+    [periodTransactions, selectedTag]
   );
 
   const statsByCurrency = useMemo(
@@ -67,31 +72,63 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   );
   const monthNavButtonClassName = 'pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#24273c]/80 text-gray-300 shadow-lg transition-all hover:text-white active:scale-90';
   const getSectionKey = (currency: string, type: TransactionType) => `${currency}:${type}`;
+  const periodLabel = periodMode === 'month'
+    ? format(selectedDate, 'yyyy 年 MM 月')
+    : format(selectedDate, 'yyyy 年');
+  const movePeriod = (direction: -1 | 1) => {
+    setSelectedDate((prev) => (
+      periodMode === 'month'
+        ? addMonths(prev, direction)
+        : addYears(prev, direction)
+    ));
+  };
 
   return (
     <div className="flex h-full w-full flex-col bg-[#1a1c2c] text-slate-200">
       <PageHeader
-        title="月份統計"
+        title="統計"
         leftAction={<ArrowLeft size={26} />}
         onLeftAction={onBack}
       />
 
       <div className="border-b border-white/5 px-5 py-4">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-[#24273c]/60 p-1">
+          {[
+            { id: 'month', label: '月份' },
+            { id: 'year', label: '年份' },
+          ].map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setPeriodMode(option.id as StatsPeriodMode)}
+              className={`rounded-[0.9rem] px-3 py-2 text-sm font-black transition-all ${
+                periodMode === option.id
+                  ? 'bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-b border-white/5 px-5 py-4">
         <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#24273c]/80 px-3 py-3 shadow-lg">
           <button
-            onClick={() => setSelectedMonth((prev) => addMonths(prev, -1))}
+            onClick={() => movePeriod(-1)}
             className={monthNavButtonClassName}
-            aria-label="切換到上個月"
-            title="上個月"
+            aria-label={periodMode === 'month' ? '切換到上個月' : '切換到上一年'}
+            title={periodMode === 'month' ? '上個月' : '上一年'}
           >
             <ChevronLeft size={18} />
           </button>
-          <p className="text-center text-xl font-black tracking-tight text-white">{format(selectedMonth, 'yyyy 年 MM 月')}</p>
+          <p className="text-center text-xl font-black tracking-tight text-white">{periodLabel}</p>
           <button
-            onClick={() => setSelectedMonth((prev) => addMonths(prev, 1))}
+            onClick={() => movePeriod(1)}
             className={monthNavButtonClassName}
-            aria-label="切換到下個月"
-            title="下個月"
+            aria-label={periodMode === 'month' ? '切換到下個月' : '切換到下一年'}
+            title={periodMode === 'month' ? '下個月' : '下一年'}
           >
             <ChevronRight size={18} />
           </button>
@@ -113,7 +150,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
           >
             全部
           </button>
-          {monthTags.map((tag) => (
+          {periodTags.map((tag) => (
             <button
               key={tag}
               onClick={() => setSelectedTag(tag)}
@@ -231,10 +268,12 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
         ) : (
           <div className="flex min-h-full flex-col items-center justify-center px-8 text-center">
             <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">
-              {format(selectedMonth, 'yyyy 年 MM 月')}
+              {periodLabel}
             </div>
             <p className="mt-6 text-lg font-bold text-gray-300">
-              {selectedTag ? `#${selectedTag} 在這個月份沒有資料` : '這個月份還沒有任何紀錄'}
+              {selectedTag
+                ? `#${selectedTag} 在這個${periodMode === 'month' ? '月份' : '年份'}沒有資料`
+                : `這個${periodMode === 'month' ? '月份' : '年份'}還沒有任何紀錄`}
             </p>
             <p className="mt-3 text-sm text-gray-500">
               目前摘要顯示為 {formatCurrencyAmount(0, defaultCurrency, { withSpace: true })}。

@@ -1,4 +1,4 @@
-import { endOfMonth } from 'date-fns';
+import { endOfMonth, endOfYear } from 'date-fns';
 import { Transaction } from '../types';
 import { toEpochSeconds } from '../time';
 
@@ -35,6 +35,12 @@ export const getStatsByCurrency = (txs: Transaction[]) => {
 export const getMonthTransactions = (transactions: Transaction[], date: Date) => {
   const start = toEpochSeconds(new Date(date.getFullYear(), date.getMonth(), 1).getTime());
   const end = toEpochSeconds(endOfMonth(date).getTime());
+  return transactions.filter((tx) => tx.timestamp >= start && tx.timestamp <= end);
+};
+
+export const getYearTransactions = (transactions: Transaction[], date: Date) => {
+  const start = toEpochSeconds(new Date(date.getFullYear(), 0, 1).getTime());
+  const end = toEpochSeconds(endOfYear(date).getTime());
   return transactions.filter((tx) => tx.timestamp >= start && tx.timestamp <= end);
 };
 
