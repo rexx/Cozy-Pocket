@@ -7,7 +7,7 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 
 ## 1. 專案概述 (Project Overview)
 *   **設計理念**：深色調 (Dark Mode) 美感、隱私優先、極致互動體驗。
-*   **核心功能**：智慧日曆、AI 智慧解析、離線優先 (IndexedDB)、資料匯入匯出、歷史輸入建議。
+*   **核心功能**：智慧日曆、月份／年份統計、Tag 篩選、AI 智慧解析、離線優先 (IndexedDB)、資料匯入匯出、歷史輸入建議。
 *   **雲端同步 (Cloud Sync)**：透過 Google Apps Script 將資料自動備份至 Google Sheets。
 
 ---
@@ -101,7 +101,18 @@ this.version(1).stores({
 *   目前同步狀態包含：`pending`、`syncing`、`synced`、`error`。
 *   離線時新增／編輯／匯入資料仍會先落在 IndexedDB，並保持 `pending`，待恢復連線後補送。
 
-### 6.6 PWA / iOS 離線模式
+### 6.5 統計頁期間與篩選
+*   使用者可從首頁底部的本月摘要卡進入「統計」頁。
+*   統計頁支援 `月份` 與 `年份` 兩種模式，兩者共用同一套聚合邏輯與 UI。
+*   期間切換會同步影響幣別統計、Tag 清單，以及收入／支出展開後的交易明細。
+*   `tags` 採空白分隔儲存；統計頁的 Tag 篩選使用精確 token 比對，不做模糊包含搜尋。
+
+### 6.6 統計頁明細展開
+*   每個幣別卡片會顯示收入與支出總額。
+*   點擊收入或支出卡片後，會展開符合目前期間與 Tag 篩選的交易列表。
+*   展開後的項目沿用既有 `TransactionItem` 呈現，點擊後會直接進入原本的編輯流程。
+
+### 6.7 PWA / iOS 離線模式
 *   專案現在會在 production build 產生 Service Worker，precache app shell、manifest 與 icon 資產。
 *   GitHub Pages 部署路徑固定為 `https://rexx.github.io/Cozy-Pocket/`，Vite `base` 與 manifest `scope/start_url` 已對齊此路徑。
 *   iOS Safari 首次上線開啟後，可透過「加入主畫面」安裝；之後離線仍可開啟 app 與操作本機資料。
@@ -110,7 +121,7 @@ this.version(1).stores({
 *   離線實作與修改重點說明請見：[PWA Offline Implementation](docs/pwa-offline-implementation.md)
 *   詳細排版注意事項請見：[PWA Layout Gotchas](docs/pwa-layout-gotchas.md)
 
-### 6.5 輸入建議排序
+### 6.8 輸入建議排序
 *   新增／編輯記帳時，`merchant`、`name`、`tags` 會根據歷史交易產生建議 chips。
 *   建議來源來自目前本機已載入的 `transactions`，不另外建立建議資料表。
 *   每個建議值會累積出現次數、最近使用時間、曾出現過的主類別與子類別。
@@ -142,6 +153,15 @@ PWA icon 與 manifest 會直接從 `/Cozy-Pocket/<filename>` 提供，例如：
 ```text
 https://rexx.github.io/Cozy-Pocket/android-chrome-192x192.png
 ```
+
+統計頁操作方式：
+
+1. 在首頁底部點擊本月摘要卡
+2. 在統計頁上方切換 `月份` 或 `年份`
+3. 使用左右箭頭切換目前期間
+4. 視需要選擇單一 `tag` 篩選
+5. 點擊收入或支出卡片展開符合條件的交易列表
+6. 點擊列表項目可直接編輯該筆交易
 
 ---
 
