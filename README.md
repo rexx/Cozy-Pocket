@@ -100,6 +100,8 @@ this.version(1).stores({
 *   `syncStatus` 為本地 UI / 補送機制使用的狀態欄位，不屬於上傳到 Google Sheets 的 payload 欄位。
 *   目前同步狀態包含：`pending`、`syncing`、`synced`、`error`。
 *   離線時新增／編輯／匯入資料仍會先落在 IndexedDB，並保持 `pending`，待恢復連線後補送。
+*   同步失敗時，頂部錯誤列會顯示失敗交易 `id` 與錯誤摘要；「同步狀態頁」中的失敗交易會直接顯示 `lastSyncError` 詳細內容。
+*   若後端有正確回傳結構化錯誤（例如 Google Apps Script 寫入失敗），前端會優先顯示該錯誤訊息；只有在瀏覽器拿不到可讀 response 時，才會退回顯示 `Failed to fetch` 類型的診斷提示。
 
 ### 6.5 統計頁期間與篩選
 *   使用者可從首頁底部的本月摘要卡進入「統計」頁。

@@ -180,6 +180,8 @@ this.version(1).stores({
 - 當 `status === "success"` 且有 `results[]` 時：
   - 必須逐筆處理 `results[i].status`。
   - 允許部分成功、部分失敗（Partial Failure），不得以全批成功處理。
+- 若瀏覽器端只收到 `Failed to fetch`，表示前端未取得可解析 response body；此時只能顯示 URL / origin / online 狀態等診斷資訊，不能視為已取得後端真實錯誤。
+- 因此 GAS 端必須盡可能將可預期失敗包成 JSON 回傳，避免 quota、權限、寫入失敗等錯誤在前端退化成單純的網路錯誤。
 
 ## 5. 同步流程（MVP）
 1. 前端新增交易，先寫入 IndexedDB。
@@ -246,6 +248,9 @@ this.version(1).stores({
   - `synced`：已同步
   - `error`：同步失敗
 - App 另提供「同步狀態頁」，顯示四種狀態的筆數統計、完整交易列表，以及手動同步待同步資料的入口。
+- 全域錯誤列應顯示失敗交易 `id` 與錯誤摘要，避免只顯示「同步失敗」或失敗筆數。
+- 同步狀態頁對 `syncStatus === error` 的交易，應顯示 `lastSyncError` 詳細內容。
+- 若錯誤來自瀏覽器層級且無可讀 response，可顯示診斷提示（例如 `Failed to fetch`、sync URL、origin、online 狀態與可能原因）；若後端有回傳 `message`，則應以後端訊息為主。
 - 若目前離線，同步狀態頁會顯示離線提示，並停用「同步待同步」按鈕。
 
 ## 7. Sync Conflict Matrix
