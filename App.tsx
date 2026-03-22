@@ -525,6 +525,7 @@ const App: React.FC = () => {
           initialDate={selectedDate}
           defaultCurrency={defaultCurrency}
           onBack={() => setActiveView('home')}
+          onTransactionClick={handleEditItem}
         />
         {isModalOpen && (
           <AddTransactionModal

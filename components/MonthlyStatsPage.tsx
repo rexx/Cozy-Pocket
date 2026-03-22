@@ -2,15 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { addMonths, format } from 'date-fns';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrencyAmount } from '../constants';
-import { Transaction } from '../types';
+import { Transaction, TransactionType } from '../types';
 import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency } from '../services/statsService';
 import PageHeader from './PageHeader';
+import TransactionItem from './TransactionItem';
 
 interface MonthlyStatsPageProps {
   transactions: Transaction[];
   initialDate: Date;
   defaultCurrency: string;
   onBack: () => void;
+  onTransactionClick: (transaction: Transaction) => void;
 }
 
 const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
@@ -18,9 +20,11 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   initialDate,
   defaultCurrency,
   onBack,
+  onTransactionClick,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState(initialDate);
   const [selectedTag, setSelectedTag] = useState('');
+  const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedMonth(initialDate);
@@ -42,6 +46,10 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     }
   }, [monthTags, selectedTag]);
 
+  useEffect(() => {
+    setExpandedSectionKey(null);
+  }, [selectedMonth, selectedTag]);
+
   const filteredTransactions = useMemo(
     () => filterTransactionsByTag(monthTransactions, selectedTag),
     [monthTransactions, selectedTag]
@@ -58,6 +66,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     formatCurrencyAmount(value, currency, { withSpace: true })
   );
   const monthNavButtonClassName = 'pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#24273c]/80 text-gray-300 shadow-lg transition-all hover:text-white active:scale-90';
+  const getSectionKey = (currency: string, type: TransactionType) => `${currency}:${type}`;
 
   return (
     <div className="flex h-full w-full flex-col bg-[#1a1c2c] text-slate-200">
@@ -125,7 +134,13 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
           <div className="space-y-4">
             {currencies.map((currency) => {
               const stats = statsByCurrency[currency];
-              const net = stats.income - stats.expense;
+              const incomeTransactions = filteredTransactions
+                .filter((tx) => tx.currency === currency && tx.type === '收入')
+                .sort((a, b) => b.timestamp - a.timestamp);
+              const expenseTransactions = filteredTransactions
+                .filter((tx) => tx.currency === currency && tx.type === '支出')
+                .sort((a, b) => b.timestamp - a.timestamp);
+              const activeSectionKey = expandedSectionKey;
 
               return (
                 <section
@@ -143,28 +158,72 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
-                    <div className="rounded-2xl border border-rose-400/15 bg-rose-500/10 p-4">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSectionKey((prev) => prev === getSectionKey(currency, '收入') ? null : getSectionKey(currency, '收入'))}
+                      className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
+                        activeSectionKey === getSectionKey(currency, '收入')
+                          ? 'border-rose-300/30 bg-rose-500/15'
+                          : 'border-rose-400/15 bg-rose-500/10'
+                      }`}
+                    >
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-300/70">收入</p>
                       <p className="mt-2 text-3xl font-black tracking-tight text-rose-300">
                         +{formatStatAmount(stats.income, currency)}
                       </p>
-                    </div>
+                    </button>
 
-                    <div className="rounded-2xl border border-emerald-400/15 bg-emerald-500/10 p-4">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSectionKey((prev) => prev === getSectionKey(currency, '支出') ? null : getSectionKey(currency, '支出'))}
+                      className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
+                        activeSectionKey === getSectionKey(currency, '支出')
+                          ? 'border-emerald-300/30 bg-emerald-500/15'
+                          : 'border-emerald-400/15 bg-emerald-500/10'
+                      }`}
+                    >
                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-300/70">支出</p>
                       <p className="mt-2 text-3xl font-black tracking-tight text-emerald-300">
                         -{formatStatAmount(stats.expense, currency)}
                       </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-cyan-400/15 bg-cyan-500/10 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-300/70">淨額</p>
-                      <p className={`mt-2 text-3xl font-black tracking-tight ${net >= 0 ? 'text-cyan-200' : 'text-amber-200'}`}>
-                        {net >= 0 ? '+' : '-'}
-                        {formatStatAmount(Math.abs(net), currency)}
-                      </p>
-                    </div>
+                    </button>
                   </div>
+
+                  {activeSectionKey === getSectionKey(currency, '收入') && (
+                    <div className="mt-4 overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
+                      {incomeTransactions.length > 0 ? (
+                        incomeTransactions.map((transaction) => (
+                          <TransactionItem
+                            key={transaction.id}
+                            transaction={transaction}
+                            onClick={onTransactionClick}
+                          />
+                        ))
+                      ) : (
+                        <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
+                          沒有符合條件的收入項目
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeSectionKey === getSectionKey(currency, '支出') && (
+                    <div className="mt-4 overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
+                      {expenseTransactions.length > 0 ? (
+                        expenseTransactions.map((transaction) => (
+                          <TransactionItem
+                            key={transaction.id}
+                            transaction={transaction}
+                            onClick={onTransactionClick}
+                          />
+                        ))
+                      ) : (
+                        <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
+                          沒有符合條件的支出項目
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </section>
               );
             })}

@@ -9,7 +9,7 @@ import { categoryIconMap } from './categoryIcons';
 
 interface TransactionItemProps {
   transaction: Transaction;
-  onClick: (transaction: Transaction) => void;
+  onClick?: (transaction: Transaction) => void;
 }
 
 const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { dotClassName: string; title: string }> = {
@@ -70,8 +70,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
 
   return (
     <div 
-      onClick={() => onClick(transaction)}
-      className="flex items-center gap-4 py-4 px-5 active:bg-white/5 transition-all duration-200 cursor-pointer border-b border-white/5 last:border-0 group"
+      onClick={() => onClick?.(transaction)}
+      className={`flex items-center gap-4 py-4 px-5 transition-all duration-200 border-b border-white/5 last:border-0 group ${
+        onClick ? 'cursor-pointer active:bg-white/5' : ''
+      }`}
     >
       <div 
         className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transform group-active:scale-90 transition-transform flex-shrink-0"
