@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { addMonths, addYears, format } from 'date-fns';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrencyAmount } from '../constants';
-import { Transaction, TransactionType } from '../types';
+import { PaymentMethod, Transaction, TransactionType } from '../types';
 import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
@@ -27,6 +27,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [periodMode, setPeriodMode] = useState<StatsPeriodMode>('month');
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedTag, setSelectedTag] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | ''>('');
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,13 +52,31 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     }
   }, [periodTags, selectedTag]);
 
+  const periodPaymentMethods = useMemo(() => {
+    const methodSet = new Set<PaymentMethod>();
+    periodTransactions.forEach((tx) => {
+      if (tx.paymentMethod) {
+        methodSet.add(tx.paymentMethod as PaymentMethod);
+      }
+    });
+    return Array.from(methodSet);
+  }, [periodTransactions]);
+
+  useEffect(() => {
+    if (selectedPaymentMethod && !periodPaymentMethods.includes(selectedPaymentMethod)) {
+      setSelectedPaymentMethod('');
+    }
+  }, [periodPaymentMethods, selectedPaymentMethod]);
+
   useEffect(() => {
     setExpandedSectionKey(null);
-  }, [selectedDate, selectedTag, periodMode]);
+  }, [selectedDate, selectedTag, selectedPaymentMethod, periodMode]);
 
   const filteredTransactions = useMemo(
-    () => filterTransactionsByTag(periodTransactions, selectedTag),
-    [periodTransactions, selectedTag]
+    () => filterTransactionsByTag(periodTransactions, selectedTag).filter((tx) => (
+      selectedPaymentMethod ? tx.paymentMethod === selectedPaymentMethod : true
+    )),
+    [periodTransactions, selectedTag, selectedPaymentMethod]
   );
 
   const statsByCurrency = useMemo(
@@ -163,6 +182,37 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
               }`}
             >
               #{tag}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-b border-white/5 px-5 py-4">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">支付方式</p>
+        </div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button
+            onClick={() => setSelectedPaymentMethod('')}
+            className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+              selectedPaymentMethod === ''
+                ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+            }`}
+          >
+            全部
+          </button>
+          {periodPaymentMethods.map((paymentMethod) => (
+            <button
+              key={paymentMethod}
+              onClick={() => setSelectedPaymentMethod(paymentMethod)}
+              className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                selectedPaymentMethod === paymentMethod
+                  ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                  : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+              }`}
+            >
+              {paymentMethod}
             </button>
           ))}
         </div>
