@@ -100,6 +100,8 @@ function processCreateItems(ss, items) {
           recordMap: loadRecordMap(sheet),
           rowsToAppend: [],
           rowsToUpdate: [],
+          appendItemIds: [],
+          updateItemIds: [],
         };
       }
 
@@ -130,6 +132,7 @@ function processCreateItems(ss, items) {
       const existing = state.recordMap[id];
       if (!existing) {
         state.rowsToAppend.push(row);
+        state.appendItemIds.push(id);
         state.recordMap[id] = {
           row: -1,
           appendIndex: state.rowsToAppend.length - 1,
@@ -145,6 +148,7 @@ function processCreateItems(ss, items) {
       if (decision === 'update') {
         if (existing.row > 1) {
           state.rowsToUpdate.push({ row: existing.row, values: row });
+          state.updateItemIds.push(id);
         } else if (typeof existing.appendIndex === 'number') {
           state.rowsToAppend[existing.appendIndex] = row;
         }
@@ -173,18 +177,41 @@ function processCreateItems(ss, items) {
   Object.keys(yearState).forEach(function (year) {
     const state = yearState[year];
 
-    state.rowsToUpdate.forEach(function (entry) {
-      state.sheet.getRange(entry.row, 1, 1, SHEET_HEADERS.length).setValues([entry.values]);
-    });
+    try {
+      state.rowsToUpdate.forEach(function (entry) {
+        state.sheet.getRange(entry.row, 1, 1, SHEET_HEADERS.length).setValues([entry.values]);
+      });
+    } catch (err) {
+      markBatchFailure(results, state.updateItemIds, 'Update failed', year, err);
+    }
 
     if (!state.rowsToAppend.length) return;
 
-    const startRow = state.sheet.getLastRow() + 1;
-    const range = state.sheet.getRange(startRow, 1, state.rowsToAppend.length, SHEET_HEADERS.length);
-    range.setValues(state.rowsToAppend);
+    try {
+      const startRow = state.sheet.getLastRow() + 1;
+      const range = state.sheet.getRange(startRow, 1, state.rowsToAppend.length, SHEET_HEADERS.length);
+      range.setValues(state.rowsToAppend);
+    } catch (err) {
+      markBatchFailure(results, state.appendItemIds, 'Append failed', year, err);
+    }
   });
 
   return results;
+}
+
+function markBatchFailure(results, ids, action, year, err) {
+  const errMessage = String(err && err.message ? err.message : err);
+  const message = action + ' for sheet ' + year + ': ' + errMessage;
+
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    for (let j = results.length - 1; j >= 0; j--) {
+      if (results[j].id === id) {
+        results[j] = { id: id, status: 'error', message: message };
+        break;
+      }
+    }
+  }
 }
 
 function deriveYear(item) {

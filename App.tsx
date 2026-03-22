@@ -53,6 +53,20 @@ interface TriggerSyncResult {
   skippedOffline: boolean;
 }
 
+const buildSyncFailureSummary = (results: { id: string; status: string; message?: string }[], fallbackLabel: string) => {
+  const failed = results.filter((result) => result.status === 'error');
+  if (failed.length === 0) return null;
+
+  const details = failed.slice(0, 3).map((result) => {
+    const message = result.message?.trim() || fallbackLabel;
+    return `${result.id}: ${message}`;
+  });
+  const extraCount = failed.length - details.length;
+  return extraCount > 0
+    ? `${details.join(' | ')} | 另外 ${extraCount} 筆失敗`
+    : details.join(' | ');
+};
+
 const normalizeSuggestionValue = (value: string) => value.trim();
 
 const buildSuggestions = (
@@ -212,9 +226,9 @@ const App: React.FC = () => {
           return;
         }
         const results = await runSyncWithProgress('同步範例資料', (onProgress) => syncCreateItems(examples, onProgress));
-        const failedCount = results.filter(r => r.status === 'error').length;
-        if (failedCount > 0) {
-          setCapturedErrors(prev => [...prev, `Sync Error: 範例資料有 ${failedCount} 筆同步失敗`]);
+        const summary = buildSyncFailureSummary(results, 'Example sync failed');
+        if (summary) {
+          setCapturedErrors(prev => [...prev, `Sync Error: ${summary}`]);
         }
         await refreshData();
       })();
@@ -340,9 +354,10 @@ const App: React.FC = () => {
     }
 
     const results = await runSyncWithProgress(label, (onProgress) => syncPendingTransactions(onProgress));
+    const summary = buildSyncFailureSummary(results, 'Pending sync failed');
     const failed = results.filter((r) => r.status === 'error');
-    if (failed.length > 0) {
-      setCapturedErrors(prev => [...prev, `Sync Pending Error: ${failed.length} 筆待同步資料上傳失敗`]);
+    if (summary) {
+      setCapturedErrors(prev => [...prev, `Sync Pending Error: ${summary}`]);
     }
     if (results.length > 0) {
       await refreshData();
@@ -423,7 +438,7 @@ const App: React.FC = () => {
         const results = await runSyncWithProgress('同步新交易', (onProgress) => syncCreateItems([transaction], onProgress));
         const failed = results.find(r => r.id === transaction.id && r.status === 'error');
         if (failed) {
-            setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Create sync failed'}`]);
+            setCapturedErrors(prev => [...prev, `Sync Error [${transaction.id}]: ${failed.message || 'Create sync failed'}`]);
         }
         await refreshData();
       })();
@@ -464,7 +479,7 @@ const App: React.FC = () => {
         const results = await runSyncWithProgress('同步更新交易', (onProgress) => syncCreateItems([merged], onProgress));
         const failed = results.find(r => r.id === merged.id && r.status === 'error');
         if (failed) {
-          setCapturedErrors(prev => [...prev, `Sync Error: ${failed.message || 'Update sync failed'}`]);
+          setCapturedErrors(prev => [...prev, `Sync Error [${merged.id}]: ${failed.message || 'Update sync failed'}`]);
         }
         await refreshData();
       })();

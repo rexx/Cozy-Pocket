@@ -30,6 +30,69 @@ interface SyncConfig {
 
 const BATCH_SIZE = 50;
 
+const normalizeErrorMessage = (value: unknown, fallback: string): string => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || fallback;
+  }
+  if (value instanceof Error) {
+    return value.message || fallback;
+  }
+  if (value && typeof value === 'object') {
+    try {
+      const json = JSON.stringify(value);
+      return json === '{}' ? fallback : json;
+    } catch {
+      return fallback;
+    }
+  }
+  if (value == null) return fallback;
+  return String(value);
+};
+
+const buildHttpErrorMessage = (
+  res: Response,
+  payloadMessage?: unknown,
+  rawText?: string
+): string => {
+  const parts = [`HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`];
+  const detail = normalizeErrorMessage(
+    payloadMessage ?? rawText,
+    ''
+  );
+  if (detail) {
+    parts.push(detail);
+  }
+  return parts.join(' | ');
+};
+
+const buildFetchDiagnosticMessage = (apiUrl: string, error: unknown): string => {
+  const message = normalizeErrorMessage(error, 'Network error');
+  const details: string[] = [message];
+
+  try {
+    const parsedUrl = new URL(apiUrl);
+    details.push(`url=${parsedUrl.origin}${parsedUrl.pathname}`);
+  } catch {
+    details.push(`url=${apiUrl || '(empty)'}`);
+    details.push('同步網址格式可能不正確');
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    details.push(`origin=${window.location.origin}`);
+  }
+
+  if (typeof navigator !== 'undefined') {
+    details.push(`online=${navigator.onLine ? 'true' : 'false'}`);
+  }
+
+  if (/Failed to fetch/i.test(message)) {
+    details.push('可能原因: GAS 網址錯誤、Web App 尚未部署/未開放權限、CORS 被擋、網路無法連線');
+  }
+
+  return details.join(' | ');
+};
+
 const setSyncStatusForItems = async (
   items: Transaction[],
   syncStatus: Transaction['syncStatus'],
@@ -147,19 +210,31 @@ const syncCreateItemsWithConfig = async (
       body: new URLSearchParams({ payload }),
     });
 
+    const responseText = await res.text();
     let json: SyncApiResponse | null = null;
     try {
-      json = await res.json();
+      json = responseText ? JSON.parse(responseText) as SyncApiResponse : null;
     } catch {
       return items.map((item) => ({
         id: item.id,
         status: 'error',
-        message: 'Invalid JSON response',
+        message: buildHttpErrorMessage(res, undefined, responseText || 'Invalid JSON response'),
+      }));
+    }
+
+    if (!res.ok) {
+      const message = buildHttpErrorMessage(res, json?.message, responseText);
+      return items.map((item) => ({
+        id: item.id,
+        status: 'error',
+        message,
       }));
     }
 
     if (!json || json.status !== 'success') {
-      const message = json?.message || (json?.status === 'unauthorized' ? 'Unauthorized' : 'Sync failed');
+      const message = json?.status === 'unauthorized'
+        ? normalizeErrorMessage(json?.message, 'Unauthorized')
+        : normalizeErrorMessage(json?.message, 'Sync failed');
       return items.map((item) => ({
         id: item.id,
         status: 'error',
@@ -169,7 +244,7 @@ const syncCreateItemsWithConfig = async (
 
     return normalizeResults(items, json.results);
   } catch (error: any) {
-    const message = error?.message || 'Network error';
+    const message = buildFetchDiagnosticMessage(config.apiUrl, error);
     return items.map((item) => ({
       id: item.id,
       status: 'error',
