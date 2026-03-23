@@ -107,6 +107,10 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     ? format(selectedDate, 'yyyy 年 MM 月')
     : format(selectedDate, 'yyyy 年');
   const selectedSortLabel = sortMode === 'latest' ? '日期' : '金額';
+  const hasActiveFilters = Boolean(selectedTag || selectedPaymentMethod);
+  const activeFilterBadgeLabel = hasActiveFilters
+    ? [selectedTag ? `#${selectedTag}` : null, selectedPaymentMethod || null].filter(Boolean).join(' · ')
+    : '全部交易';
   const movePeriod = (direction: -1 | 1) => {
     setSelectedDate((prev) => (
       periodMode === 'month'
@@ -292,7 +296,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                       <h2 className="mt-1 text-2xl font-black tracking-tight text-white">{currency}</h2>
                     </div>
                     <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">
-                      {selectedTag ? `#${selectedTag}` : '全部交易'}
+                      {activeFilterBadgeLabel}
                     </div>
                   </div>
 
@@ -375,8 +379,8 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
               {periodLabel}
             </div>
             <p className="mt-6 text-lg font-bold text-gray-300">
-              {selectedTag
-                ? `#${selectedTag} 在這個${periodMode === 'month' ? '月份' : '年份'}沒有資料`
+              {hasActiveFilters
+                ? `目前篩選在這個${periodMode === 'month' ? '月份' : '年份'}沒有資料`
                 : `這個${periodMode === 'month' ? '月份' : '年份'}還沒有任何紀錄`}
             </p>
             <p className="mt-3 text-sm text-gray-500">
