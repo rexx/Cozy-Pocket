@@ -8,6 +8,7 @@ import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
 
 type StatsPeriodMode = 'month' | 'year';
+type StatsSortMode = 'latest' | 'amount-desc';
 
 interface MonthlyStatsPageProps {
   transactions: Transaction[];
@@ -28,6 +29,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedTag, setSelectedTag] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | ''>('');
+  const [sortMode, setSortMode] = useState<StatsSortMode>('latest');
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,6 +91,15 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const formatStatAmount = (value: number, currency: string) => (
     formatCurrencyAmount(value, currency, { withSpace: true })
   );
+  const sortTransactions = (items: Transaction[]) => [...items].sort((a, b) => {
+    if (sortMode === 'amount-desc') {
+      const amountOrder = a.type === '支出'
+        ? a.amount - b.amount
+        : b.amount - a.amount;
+      if (amountOrder !== 0) return amountOrder;
+    }
+    return b.timestamp - a.timestamp;
+  });
   const monthNavButtonClassName = 'pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#24273c]/80 text-gray-300 shadow-lg transition-all hover:text-white active:scale-90';
   const getSectionKey = (currency: string, type: TransactionType) => `${currency}:${type}`;
   const periodLabel = periodMode === 'month'
@@ -158,7 +169,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 
       <div className="border-b border-white/5 px-5 py-4">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">Tag 篩選</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">TAG</p>
         </div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           <button
@@ -218,17 +229,41 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
         </div>
       </div>
 
+      <div className="border-b border-white/5 px-5 py-4">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-[10px] font-black tracking-[0.35em] text-gray-500">排序</p>
+        </div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {[
+            { id: 'latest', label: '日期' },
+            { id: 'amount-desc', label: '金額' },
+          ].map((option) => (
+            <button
+              key={option.id}
+              onClick={() => setSortMode(option.id as StatsSortMode)}
+              className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                sortMode === option.id
+                  ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                  : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex-1 overflow-y-auto px-5 py-5">
         {currencies.length > 0 ? (
           <div className="space-y-4">
             {currencies.map((currency) => {
               const stats = statsByCurrency[currency];
-              const incomeTransactions = filteredTransactions
-                .filter((tx) => tx.currency === currency && tx.type === '收入')
-                .sort((a, b) => b.timestamp - a.timestamp);
-              const expenseTransactions = filteredTransactions
-                .filter((tx) => tx.currency === currency && tx.type === '支出')
-                .sort((a, b) => b.timestamp - a.timestamp);
+              const incomeTransactions = sortTransactions(
+                filteredTransactions.filter((tx) => tx.currency === currency && tx.type === '收入')
+              );
+              const expenseTransactions = sortTransactions(
+                filteredTransactions.filter((tx) => tx.currency === currency && tx.type === '支出')
+              );
               const activeSectionKey = expandedSectionKey;
 
               return (
@@ -286,6 +321,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                             key={transaction.id}
                             transaction={transaction}
                             onClick={onTransactionClick}
+                            showDateTime
                           />
                         ))
                       ) : (
@@ -304,6 +340,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                             key={transaction.id}
                             transaction={transaction}
                             onClick={onTransactionClick}
+                            showDateTime
                           />
                         ))
                       ) : (

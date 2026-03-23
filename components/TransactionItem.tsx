@@ -10,6 +10,7 @@ import { categoryIconMap } from './categoryIcons';
 interface TransactionItemProps {
   transaction: Transaction;
   onClick?: (transaction: Transaction) => void;
+  showDateTime?: boolean;
 }
 
 const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { dotClassName: string; title: string }> = {
@@ -31,7 +32,7 @@ const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { dotCl
   }
 };
 
-const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick }) => {
+const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick, showDateTime = false }) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
   const subCategory = category.subcategories?.find(s => s.id === transaction.subCategoryId);
   const isIncome = transaction.type === '收入';
@@ -64,7 +65,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick 
   const displayAmount = isIncome ? transaction.amount : -transaction.amount;
   const formattedAmount = `${displayAmount < 0 ? '-' : ''}${formatCurrencyAmount(displayAmount, transaction.currency)}`;
 
-  const formattedTime = format(new Date(toEpochMillis(transaction.timestamp)), 'HH:mm');
+  const formattedTime = format(
+    new Date(toEpochMillis(transaction.timestamp)),
+    showDateTime ? 'yyyy-MM-dd HH:mm' : 'HH:mm'
+  );
   const syncStatus = transaction.syncStatus || 'pending';
   const syncStatusUi = SYNC_STATUS_UI[syncStatus];
 
