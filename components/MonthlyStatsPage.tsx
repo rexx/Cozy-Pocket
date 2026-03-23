@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addMonths, addYears, format } from 'date-fns';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowDownUp, ArrowLeft, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { formatCurrencyAmount } from '../constants';
 import { PaymentMethod, Transaction, TransactionType } from '../types';
 import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
@@ -30,6 +30,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [selectedTag, setSelectedTag] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | ''>('');
   const [sortMode, setSortMode] = useState<StatsSortMode>('latest');
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -105,12 +106,16 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const periodLabel = periodMode === 'month'
     ? format(selectedDate, 'yyyy 年 MM 月')
     : format(selectedDate, 'yyyy 年');
+  const selectedSortLabel = sortMode === 'latest' ? '日期' : '金額';
   const movePeriod = (direction: -1 | 1) => {
     setSelectedDate((prev) => (
       periodMode === 'month'
         ? addMonths(prev, direction)
         : addYears(prev, direction)
     ));
+  };
+  const toggleSortMode = () => {
+    setSortMode((prev) => (prev === 'latest' ? 'amount-desc' : 'latest'));
   };
 
   return (
@@ -168,89 +173,99 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
       </div>
 
       <div className="border-b border-white/5 px-5 py-4">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">TAG</p>
-        </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          <button
-            onClick={() => setSelectedTag('')}
-            className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
-              selectedTag === ''
-                ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
-                : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
-            }`}
-          >
-            全部
-          </button>
-          {periodTags.map((tag) => (
+        <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center">
             <button
-              key={tag}
-              onClick={() => setSelectedTag(tag)}
-              className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
-                selectedTag === tag
-                  ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
-                  : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
-              }`}
+              type="button"
+              onClick={() => setIsFilterPanelOpen((prev) => !prev)}
+              className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 shadow-lg transition-all hover:text-white active:scale-[0.99]"
+              aria-expanded={isFilterPanelOpen}
+              aria-label={isFilterPanelOpen ? '收合篩選' : '展開篩選'}
             >
-              #{tag}
+              <Filter size={14} strokeWidth={2.3} />
             </button>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      <div className="border-b border-white/5 px-5 py-4">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">支付方式</p>
-        </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          <button
-            onClick={() => setSelectedPaymentMethod('')}
-            className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
-              selectedPaymentMethod === ''
-                ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
-                : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
-            }`}
-          >
-            全部
-          </button>
-          {periodPaymentMethods.map((paymentMethod) => (
+          <div className="flex items-center">
             <button
-              key={paymentMethod}
-              onClick={() => setSelectedPaymentMethod(paymentMethod)}
-              className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
-                selectedPaymentMethod === paymentMethod
-                  ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
-                  : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
-              }`}
+              type="button"
+              onClick={toggleSortMode}
+              className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-[10px] font-black text-gray-300 shadow-lg transition-all hover:text-white active:scale-[0.99]"
+              aria-label={`切換排序，目前為${selectedSortLabel}`}
             >
-              {paymentMethod}
+              <ArrowDownUp size={12} strokeWidth={2.3} />
+              {selectedSortLabel}
             </button>
-          ))}
+          </div>
         </div>
-      </div>
 
-      <div className="border-b border-white/5 px-5 py-4">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-[10px] font-black tracking-[0.35em] text-gray-500">排序</p>
-        </div>
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {[
-            { id: 'latest', label: '日期' },
-            { id: 'amount-desc', label: '金額' },
-          ].map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setSortMode(option.id as StatsSortMode)}
-              className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
-                sortMode === option.id
-                  ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
-                  : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        {isFilterPanelOpen && (
+          <div className="mt-3 rounded-2xl border border-white/10 bg-[#24273c]/70 px-4 py-4 shadow-lg">
+            <div className="space-y-4">
+              <div>
+                <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">TAG</p>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTag('')}
+                    className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                      selectedTag === ''
+                        ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                        : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    全部
+                  </button>
+                  {periodTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedTag(tag)}
+                      className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                        selectedTag === tag
+                          ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                          : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      #{tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">支付方式</p>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPaymentMethod('')}
+                    className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                      selectedPaymentMethod === ''
+                        ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                        : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    全部
+                  </button>
+                  {periodPaymentMethods.map((paymentMethod) => (
+                    <button
+                      key={paymentMethod}
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod(paymentMethod)}
+                      className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                        selectedPaymentMethod === paymentMethod
+                          ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                          : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {paymentMethod}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5">
