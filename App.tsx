@@ -702,17 +702,17 @@ const App: React.FC = () => {
                   <div className="flex-[1.2] pl-4 space-y-1.5 text-right">
                     <div className="flex items-center justify-end gap-1 mb-1">
                       {dailyCurrencyCount > 1 && <span className="text-[8px] text-cyan-400 font-black uppercase">📦 多幣別</span>}
-                      <span className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">今日</span>
+                      <span className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">本日</span>
                     </div>
                     {Object.entries(dailyStatsByCurrency).length > 0 ? (
                       Object.entries(dailyStatsByCurrency).map(([curr, stats]: [string, any]) => (
                         <div key={curr} className="mb-3 last:mb-0">
-                          <div className="text-rose-400 font-black text-lg tabular-nums tracking-tighter leading-none">+{formatStatAmount(stats.income, curr)}</div>
-                          <div className="text-emerald-400 font-black text-lg tabular-nums tracking-tighter leading-none">-{formatStatAmount(stats.expense, curr)}</div>
+                          <div className="text-rose-400 font-black text-[11px] tabular-nums tracking-tighter leading-none truncate">+{formatStatAmount(stats.income, curr)}</div>
+                          <div className="text-emerald-400 font-black text-[11px] tabular-nums tracking-tighter leading-none truncate">-{formatStatAmount(stats.expense, curr)}</div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-gray-700 font-black text-xl">{formatStatAmount(0, defaultCurrency)}</div>
+                      <div className="text-gray-700 font-black text-[11px]">{formatStatAmount(0, defaultCurrency)}</div>
                     )}
                   </div>
                 </button>
