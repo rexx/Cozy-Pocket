@@ -624,8 +624,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           />
         </div>
 
-        <div className="bg-[#252538] rounded-2xl p-5 min-h-[140px] border border-white/5 shadow-lg">
-          <textarea placeholder="輸入備註..." value={note} onChange={(e) => setNote(e.target.value)} className="w-full bg-transparent resize-none text-sm focus:outline-none h-full placeholder-gray-700 text-white font-light leading-relaxed" />
+        <div className="bg-[#252538] rounded-2xl px-4 py-2 min-h-[156px] border border-white/5 shadow-lg transition-all focus-within:border-white/20">
+          <textarea
+            rows={4}
+            placeholder="輸入備註..."
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="w-full h-full min-h-[140px] bg-transparent resize-none text-sm focus:outline-none placeholder-gray-700 text-white font-light leading-relaxed"
+          />
         </div>
 
         {isEditing && (
