@@ -142,7 +142,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleExpandCategoryPicker = () => {
     setIsCategoryCollapsed(false);
-    setIsSubView(false);
+    setIsSubView(isEditing && activeTab === '支出' && !!categoryId);
   };
 
   const toggleCurrency = () => {

@@ -115,7 +115,7 @@ export const EXPENSE_CATEGORIES: Category[] = [
     ]
   },
   { 
-    id: 'fixed', name: '固定支出', icon: 'CalendarCheck', color: '#4A90E2',
+    id: 'fixed', name: '固定支出', icon: 'CalendarCheck', color: '#E59F3A',
     subcategories: [
       { id: 'rent', name: '房租', icon: 'Home' },
       { id: 'mortgage', name: '房貸', icon: 'Building' },
