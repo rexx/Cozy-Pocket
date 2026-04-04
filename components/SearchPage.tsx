@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { Transaction } from '../types';
 import { toEpochMillis } from '../time';
 import TransactionItem from './TransactionItem';
+import PageHeader from './PageHeader';
 
 interface SearchPageProps {
   searchQuery: string;
@@ -27,9 +28,13 @@ const SearchPage: React.FC<SearchPageProps> = ({
   return (
     <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
-        <div className="p-4 flex items-center gap-3">
-          <button onClick={onBack} className="p-2 text-gray-400 hover:text-white transition-colors"><ArrowLeft size={24} /></button>
-          <div className="flex-1 relative">
+        <PageHeader
+          title="搜尋"
+          leftAction={<ArrowLeft size={26} />}
+          onLeftAction={onBack}
+        />
+        <div className="px-4 pb-4 pt-3">
+          <div className="relative">
             <input
               ref={searchInputRef}
               type="text"

@@ -3,6 +3,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Transaction } from '../types';
 import { toEpochMillis } from '../time';
 import TransactionItem from './TransactionItem';
+import PageHeader from './PageHeader';
 
 interface SyncStatusPageProps {
   transactions: Transaction[];
@@ -65,24 +66,24 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, 
   return (
     <div className="h-full w-full bg-[#1a1c2c] text-slate-200">
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 bg-[#1e1e2d]">
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white transition-colors">
-              <ArrowLeft size={22} />
+        <PageHeader
+          title="同步狀態"
+          leftAction={<ArrowLeft size={26} />}
+          onLeftAction={onClose}
+          rightSlot={(
+            <button
+              onClick={onSyncNow}
+              disabled={isSyncing || isOffline}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              title={isSyncing ? '同步中' : isOffline ? '離線中' : '立即同步'}
+              aria-label={isSyncing ? '同步中' : isOffline ? '離線中' : '立即同步'}
+            >
+              <RefreshCw size={15} className={isSyncing ? 'animate-spin' : ''} />
             </button>
-            <div>
-              <h2 className="text-base font-black text-white tracking-wide">同步狀態</h2>
-              <p className="text-[10px] text-gray-500 font-bold">待同步與同步結果總覽</p>
-            </div>
-          </div>
-          <button
-            onClick={onSyncNow}
-            disabled={isSyncing || isOffline}
-            className="inline-flex items-center gap-2 text-[11px] font-black px-3 py-2 rounded-xl bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-            {isSyncing ? '同步中' : isOffline ? '離線中' : '同步待同步'}
-          </button>
+          )}
+        />
+        <div className="px-4 py-2 border-b border-white/5 bg-[#1e1e2d]">
+          <p className="text-[10px] font-bold text-gray-500">待同步與同步結果總覽</p>
         </div>
         {isOffline && (
           <div className="px-4 py-2 border-b border-amber-400/10 bg-amber-500/10 text-[11px] font-bold text-amber-200">
