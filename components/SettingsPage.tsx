@@ -166,23 +166,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         onNotify('同步設定已儲存');
         setStatus({
           type: 'success',
-          message: '同步設定已儲存；目前離線，待恢復連線後再同步',
+          message: '同步設定已儲存\n目前離線，待恢復連線後再同步',
         });
       } else if (syncResult.failed > 0) {
-        onNotify('同步設定已儲存');
+        onNotify(`同步設定已儲存，但有 ${syncResult.failed} 筆同步失敗`);
         setStatus({
           type: 'error',
-          message: `同步設定已儲存，但同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
-        });
-      } else if (syncResult.total > 0) {
-        onNotify('同步設定已儲存');
-        setStatus({
-          type: 'success',
-          message: `同步設定已儲存，並已同步 ${syncResult.total} 筆`,
+          message: `同步設定已儲存\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
         });
       } else {
         onNotify('同步設定已儲存');
-        setStatus({ type: 'success', message: '同步設定已儲存，沒有待同步資料' });
+        setStatus({ type: 'idle', message: '' });
       }
     } catch (err: any) {
       setStatus({ type: 'error', message: `同步設定儲存失敗: ${err.message}` });
@@ -298,7 +292,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setStatus({ type: 'success', message: '匯出成功！' });
+      onNotify('匯出成功');
+      setStatus({ type: 'idle', message: '' });
     } catch (err: any) {
       setStatus({ type: 'error', message: `匯出失敗: ${err.message}` });
     }
@@ -459,25 +454,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`
         : `匯入成功 (${importPreview.validRows} 筆)`;
       if (syncResult.skippedOffline) {
+        onNotify(`匯入成功 (${importPreview.validRows} 筆)`);
         setStatus({
           type: 'success',
-          message: `${importBaseMessage}；目前離線，待恢復連線後再同步`,
+          message: `${importBaseMessage}\n目前離線，待恢復連線後再同步`,
         });
       } else if (syncResult.failed > 0) {
+        onNotify(`匯入完成，但有 ${syncResult.failed} 筆同步失敗`);
         setStatus({
           type: 'error',
-          message: `${importBaseMessage}；同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
+          message: `${importBaseMessage}\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
         });
       } else if (syncResult.total > 0) {
-        setStatus({
-          type: 'success',
-          message: `${importBaseMessage}；已同步 ${syncResult.total} 筆`,
-        });
+        onNotify(importBaseMessage);
+        setStatus({ type: 'idle', message: '' });
       } else {
-        setStatus({
-          type: 'success',
-          message: `${importBaseMessage}；沒有待同步資料`,
-        });
+        onNotify(importBaseMessage);
+        setStatus({ type: 'idle', message: '' });
       }
       setImportPreview(null);
       setSelectedImportFileName('');
@@ -506,7 +499,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     try {
       const count = await onInsertExamples();
       onDataChange();
-      setStatus({ type: 'success', message: `已插入範例資料 (${count} 筆)` });
+      onNotify(`已插入範例資料 (${count} 筆)`);
+      setStatus({ type: 'idle', message: '' });
     } catch (err: any) {
       setStatus({ type: 'error', message: `插入範例資料失敗: ${err.message}` });
     }
@@ -827,7 +821,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         {status.type !== 'idle' && (
           <div className={`p-4 rounded-2xl border flex items-center gap-3 animate-slide-up ${status.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
             {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-            <span className="text-sm font-bold">{status.message}</span>
+            <span className="text-sm font-bold whitespace-pre-line">{status.message}</span>
           </div>
         )}
 
