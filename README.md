@@ -140,6 +140,14 @@ this.version(1).stores({
 *   `Tag 管理` 是 `資料與設定` 內的功能區塊，不是獨立頁面。
 *   `新增／編輯交易` 可從多個主頁面進入，但仍維持 overlay 呈現。
 
+#### 6.5.3 頁面元件對應
+*   `首頁`：目前仍由 `App.tsx` 內的 home view 分支承載。
+*   `搜尋`：`components/SearchPage.tsx`
+*   `統計`：`components/MonthlyStatsPage.tsx`
+*   `資料與設定`：`components/SettingsPage.tsx`
+*   `同步狀態`：`components/SyncStatusPage.tsx`
+*   `新增／編輯交易` overlay：`components/AddTransactionModal.tsx`
+
 ### 6.6 統計頁期間與篩選
 *   使用者可從首頁底部的本月摘要卡進入「統計」頁。
 *   統計頁支援 `月份` 與 `年份` 兩種模式，兩者共用同一套聚合邏輯與 UI。
