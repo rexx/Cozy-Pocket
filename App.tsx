@@ -530,15 +530,20 @@ const App: React.FC = () => {
 
       const normalizedOldTag = normalizeTag(oldTag);
       const normalizedNewTag = normalizeTag(newTag);
+      const renameSummary = `已將 #${normalizedOldTag} 更名為 #${normalizedNewTag}`;
 
       if (isOffline()) {
-        showToast(`已將 #${normalizedOldTag} 更名為 #${normalizedNewTag}`);
+        showToast(renameSummary);
         return { ...preview, skippedOffline: true };
       }
 
       const syncResult = await triggerPendingSync('tag 更名後同步');
       await refreshData();
-      showToast(`已將 #${normalizedOldTag} 更名為 #${normalizedNewTag}`);
+      showToast(
+        syncResult.failed > 0
+          ? `Tag 更名完成，但有 ${syncResult.failed} 筆同步失敗`
+          : renameSummary
+      );
       return { ...preview, skippedOffline: false, syncResult };
     } catch (err: any) {
       setCapturedErrors((prev) => [...prev, `Tag Rename Error: ${err.message}`]);

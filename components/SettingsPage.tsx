@@ -235,7 +235,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (result.skippedOffline) {
         setStatus({
           type: 'success',
-          message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆；目前離線，待恢復連線後同步`,
+          message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
         });
         return;
       }
@@ -243,15 +243,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (result.syncResult && result.syncResult.failed > 0) {
         setStatus({
           type: 'error',
-          message: `已更名 ${result.affectedCount} 筆，但同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+          message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
         });
         return;
       }
 
-      setStatus({
-        type: 'success',
-        message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆`,
-      });
+      setStatus({ type: 'idle', message: '' });
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || 'Tag 更名失敗' });
     } finally {
