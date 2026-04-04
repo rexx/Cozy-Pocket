@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Trash2, CloudUpload, Tags, PencilLine } from 'lucide-react';
+import { ArrowLeft, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Trash2, CloudUpload, Tags, PencilLine } from 'lucide-react';
 import { Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
@@ -515,11 +515,11 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({
   const getCurrencyOptionLabel = (currency: string) => `${currency} (${getCurrencyDisplay(currency)})`;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1c2c] animate-slide-up select-none overflow-hidden text-slate-200">
+    <div className="flex h-full w-full flex-col bg-[#1a1c2c] select-none overflow-hidden text-slate-200">
       <div className="flex-none">
         <PageHeader
           title="資料與設定"
-          leftAction={<X size={26} />}
+          leftAction={<ArrowLeft size={26} />}
           onLeftAction={onClose}
         />
       </div>

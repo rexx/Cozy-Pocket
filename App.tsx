@@ -129,12 +129,11 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
 };
 
 const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<'home' | 'stats'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'stats' | 'settings'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncProgressPageOpen, setIsSyncProgressPageOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
@@ -601,23 +600,49 @@ const App: React.FC = () => {
             suggestions={suggestionIndex}
           />
         )}
-        {isSettingsOpen && (
-          <DataManagementModal
-            onClose={() => setIsSettingsOpen(false)}
-            onDataChange={refreshData}
-            onInsertExamples={insertExampleTransactions}
-            onTriggerSync={triggerPendingSync}
-            onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
-            onNotify={showToast}
-            isOffline={isOfflineMode}
-            tagSummaries={tagUsageSummaries}
-            onPreviewTagRename={previewTagRename}
-            onRenameTag={renameTag}
-            onGetTagTransactions={getTagTransactions}
-            onTagTransactionClick={(tx) => {
-              setIsSettingsOpen(false);
-              handleEditItem(tx);
+        {isSyncProgressPageOpen && (
+          <SyncProgressPage
+            transactions={transactions}
+            onClose={() => setIsSyncProgressPageOpen(false)}
+            onSyncNow={async () => {
+              await triggerPendingSync('同步狀態頁手動同步');
             }}
+            isSyncing={syncProgressUI.visible}
+            isOffline={isOfflineMode}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (activeView === 'settings') {
+    return (
+      <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        {toastMessage && <SuccessToast message={toastMessage} />}
+        <DataManagementModal
+          onClose={() => setActiveView('home')}
+          onDataChange={refreshData}
+          onInsertExamples={insertExampleTransactions}
+          onTriggerSync={triggerPendingSync}
+          onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
+          onNotify={showToast}
+          isOffline={isOfflineMode}
+          tagSummaries={tagUsageSummaries}
+          onPreviewTagRename={previewTagRename}
+          onRenameTag={renameTag}
+          onGetTagTransactions={getTagTransactions}
+          onTagTransactionClick={handleEditItem}
+        />
+        {isModalOpen && (
+          <AddTransactionModal
+            initialDate={selectedDate}
+            editingTransaction={editingTransaction}
+            onClose={() => setIsModalOpen(false)}
+            onAdd={addTransaction}
+            onUpdate={updateTransaction}
+            onDelete={deleteTransaction}
+            suggestions={suggestionIndex}
           />
         )}
         {isSyncProgressPageOpen && (
@@ -645,7 +670,7 @@ const App: React.FC = () => {
             selectedDate={selectedDate} 
             onDateSelect={setSelectedDate}
             onSearchClick={toggleSearchMode}
-            onSettingsClick={() => setIsSettingsOpen(true)}
+            onSettingsClick={() => setActiveView('settings')}
             onSyncProgressClick={() => setIsSyncProgressPageOpen(true)}
             isSyncProgressVisible={syncProgressUI.visible}
             isOffline={isOfflineMode}
@@ -788,25 +813,6 @@ const App: React.FC = () => {
           onUpdate={updateTransaction}
           onDelete={deleteTransaction}
           suggestions={suggestionIndex}
-        />
-      )}
-      {isSettingsOpen && (
-        <DataManagementModal
-          onClose={() => setIsSettingsOpen(false)}
-          onDataChange={refreshData}
-          onInsertExamples={insertExampleTransactions}
-          onTriggerSync={triggerPendingSync}
-          onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
-          onNotify={showToast}
-          isOffline={isOfflineMode}
-          tagSummaries={tagUsageSummaries}
-          onPreviewTagRename={previewTagRename}
-          onRenameTag={renameTag}
-          onGetTagTransactions={getTagTransactions}
-          onTagTransactionClick={(tx) => {
-            setIsSettingsOpen(false);
-            handleEditItem(tx);
-          }}
         />
       )}
       {isSyncProgressPageOpen && (
