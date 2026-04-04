@@ -14,7 +14,7 @@ import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
-import { buildTagRenamePreview, getTagUsageSummaries, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
+import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
@@ -504,6 +504,10 @@ const App: React.FC = () => {
     return buildTagRenamePreview(transactions, oldTag, newTag);
   }, [transactions]);
 
+  const getTagTransactions = useCallback(async (tag: string) => {
+    return getTransactionsByTag(transactions, tag);
+  }, [transactions]);
+
   const renameTag = useCallback(async (oldTag: string, newTag: string) => {
     try {
       const { preview, updatedTransactions } = renameTagInTransactions(transactions, oldTag, newTag);
@@ -609,6 +613,11 @@ const App: React.FC = () => {
             tagSummaries={tagUsageSummaries}
             onPreviewTagRename={previewTagRename}
             onRenameTag={renameTag}
+            onGetTagTransactions={getTagTransactions}
+            onTagTransactionClick={(tx) => {
+              setIsSettingsOpen(false);
+              handleEditItem(tx);
+            }}
           />
         )}
         {isSyncProgressPageOpen && (
@@ -793,6 +802,11 @@ const App: React.FC = () => {
           tagSummaries={tagUsageSummaries}
           onPreviewTagRename={previewTagRename}
           onRenameTag={renameTag}
+          onGetTagTransactions={getTagTransactions}
+          onTagTransactionClick={(tx) => {
+            setIsSettingsOpen(false);
+            handleEditItem(tx);
+          }}
         />
       )}
       {isSyncProgressPageOpen && (

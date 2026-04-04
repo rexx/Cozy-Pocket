@@ -8,6 +8,7 @@ import { formatReadableDateTime, toEpochSeconds } from '../time';
 import { SUPPORTED_CURRENCIES, getCurrencyDisplay, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
 import { TagRenamePreview, TagUsageSummary, normalizeTag } from '../services/tagService';
+import TransactionItem from './TransactionItem';
 
 interface DataManagementModalProps {
   onClose: () => void;
@@ -20,6 +21,8 @@ interface DataManagementModalProps {
   tagSummaries: TagUsageSummary[];
   onPreviewTagRename: (oldTag: string, newTag: string) => Promise<TagRenamePreview>;
   onRenameTag: (oldTag: string, newTag: string) => Promise<TagRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
+  onGetTagTransactions: (tag: string) => Promise<Transaction[]>;
+  onTagTransactionClick: (transaction: Transaction) => void;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
@@ -34,6 +37,8 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({
   tagSummaries,
   onPreviewTagRename,
   onRenameTag,
+  onGetTagTransactions,
+  onTagTransactionClick,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
@@ -48,6 +53,8 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({
   const [tagRenamePreview, setTagRenamePreview] = useState<TagRenamePreview | null>(null);
   const [isTagPreviewLoading, setIsTagPreviewLoading] = useState(false);
   const [isTagRenameSubmitting, setIsTagRenameSubmitting] = useState(false);
+  const [tagTransactions, setTagTransactions] = useState<Transaction[]>([]);
+  const [isTagTransactionsLoading, setIsTagTransactionsLoading] = useState(false);
   const [importPreview, setImportPreview] = useState<{
     transactions: Transaction[];
     totalRows: number;
@@ -80,8 +87,42 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({
       setSelectedTagToRename('');
       setRenamedTagInput('');
       setTagRenamePreview(null);
+      setTagTransactions([]);
     }
   }, [selectedTagToRename, tagSummaries]);
+
+  useEffect(() => {
+    if (!selectedTagToRename) {
+      setTagTransactions([]);
+      setIsTagTransactionsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadTagTransactions = async () => {
+      try {
+        setIsTagTransactionsLoading(true);
+        const results = await onGetTagTransactions(selectedTagToRename);
+        if (!isMounted) return;
+        setTagTransactions(results);
+      } catch (err: any) {
+        if (!isMounted) return;
+        setTagTransactions([]);
+        setStatus({ type: 'error', message: err.message || '讀取 tag 項目失敗' });
+      } finally {
+        if (isMounted) {
+          setIsTagTransactionsLoading(false);
+        }
+      }
+    };
+
+    void loadTagTransactions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [onGetTagTransactions, selectedTagToRename]);
 
   const handleDefaultCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVal = e.target.value;
@@ -154,6 +195,10 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({
     setTagRenamePreview(null);
     setIsTagPreviewLoading(false);
     setIsTagRenameSubmitting(false);
+    if (!nextSelectedTag) {
+      setTagTransactions([]);
+      setIsTagTransactionsLoading(false);
+    }
   };
 
   const handleSelectTagToRename = (tag: string) => {
@@ -660,6 +705,28 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({
                     >
                       {isTagRenameSubmitting ? '更名中...' : '確認更名'}
                     </button>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h3 className="text-sm font-black text-white">#{selectedTagToRename} · {tagTransactions.length} 筆</h3>
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#1a1c2c]">
+                      {isTagTransactionsLoading ? (
+                        <div className="px-4 py-6 text-center text-sm text-gray-400">載入中...</div>
+                      ) : tagTransactions.length > 0 ? (
+                        tagTransactions.map((tx) => (
+                          <TransactionItem
+                            key={tx.id}
+                            transaction={tx}
+                            onClick={onTagTransactionClick}
+                            showDateTime
+                          />
+                        ))
+                      ) : (
+                        <div className="px-4 py-6 text-center text-sm text-gray-400">目前沒有符合這個 tag 的交易。</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : null}

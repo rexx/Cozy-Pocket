@@ -44,6 +44,18 @@ export const getTagUsageSummaries = (transactions: Transaction[]): TagUsageSumma
     });
 };
 
+export const getTransactionsByTag = (
+  transactions: Transaction[],
+  tag: string
+) => {
+  const normalizedTag = normalizeTag(tag);
+  if (!normalizedTag) return [];
+
+  return transactions
+    .filter((tx) => splitTags(tx.tags).includes(normalizedTag))
+    .sort((a, b) => b.timestamp - a.timestamp);
+};
+
 export const buildTagRenamePreview = (
   transactions: Transaction[],
   oldTag: string,
