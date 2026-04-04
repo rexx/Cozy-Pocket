@@ -141,12 +141,22 @@ this.version(1).stores({
 *   `新增／編輯交易` 可從多個主頁面進入，但仍維持 overlay 呈現。
 
 #### 6.5.3 頁面元件對應
-*   `首頁`：目前仍由 `App.tsx` 內的 home view 分支承載。
+*   `首頁`：`components/HomePage.tsx`
 *   `搜尋`：`components/SearchPage.tsx`
 *   `統計`：`components/MonthlyStatsPage.tsx`
 *   `資料與設定`：`components/SettingsPage.tsx`
 *   `同步狀態`：`components/SyncStatusPage.tsx`
 *   `新增／編輯交易` overlay：`components/AddTransactionModal.tsx`
+
+#### 6.5.4 元件層級與命名原則
+*   主頁面元件統一使用 `*Page.tsx` 命名，放在 `components/` 目錄下。
+*   overlay / modal 元件統一使用 `*Modal.tsx` 命名，與主頁面元件語意區隔。
+*   `App.tsx` 應盡量只負責：
+    *   active view 切換
+    *   共用 state / handler 管理
+    *   將資料與 callback 傳給各 page / modal
+*   新的完整頁面功能，優先新增獨立 `*Page.tsx`，避免再把大量頁面 JSX 直接堆回 `App.tsx`。
+*   頁內功能區塊（例如 Tag 管理）可先留在對應 page 內；只有在規模明顯擴大時才再拆成子元件或子頁。
 
 ### 6.6 統計頁期間與篩選
 *   使用者可從首頁底部的本月摘要卡進入「統計」頁。
