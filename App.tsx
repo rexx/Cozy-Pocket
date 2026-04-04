@@ -5,8 +5,8 @@ import { Plus, AlertCircle, X, Search as SearchIcon, ArrowLeft, Layers, ChevronL
 import Calendar from './components/Calendar';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
-import DataManagementModal from './components/DataManagementModal';
-import SyncProgressPage from './components/SyncProgressPage';
+import SettingsPage from './components/SettingsPage';
+import SyncStatusPage from './components/SyncStatusPage';
 import MonthlyStatsPage from './components/MonthlyStatsPage';
 import { SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
@@ -611,7 +611,7 @@ const App: React.FC = () => {
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
         <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
-        <DataManagementModal
+        <SettingsPage
           onClose={() => setActiveView('home')}
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
@@ -645,7 +645,7 @@ const App: React.FC = () => {
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
         <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
-        <SyncProgressPage
+        <SyncStatusPage
           transactions={transactions}
           onClose={() => setActiveView('home')}
           onSyncNow={async () => {

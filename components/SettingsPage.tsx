@@ -10,7 +10,7 @@ import PageHeader from './PageHeader';
 import { TagRenamePreview, TagUsageSummary, normalizeTag } from '../services/tagService';
 import TransactionItem from './TransactionItem';
 
-interface DataManagementModalProps {
+interface SettingsPageProps {
   onClose: () => void;
   onDataChange: () => void;
   onInsertExamples: () => Promise<number>;
@@ -26,7 +26,7 @@ interface DataManagementModalProps {
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
-const DataManagementModal: React.FC<DataManagementModalProps> = ({
+const SettingsPage: React.FC<SettingsPageProps> = ({
   onClose,
   onDataChange,
   onInsertExamples,
@@ -840,4 +840,4 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({
   );
 };
 
-export default DataManagementModal;
+export default SettingsPage;

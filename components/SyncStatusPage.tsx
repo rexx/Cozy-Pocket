@@ -4,7 +4,7 @@ import { Transaction } from '../types';
 import { toEpochMillis } from '../time';
 import TransactionItem from './TransactionItem';
 
-interface SyncProgressPageProps {
+interface SyncStatusPageProps {
   transactions: Transaction[];
   onClose: () => void;
   onSyncNow: () => Promise<void>;
@@ -29,7 +29,7 @@ const STATUS_META: Record<SyncStatusKey, { label: string }> = {
   },
 };
 
-const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClose, onSyncNow, isSyncing, isOffline }) => {
+const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, onSyncNow, isSyncing, isOffline }) => {
   const groupedCounts = useMemo(() => {
     const buckets: Record<SyncStatusKey, Transaction[]> = {
       pending: [],
@@ -132,4 +132,4 @@ const SyncProgressPage: React.FC<SyncProgressPageProps> = ({ transactions, onClo
   );
 };
 
-export default SyncProgressPage;
+export default SyncStatusPage;
