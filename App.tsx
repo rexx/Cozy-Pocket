@@ -129,7 +129,7 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
 };
 
 const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<'home' | 'stats' | 'settings'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'stats' | 'settings'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -153,7 +153,6 @@ const App: React.FC = () => {
   });
   const activeSyncTaskRef = useRef(0);
   const syncHideTimerRef = useRef<number | null>(null);
-  const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -386,7 +385,7 @@ const App: React.FC = () => {
   }, [transactions, selectedDate]);
 
   const filteredTransactions = useMemo(() => {
-    if (!isSearchMode || !searchQuery.trim()) return [];
+    if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase().trim();
     return transactions.filter(t => {
       const category = CATEGORIES.find(c => c.id === t.categoryId);
@@ -401,7 +400,7 @@ const App: React.FC = () => {
         t.currency.toLowerCase().includes(query)
       );
     }).sort((a, b) => b.timestamp - a.timestamp);
-  }, [transactions, searchQuery, isSearchMode]);
+  }, [transactions, searchQuery]);
 
   const dailyStatsByCurrency = useMemo(() => getStatsByCurrency(dailyTransactions), [dailyTransactions]);
 
@@ -552,10 +551,14 @@ const App: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const toggleSearchMode = () => {
-    setIsSearchMode(!isSearchMode);
+  const openSearchPage = () => {
+    setActiveView('search');
+    window.setTimeout(() => searchInputRef.current?.focus(), 100);
+  };
+
+  const closeSearchPage = () => {
+    setActiveView('home');
     setSearchQuery('');
-    if (!isSearchMode) setTimeout(() => searchInputRef.current?.focus(), 100);
   };
 
   const formatStatAmount = (val: number, currency: string) => {
@@ -660,25 +663,14 @@ const App: React.FC = () => {
     );
   }
 
-  return (
-    <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-      <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
-      {toastMessage && <SuccessToast message={toastMessage} />}
-      <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
-        {!isSearchMode ? (
-          <Calendar 
-            selectedDate={selectedDate} 
-            onDateSelect={setSelectedDate}
-            onSearchClick={toggleSearchMode}
-            onSettingsClick={() => setActiveView('settings')}
-            onSyncProgressClick={() => setIsSyncProgressPageOpen(true)}
-            isSyncProgressVisible={syncProgressUI.visible}
-            isOffline={isOfflineMode}
-            transactions={transactions}
-          />
-        ) : (
-          <div className="p-4 flex items-center gap-3 animate-slide-up">
-            <button onClick={toggleSearchMode} className="p-2 text-gray-400 hover:text-white transition-colors"><ArrowLeft size={24} /></button>
+  if (activeView === 'search') {
+    return (
+      <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        {toastMessage && <SuccessToast message={toastMessage} />}
+        <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
+          <div className="p-4 flex items-center gap-3">
+            <button onClick={closeSearchPage} className="p-2 text-gray-400 hover:text-white transition-colors"><ArrowLeft size={24} /></button>
             <div className="flex-1 relative">
               <input
                 ref={searchInputRef}
@@ -692,60 +684,97 @@ const App: React.FC = () => {
               {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"><X size={16} /></button>}
             </div>
           </div>
+        </div>
+        <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain">
+          <div className="mt-2 min-h-[calc(100%+1px)] space-y-1">
+            {searchQuery.trim() === '' ? (
+              <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
+                <div className="text-7xl mb-6 grayscale opacity-20 select-none">🔍</div>
+                <p className="text-gray-500 font-bold text-lg tracking-tight opacity-60">請輸入關鍵字開始搜尋</p>
+              </div>
+            ) : filteredTransactions.length > 0 ? (
+              <>
+                <div className="px-5 py-2"><span className="text-[10px] text-cyan-400 font-black uppercase tracking-widest">搜尋結果 ({filteredTransactions.length})</span></div>
+                {filteredTransactions.map(tx => (
+                  <div key={tx.id}>
+                    <div className="px-5 py-1 bg-white/5 border-l-2 border-cyan-500/50"><span className="text-[10px] text-gray-500 font-bold">{format(new Date(toEpochMillis(tx.timestamp)), 'yyyy-MM-dd')}</span></div>
+                    <TransactionItem transaction={tx} onClick={handleEditItem} />
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 px-10 text-center opacity-40"><div className="text-6xl mb-4">🙊</div><p className="text-gray-400 font-medium">找不到符合「{searchQuery}」的紀錄</p></div>
+            )}
+          </div>
+        </div>
+        {isModalOpen && (
+          <AddTransactionModal
+            initialDate={selectedDate}
+            editingTransaction={editingTransaction}
+            onClose={() => setIsModalOpen(false)}
+            onAdd={addTransaction}
+            onUpdate={updateTransaction}
+            onDelete={deleteTransaction}
+            suggestions={suggestionIndex}
+          />
+        )}
+        {isSyncProgressPageOpen && (
+          <SyncProgressPage
+            transactions={transactions}
+            onClose={() => setIsSyncProgressPageOpen(false)}
+            onSyncNow={async () => {
+              await triggerPendingSync('同步狀態頁手動同步');
+            }}
+            isSyncing={syncProgressUI.visible}
+            isOffline={isOfflineMode}
+          />
         )}
       </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+      <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+      {toastMessage && <SuccessToast message={toastMessage} />}
+      <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
+        <Calendar 
+          selectedDate={selectedDate} 
+          onDateSelect={setSelectedDate}
+          onSearchClick={openSearchPage}
+          onSettingsClick={() => setActiveView('settings')}
+          onSyncProgressClick={() => setIsSyncProgressPageOpen(true)}
+          isSyncProgressVisible={syncProgressUI.visible}
+          isOffline={isOfflineMode}
+          transactions={transactions}
+        />
+      </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
-        {!isSearchMode && (
-          <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">
-            <button
-              onClick={() => setSelectedDate(addDays(selectedDate, -1))}
-              className="pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
-              aria-label="切換到昨天"
-              title="昨天"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-              className="pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
-              aria-label="切換到明天"
-              title="明天"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        )}
-        {!isSearchMode && (
-          <div className="absolute right-8 bottom-8 z-40">
-            <button onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }} className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(34,211,238,0.4)] active:scale-90 transition-all hover:brightness-110">
-              <Plus size={36} strokeWidth={2.5} />
-            </button>
-          </div>
-        )}
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">
+          <button
+            onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+            className="pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+            aria-label="切換到昨天"
+            title="昨天"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+            className="pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+            aria-label="切換到明天"
+            title="明天"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+        <div className="absolute right-8 bottom-8 z-40">
+          <button onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }} className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(34,211,238,0.4)] active:scale-90 transition-all hover:brightness-110">
+            <Plus size={36} strokeWidth={2.5} />
+          </button>
+        </div>
         <div className="overflow-y-auto no-scrollbar overscroll-contain h-full min-h-0">
           <div className="mt-2 min-h-[calc(100%+1px)] space-y-1">
-          {isSearchMode ? (
-            <>
-              {searchQuery.trim() === '' ? (
-                <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
-                  <div className="text-7xl mb-6 grayscale opacity-20 select-none">🔍</div>
-                  <p className="text-gray-500 font-bold text-lg tracking-tight opacity-60">請輸入關鍵字開始搜尋</p>
-                </div>
-              ) : filteredTransactions.length > 0 ? (
-                <>
-                  <div className="px-5 py-2"><span className="text-[10px] text-cyan-400 font-black uppercase tracking-widest">搜尋結果 ({filteredTransactions.length})</span></div>
-                  {filteredTransactions.map(tx => (
-                    <div key={tx.id}>
-                      <div className="px-5 py-1 bg-white/5 border-l-2 border-cyan-500/50"><span className="text-[10px] text-gray-500 font-bold">{format(new Date(toEpochMillis(tx.timestamp)), 'yyyy-MM-dd')}</span></div>
-                      <TransactionItem transaction={tx} onClick={handleEditItem} />
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 px-10 text-center opacity-40"><div className="text-6xl mb-4">🙊</div><p className="text-gray-400 font-medium">找不到符合「{searchQuery}」的紀錄</p></div>
-              )}
-            </>
-          ) : (
             <>
               {dailyTransactions.length > 0 ? (
                 dailyTransactions.map(tx => <TransactionItem key={tx.id} transaction={tx} onClick={handleEditItem} />)
@@ -800,7 +829,6 @@ const App: React.FC = () => {
                 <p className="text-center text-[10px] text-gray-700 font-bold uppercase tracking-[0.4em] mt-12 opacity-15">Cozy Pocket • Minimalism</p>
               </div>
             </>
-          )}
           </div>
         </div>
       </div>
