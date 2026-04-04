@@ -129,12 +129,11 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
 };
 
 const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'stats' | 'settings'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'stats' | 'settings' | 'sync'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSyncProgressPageOpen, setIsSyncProgressPageOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -603,17 +602,6 @@ const App: React.FC = () => {
             suggestions={suggestionIndex}
           />
         )}
-        {isSyncProgressPageOpen && (
-          <SyncProgressPage
-            transactions={transactions}
-            onClose={() => setIsSyncProgressPageOpen(false)}
-            onSyncNow={async () => {
-              await triggerPendingSync('同步狀態頁手動同步');
-            }}
-            isSyncing={syncProgressUI.visible}
-            isOffline={isOfflineMode}
-          />
-        )}
       </div>
     );
   }
@@ -628,7 +616,7 @@ const App: React.FC = () => {
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
-          onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
+          onOpenSyncProgress={() => setActiveView('sync')}
           onNotify={showToast}
           isOffline={isOfflineMode}
           tagSummaries={tagUsageSummaries}
@@ -648,15 +636,33 @@ const App: React.FC = () => {
             suggestions={suggestionIndex}
           />
         )}
-        {isSyncProgressPageOpen && (
-          <SyncProgressPage
-            transactions={transactions}
-            onClose={() => setIsSyncProgressPageOpen(false)}
-            onSyncNow={async () => {
-              await triggerPendingSync('同步狀態頁手動同步');
-            }}
-            isSyncing={syncProgressUI.visible}
-            isOffline={isOfflineMode}
+      </div>
+    );
+  }
+
+  if (activeView === 'sync') {
+    return (
+      <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        {toastMessage && <SuccessToast message={toastMessage} />}
+        <SyncProgressPage
+          transactions={transactions}
+          onClose={() => setActiveView('home')}
+          onSyncNow={async () => {
+            await triggerPendingSync('同步狀態頁手動同步');
+          }}
+          isSyncing={syncProgressUI.visible}
+          isOffline={isOfflineMode}
+        />
+        {isModalOpen && (
+          <AddTransactionModal
+            initialDate={selectedDate}
+            editingTransaction={editingTransaction}
+            onClose={() => setIsModalOpen(false)}
+            onAdd={addTransaction}
+            onUpdate={updateTransaction}
+            onDelete={deleteTransaction}
+            suggestions={suggestionIndex}
           />
         )}
       </div>
@@ -718,17 +724,6 @@ const App: React.FC = () => {
             suggestions={suggestionIndex}
           />
         )}
-        {isSyncProgressPageOpen && (
-          <SyncProgressPage
-            transactions={transactions}
-            onClose={() => setIsSyncProgressPageOpen(false)}
-            onSyncNow={async () => {
-              await triggerPendingSync('同步狀態頁手動同步');
-            }}
-            isSyncing={syncProgressUI.visible}
-            isOffline={isOfflineMode}
-          />
-        )}
       </div>
     );
   }
@@ -743,7 +738,7 @@ const App: React.FC = () => {
           onDateSelect={setSelectedDate}
           onSearchClick={openSearchPage}
           onSettingsClick={() => setActiveView('settings')}
-          onSyncProgressClick={() => setIsSyncProgressPageOpen(true)}
+          onSyncProgressClick={() => setActiveView('sync')}
           isSyncProgressVisible={syncProgressUI.visible}
           isOffline={isOfflineMode}
           transactions={transactions}
@@ -841,17 +836,6 @@ const App: React.FC = () => {
           onUpdate={updateTransaction}
           onDelete={deleteTransaction}
           suggestions={suggestionIndex}
-        />
-      )}
-      {isSyncProgressPageOpen && (
-        <SyncProgressPage
-          transactions={transactions}
-          onClose={() => setIsSyncProgressPageOpen(false)}
-          onSyncNow={async () => {
-            await triggerPendingSync('同步狀態頁手動同步');
-          }}
-          isSyncing={syncProgressUI.visible}
-          isOffline={isOfflineMode}
         />
       )}
     </div>
