@@ -14,6 +14,7 @@ import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
+import { buildTagRenamePreview, getTagUsageSummaries, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
@@ -122,9 +123,7 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
     merchants: buildSuggestions(transactions, (tx) => tx.merchant ? [tx.merchant] : []),
     names: buildSuggestions(transactions, (tx) => tx.name ? [tx.name] : []),
     tags: buildSuggestions(transactions, (tx) => (
-      tx.tags
-        ? tx.tags.split(/\s+/).map((tag) => tag.replace(/^#+/, '')).filter(Boolean)
-        : []
+      splitTags(tx.tags)
     )),
   };
 };
@@ -412,6 +411,7 @@ const App: React.FC = () => {
   }, [transactions, selectedDate]);
 
   const suggestionIndex = useMemo<SuggestionIndex>(() => buildSuggestionIndex(transactions), [transactions]);
+  const tagUsageSummaries = useMemo(() => getTagUsageSummaries(transactions), [transactions]);
 
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     let attempts = 0;
@@ -500,6 +500,50 @@ const App: React.FC = () => {
     }
   };
 
+  const previewTagRename = useCallback(async (oldTag: string, newTag: string) => {
+    return buildTagRenamePreview(transactions, oldTag, newTag);
+  }, [transactions]);
+
+  const renameTag = useCallback(async (oldTag: string, newTag: string) => {
+    try {
+      const { preview, updatedTransactions } = renameTagInTransactions(transactions, oldTag, newTag);
+
+      if (preview.affectedCount === 0 || updatedTransactions.length === 0) {
+        throw new Error('找不到會受影響的交易');
+      }
+
+      const timestamp = Date.now();
+      const transactionsToPersist = updatedTransactions.map((tx, index) => ({
+        ...tx,
+        updatedAt: timestamp + index,
+        version: (tx.version || 0) + 1,
+        syncStatus: 'pending' as const,
+        lastSyncError: undefined,
+      }));
+
+      await db.transactions.bulkPut(transactionsToPersist);
+
+      const updatedById = new Map(transactionsToPersist.map((tx) => [tx.id, tx]));
+      setTransactions((prev) => prev.map((tx) => updatedById.get(tx.id) || tx));
+
+      const normalizedOldTag = normalizeTag(oldTag);
+      const normalizedNewTag = normalizeTag(newTag);
+
+      if (isOffline()) {
+        showToast(`已將 #${normalizedOldTag} 更名為 #${normalizedNewTag}`);
+        return { ...preview, skippedOffline: true };
+      }
+
+      const syncResult = await triggerPendingSync('tag 更名後同步');
+      await refreshData();
+      showToast(`已將 #${normalizedOldTag} 更名為 #${normalizedNewTag}`);
+      return { ...preview, skippedOffline: false, syncResult };
+    } catch (err: any) {
+      setCapturedErrors((prev) => [...prev, `Tag Rename Error: ${err.message}`]);
+      throw err;
+    }
+  }, [refreshData, showToast, transactions, triggerPendingSync]);
+
   const handleEditItem = (tx: Transaction) => {
     setEditingTransaction(tx);
     setIsModalOpen(true);
@@ -562,6 +606,9 @@ const App: React.FC = () => {
             onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
             onNotify={showToast}
             isOffline={isOfflineMode}
+            tagSummaries={tagUsageSummaries}
+            onPreviewTagRename={previewTagRename}
+            onRenameTag={renameTag}
           />
         )}
         {isSyncProgressPageOpen && (
@@ -743,6 +790,9 @@ const App: React.FC = () => {
           onOpenSyncProgress={() => setIsSyncProgressPageOpen(true)}
           onNotify={showToast}
           isOffline={isOfflineMode}
+          tagSummaries={tagUsageSummaries}
+          onPreviewTagRename={previewTagRename}
+          onRenameTag={renameTag}
         />
       )}
       {isSyncProgressPageOpen && (

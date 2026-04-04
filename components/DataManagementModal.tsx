@@ -1,12 +1,13 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Trash2, CloudUpload } from 'lucide-react';
+import { X, Download, Upload, Database, AlertTriangle, CheckCircle2, Globe, Trash2, CloudUpload, Tags, PencilLine } from 'lucide-react';
 import { Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
 import { SUPPORTED_CURRENCIES, getCurrencyDisplay, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
+import { TagRenamePreview, TagUsageSummary, normalizeTag } from '../services/tagService';
 
 interface DataManagementModalProps {
   onClose: () => void;
@@ -16,10 +17,24 @@ interface DataManagementModalProps {
   onOpenSyncProgress: () => void;
   onNotify: (message: string) => void;
   isOffline: boolean;
+  tagSummaries: TagUsageSummary[];
+  onPreviewTagRename: (oldTag: string, newTag: string) => Promise<TagRenamePreview>;
+  onRenameTag: (oldTag: string, newTag: string) => Promise<TagRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
-const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDataChange, onInsertExamples, onTriggerSync, onOpenSyncProgress, onNotify, isOffline }) => {
+const DataManagementModal: React.FC<DataManagementModalProps> = ({
+  onClose,
+  onDataChange,
+  onInsertExamples,
+  onTriggerSync,
+  onOpenSyncProgress,
+  onNotify,
+  isOffline,
+  tagSummaries,
+  onPreviewTagRename,
+  onRenameTag,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
@@ -28,6 +43,11 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
   const [syncToken, setSyncToken] = useState('');
   const [selectedImportFileName, setSelectedImportFileName] = useState('');
   const [isParsingImportFile, setIsParsingImportFile] = useState(false);
+  const [selectedTagToRename, setSelectedTagToRename] = useState('');
+  const [renamedTagInput, setRenamedTagInput] = useState('');
+  const [tagRenamePreview, setTagRenamePreview] = useState<TagRenamePreview | null>(null);
+  const [isTagPreviewLoading, setIsTagPreviewLoading] = useState(false);
+  const [isTagRenameSubmitting, setIsTagRenameSubmitting] = useState(false);
   const [importPreview, setImportPreview] = useState<{
     transactions: Transaction[];
     totalRows: number;
@@ -51,6 +71,17 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
       if (tokenSetting?.value) setSyncToken(tokenSetting.value);
     });
   }, []);
+
+  useEffect(() => {
+    if (!selectedTagToRename) return;
+    const normalizedSelectedTag = normalizeTag(selectedTagToRename);
+    const hasSelectedTag = tagSummaries.some(({ tag }) => tag === normalizedSelectedTag);
+    if (!hasSelectedTag) {
+      setSelectedTagToRename('');
+      setRenamedTagInput('');
+      setTagRenamePreview(null);
+    }
+  }, [selectedTagToRename, tagSummaries]);
 
   const handleDefaultCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVal = e.target.value;
@@ -114,6 +145,78 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
       }
     } catch (err: any) {
       setStatus({ type: 'error', message: `同步設定儲存失敗: ${err.message}` });
+    }
+  };
+
+  const resetTagRenameState = (nextSelectedTag = '') => {
+    setSelectedTagToRename(nextSelectedTag);
+    setRenamedTagInput('');
+    setTagRenamePreview(null);
+    setIsTagPreviewLoading(false);
+    setIsTagRenameSubmitting(false);
+  };
+
+  const handleSelectTagToRename = (tag: string) => {
+    setStatus({ type: 'idle', message: '' });
+    resetTagRenameState(tag);
+  };
+
+  const handlePreviewTagRename = async () => {
+    try {
+      setIsTagPreviewLoading(true);
+      setStatus({ type: 'idle', message: '' });
+      const preview = await onPreviewTagRename(selectedTagToRename, renamedTagInput);
+      setTagRenamePreview(preview);
+      if (preview.affectedCount === 0) {
+        setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行更名' });
+      } else if (preview.conflictsWithExistingTag) {
+        setStatus({ type: 'success', message: `提醒：#${preview.newTag} 已存在，執行後會合併 tag 並自動去重` });
+      }
+    } catch (err: any) {
+      setTagRenamePreview(null);
+      setStatus({ type: 'error', message: err.message || 'Tag 預覽失敗' });
+    } finally {
+      setIsTagPreviewLoading(false);
+    }
+  };
+
+  const handleRenameTag = async () => {
+    if (!tagRenamePreview || tagRenamePreview.affectedCount === 0) {
+      setStatus({ type: 'error', message: '請先預覽受影響筆數後再執行更名' });
+      return;
+    }
+
+    try {
+      setIsTagRenameSubmitting(true);
+      setStatus({ type: 'idle', message: '' });
+      const result = await onRenameTag(selectedTagToRename, renamedTagInput);
+      resetTagRenameState('');
+      onDataChange();
+
+      if (result.skippedOffline) {
+        setStatus({
+          type: 'success',
+          message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆；目前離線，待恢復連線後同步`,
+        });
+        return;
+      }
+
+      if (result.syncResult && result.syncResult.failed > 0) {
+        setStatus({
+          type: 'error',
+          message: `已更名 ${result.affectedCount} 筆，但同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+        });
+        return;
+      }
+
+      setStatus({
+        type: 'success',
+        message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆`,
+      });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || 'Tag 更名失敗' });
+    } finally {
+      setIsTagRenameSubmitting(false);
     }
   };
 
@@ -464,6 +567,104 @@ const DataManagementModal: React.FC<DataManagementModalProps> = ({ onClose, onDa
               </p>
             )}
           </div>
+        </div>
+
+        <div className="bg-[#252538] rounded-3xl p-6 border border-cyan-500/20 shadow-xl space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+              <Tags size={22} />
+            </div>
+            <div>
+              <h2 className="font-bold text-white">Tag 管理</h2>
+              <p className="text-xs text-gray-500">更名既有 tag，並同步更新所有受影響的交易</p>
+            </div>
+          </div>
+
+          {tagSummaries.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-400">
+              目前還沒有可管理的 tag。
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-gray-400">選擇要更名的 tag</p>
+                <div className="flex flex-wrap gap-2">
+                  {tagSummaries.map(({ tag, count }) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleSelectTagToRename(tag)}
+                      className={`rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                        selectedTagToRename === tag
+                          ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                          : 'border-white/10 bg-white/5 text-gray-300 hover:text-white'
+                      }`}
+                    >
+                      #{tag} · {count} 筆
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {selectedTagToRename ? (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-bold">目前 tag</label>
+                    <div className="rounded-xl border border-white/10 bg-[#1a1c2c] px-3 py-2 text-sm font-bold text-white">
+                      #{selectedTagToRename}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-bold">新 tag 名稱</label>
+                    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#1a1c2c] px-3 py-2">
+                      <PencilLine size={16} className="text-gray-500" />
+                      <input
+                        type="text"
+                        value={renamedTagInput}
+                        onChange={(e) => {
+                          setRenamedTagInput(e.target.value);
+                          setTagRenamePreview(null);
+                        }}
+                        placeholder="輸入新的 tag 名稱"
+                        className="w-full bg-transparent text-sm font-bold text-white focus:outline-none placeholder-gray-600"
+                        disabled={isTagPreviewLoading || isTagRenameSubmitting}
+                      />
+                    </div>
+                  </div>
+
+                  {tagRenamePreview && (
+                    <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 space-y-1">
+                      <p className="text-xs font-black text-amber-300">更名預覽</p>
+                      <p className="text-xs text-gray-200">#{tagRenamePreview.oldTag} → #{tagRenamePreview.newTag}</p>
+                      <p className="text-xs text-emerald-300">預計影響：{tagRenamePreview.affectedCount} 筆交易</p>
+                      {tagRenamePreview.conflictsWithExistingTag && (
+                        <p className="text-xs text-amber-200">提醒：新名稱已存在；確認後會合併為同一個 tag，並自動去除重複 tag。</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={handlePreviewTagRename}
+                      disabled={!renamedTagInput.trim() || isTagPreviewLoading || isTagRenameSubmitting}
+                      className="py-3 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-black rounded-xl active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100"
+                    >
+                      {isTagPreviewLoading ? '預覽中...' : '預覽影響筆數'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRenameTag}
+                      disabled={!tagRenamePreview || tagRenamePreview.affectedCount === 0 || isTagPreviewLoading || isTagRenameSubmitting}
+                      className="py-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-black rounded-xl active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100"
+                    >
+                      {isTagRenameSubmitting ? '更名中...' : '確認更名'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
 
         <div className="bg-[#252538] rounded-3xl p-6 border border-red-500/20 shadow-xl space-y-4">

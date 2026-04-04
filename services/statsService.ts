@@ -1,19 +1,12 @@
 import { endOfMonth, endOfYear } from 'date-fns';
 import { Transaction } from '../types';
 import { toEpochSeconds } from '../time';
+import { extractTransactionTags, normalizeTag } from './tagService';
 
 export interface CurrencyStats {
   income: number;
   expense: number;
 }
-
-export const normalizeTag = (tag: string) => tag.trim().replace(/^#+/, '');
-
-export const extractTransactionTags = (tx: Transaction) => (
-  tx.tags
-    ? tx.tags.split(/\s+/).map(normalizeTag).filter(Boolean)
-    : []
-);
 
 export const getStatsByCurrency = (txs: Transaction[]) => {
   return txs.reduce((acc, curr) => {
