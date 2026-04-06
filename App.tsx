@@ -9,10 +9,12 @@ import SyncStatusPage from './components/SyncStatusPage';
 import SearchPage from './components/SearchPage';
 import HomePage from './components/HomePage';
 import MonthlyStatsPage from './components/MonthlyStatsPage';
+import MerchantManagementPage from './components/MerchantManagementPage';
 import { SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
+import { buildMerchantRenamePreview, getTransactionsByMerchant, normalizeMerchantName, renameMerchantInTransactions } from './services/merchantService';
 import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
 import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
@@ -130,7 +132,7 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
 };
 
 const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'stats' | 'settings' | 'sync'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management'>('home');
   const [syncReturnView, setSyncReturnView] = useState<'home' | 'settings'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -524,9 +526,63 @@ const App: React.FC = () => {
     return buildTagRenamePreview(transactions, oldTag, newTag);
   }, [transactions]);
 
+  const previewMerchantRename = useCallback(async (oldMerchant: string, newMerchant: string) => {
+    return buildMerchantRenamePreview(transactions, oldMerchant, newMerchant);
+  }, [transactions]);
+
+  const getMerchantTransactions = useCallback(async (merchant: string) => {
+    return getTransactionsByMerchant(transactions, merchant);
+  }, [transactions]);
+
   const getTagTransactions = useCallback(async (tag: string) => {
     return getTransactionsByTag(transactions, tag);
   }, [transactions]);
+
+  const renameMerchant = useCallback(async (oldMerchant: string, newMerchant: string) => {
+    try {
+      const { preview, updatedTransactions } = renameMerchantInTransactions(transactions, oldMerchant, newMerchant);
+
+      if (preview.affectedCount === 0 || updatedTransactions.length === 0) {
+        throw new Error('找不到會受影響的交易');
+      }
+
+      const timestamp = Date.now();
+      const transactionsToPersist = updatedTransactions.map((tx, index) => ({
+        ...tx,
+        merchant: preview.newMerchant,
+        updatedAt: timestamp + index,
+        version: (tx.version || 0) + 1,
+        syncStatus: 'pending' as const,
+        lastSyncError: undefined,
+      }));
+
+      await db.transactions.bulkPut(transactionsToPersist);
+
+      const updatedById = new Map(transactionsToPersist.map((tx) => [tx.id, tx]));
+      setTransactions((prev) => prev.map((tx) => updatedById.get(tx.id) || tx));
+
+      const normalizedOldMerchant = normalizeMerchantName(oldMerchant);
+      const normalizedNewMerchant = normalizeMerchantName(newMerchant);
+      const renameSummary = `已將 ${normalizedOldMerchant} 更名為 ${normalizedNewMerchant}`;
+
+      if (isOffline()) {
+        showToast(renameSummary);
+        return { ...preview, skippedOffline: true };
+      }
+
+      const syncResult = await triggerPendingSync('商家更名後同步');
+      await refreshData();
+      showToast(
+        syncResult.failed > 0
+          ? `商家更名完成，但有 ${syncResult.failed} 筆同步失敗`
+          : renameSummary
+      );
+      return { ...preview, skippedOffline: false, syncResult };
+    } catch (err: any) {
+      setCapturedErrors((prev) => [...prev, `Merchant Rename Error: ${err.message}`]);
+      throw err;
+    }
+  }, [refreshData, showToast, transactions, triggerPendingSync]);
 
   const renameTag = useCallback(async (oldTag: string, newTag: string) => {
     try {
@@ -692,6 +748,7 @@ const App: React.FC = () => {
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
           onOpenSyncProgress={() => openSyncStatusFrom('settings')}
+          onOpenMerchantManagement={() => setActiveView('merchant-management')}
           onNotify={showToast}
           isOffline={isOfflineMode}
           tagSummaries={tagUsageSummaries}
@@ -699,6 +756,38 @@ const App: React.FC = () => {
           onRenameTag={renameTag}
           onGetTagTransactions={getTagTransactions}
           onTagTransactionClick={handleEditItem}
+        />
+        {isModalOpen && (
+          <AddTransactionModal
+            key={modalInstanceKey}
+            initialDate={selectedDate}
+            editingTransaction={editingTransaction}
+            prefilledTransaction={prefilledTransaction}
+            onClose={closeTransactionModal}
+            onAdd={addTransaction}
+            onUpdate={updateTransaction}
+            onDelete={deleteTransaction}
+            onDuplicate={handleDuplicateItem}
+            suggestions={suggestionIndex}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (activeView === 'merchant-management') {
+    return (
+      <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        {toastMessage && <SuccessToast message={toastMessage} />}
+        <MerchantManagementPage
+          transactions={transactions}
+          onClose={() => setActiveView('settings')}
+          onDataChange={refreshData}
+          onPreviewMerchantRename={previewMerchantRename}
+          onRenameMerchant={renameMerchant}
+          onGetMerchantTransactions={getMerchantTransactions}
+          onMerchantTransactionClick={handleEditItem}
         />
         {isModalOpen && (
           <AddTransactionModal

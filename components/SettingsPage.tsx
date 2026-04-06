@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { ArrowLeft, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CheckCircle2, Store } from 'lucide-react';
 import { Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
@@ -20,6 +20,7 @@ interface SettingsPageProps {
   onInsertExamples: () => Promise<number>;
   onTriggerSync: (label: string) => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
   onOpenSyncProgress: () => void;
+  onOpenMerchantManagement: () => void;
   onNotify: (message: string) => void;
   isOffline: boolean;
   tagSummaries: TagUsageSummary[];
@@ -36,6 +37,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onInsertExamples,
   onTriggerSync,
   onOpenSyncProgress,
+  onOpenMerchantManagement,
   onNotify,
   isOffline,
   tagSummaries,
@@ -555,6 +557,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onRenameTag={() => void handleRenameTag()}
             onTagTransactionClick={onTagTransactionClick}
           />
+
+          <section className="rounded-[28px] border border-white/8 bg-white/[0.045] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-sm sm:p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-500/12 text-amber-200">
+                  <Store size={20} />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-black tracking-[0.02em] text-white">商家管理</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                    商家清單改到獨立頁面管理，避免設定頁被長列表撐滿。
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenMerchantManagement}
+                className="inline-flex shrink-0 items-center justify-center rounded-2xl border border-amber-400/25 bg-amber-500/15 px-4 py-3 text-sm font-black text-amber-200 transition-all hover:bg-amber-500/20 active:scale-[0.98]"
+              >
+                前往管理
+              </button>
+            </div>
+          </section>
 
           <ImportExportSection
             fileInputRef={fileInputRef}
