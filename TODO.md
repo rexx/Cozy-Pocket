@@ -37,17 +37,16 @@
 
 ## 導航與頁面架構
 
-- 🔴 讓同步狀態頁從 `SettingsPage` 進入時，返回時可回到原始頁面，而不是一律回首頁。
+- ✅ 同步狀態頁已支援返回來源感知：從 `SettingsPage` 進入時返回設定頁，從首頁進入時返回首頁。
 - ✅ `SettingsPage` 已拆成單頁區段元件，下一步可視需要抽共用 page-shell 或 section state helper。
 - 🟡 評估是否將 `SettingsPage` 內的 section 升級成獨立 page，避免單頁設定在功能繼續擴張後再次膨脹。
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。
 
 ### 建議順序
-1. 同步狀態頁返回來源感知
-2. 評估 `SettingsPage` section page 化
-3. `SyncStatusPage` 互動升級
-4. 共用 page-shell 整理
+1. 評估 `SettingsPage` section page 化
+2. `SyncStatusPage` 互動升級
+3. 共用 page-shell 整理
 
 ## 商家與資料維護
 

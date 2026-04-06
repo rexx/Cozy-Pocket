@@ -131,6 +131,7 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'home' | 'search' | 'stats' | 'settings' | 'sync'>('home');
+  const [syncReturnView, setSyncReturnView] = useState<'home' | 'settings'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -417,6 +418,15 @@ const App: React.FC = () => {
   const suggestionIndex = useMemo<SuggestionIndex>(() => buildSuggestionIndex(transactions), [transactions]);
   const tagUsageSummaries = useMemo(() => getTagUsageSummaries(transactions), [transactions]);
 
+  const openSyncStatusFrom = useCallback((origin: 'home' | 'settings') => {
+    setSyncReturnView(origin);
+    setActiveView('sync');
+  }, []);
+
+  const closeSyncStatusPage = useCallback(() => {
+    setActiveView(syncReturnView);
+  }, [syncReturnView]);
+
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     let attempts = 0;
     const maxAttempts = 10;
@@ -681,7 +691,7 @@ const App: React.FC = () => {
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
-          onOpenSyncProgress={() => setActiveView('sync')}
+          onOpenSyncProgress={() => openSyncStatusFrom('settings')}
           onNotify={showToast}
           isOffline={isOfflineMode}
           tagSummaries={tagUsageSummaries}
@@ -715,7 +725,7 @@ const App: React.FC = () => {
         {toastMessage && <SuccessToast message={toastMessage} />}
         <SyncStatusPage
           transactions={transactions}
-          onClose={() => setActiveView('home')}
+          onClose={closeSyncStatusPage}
           onSyncNow={async () => {
             await triggerPendingSync('同步狀態頁手動同步');
           }}
@@ -790,7 +800,7 @@ const App: React.FC = () => {
         onNextDay={() => setSelectedDate(addDays(selectedDate, 1))}
         onOpenSearch={openSearchPage}
         onOpenSettings={() => setActiveView('settings')}
-        onOpenSyncStatus={() => setActiveView('sync')}
+        onOpenSyncStatus={() => openSyncStatusFrom('home')}
         onOpenStats={() => setActiveView('stats')}
         onOpenAddTransaction={openNewTransactionModal}
         onTransactionClick={handleEditItem}
