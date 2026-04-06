@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { Transaction } from '../types';
 import { toEpochMillis } from '../time';
@@ -30,7 +30,19 @@ const STATUS_META: Record<SyncStatusKey, { label: string }> = {
   },
 };
 
+const getSyncStatusKey = (tx: Transaction): SyncStatusKey => (
+  tx.syncStatus === 'syncing'
+    ? 'syncing'
+    : tx.syncStatus === 'synced'
+      ? 'synced'
+      : tx.syncStatus === 'error'
+        ? 'error'
+        : 'pending'
+);
+
 const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, onSyncNow, isSyncing, isOffline }) => {
+  const [hideSyncedItems, setHideSyncedItems] = useState(true);
+
   const groupedCounts = useMemo(() => {
     const buckets: Record<SyncStatusKey, Transaction[]> = {
       pending: [],
@@ -40,14 +52,7 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, 
     };
 
     for (const tx of transactions) {
-      const status: SyncStatusKey = tx.syncStatus === 'syncing'
-        ? 'syncing'
-        : tx.syncStatus === 'synced'
-          ? 'synced'
-          : tx.syncStatus === 'error'
-            ? 'error'
-            : 'pending';
-      buckets[status].push(tx);
+      buckets[getSyncStatusKey(tx)].push(tx);
     }
     return {
       pending: buckets.pending.length,
@@ -57,9 +62,13 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, 
     };
   }, [transactions]);
 
-  const sortedTransactions = useMemo(() => (
-    [...transactions].sort((a, b) => toEpochMillis(b.timestamp) - toEpochMillis(a.timestamp))
-  ), [transactions]);
+  const visibleTransactions = useMemo(() => {
+    const filteredTransactions = hideSyncedItems
+      ? transactions.filter((tx) => getSyncStatusKey(tx) !== 'synced')
+      : transactions;
+
+    return [...filteredTransactions].sort((a, b) => toEpochMillis(b.timestamp) - toEpochMillis(a.timestamp));
+  }, [hideSyncedItems, transactions]);
 
   const statusOrder: SyncStatusKey[] = ['pending', 'syncing', 'error', 'synced'];
 
@@ -100,10 +109,30 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, 
           ))}
         </div>
 
+        <div className="px-4 pt-4">
+          <button
+            type="button"
+            onClick={() => setHideSyncedItems((prev) => !prev)}
+            aria-pressed={hideSyncedItems}
+            className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-bold transition-colors ${
+              hideSyncedItems
+                ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-200'
+                : 'border-white/10 bg-[#24273c]/50 text-gray-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-2 w-2 rounded-full ${
+                hideSyncedItems ? 'bg-cyan-300' : 'bg-gray-500'
+              }`}
+            />
+            隱藏已成功項目
+          </button>
+        </div>
+
         <div className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4">
-          {sortedTransactions.length > 0 ? (
+          {visibleTransactions.length > 0 ? (
             <div className="rounded-2xl border border-white/10 bg-[#24273c]/40 overflow-hidden">
-              {sortedTransactions.map((tx) => (
+              {visibleTransactions.map((tx) => (
                 <div key={tx.id} className="border-b border-white/5 last:border-0">
                   <TransactionItem
                     transaction={tx}
@@ -124,7 +153,7 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, 
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-[11px] text-gray-600 font-bold text-center">
-              目前沒有同步資料
+              {transactions.length === 0 ? '目前沒有同步資料' : '目前沒有待處理或失敗的同步項目'}
             </div>
           )}
         </div>
