@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useLayoutEffect, useEffect, useMemo } from 'react';
 import { 
-  X, Check, Trash2, Plus, RotateCcw, Hash,
+  X, Check, Trash2, Copy, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
   Store, Tag, Banknote, CreditCard, SmartphoneNfc, ArrowLeftRight,
   Sparkles, Loader2, Globe
@@ -22,8 +22,10 @@ interface AddTransactionModalProps {
   onAdd: (transaction: Omit<Transaction, 'id'>) => Promise<boolean>;
   onUpdate?: (transaction: Transaction) => Promise<boolean>;
   onDelete?: (id: string) => void;
+  onDuplicate?: (transaction: Transaction) => void;
   initialDate: Date;
   editingTransaction?: Transaction | null;
+  prefilledTransaction?: Omit<Transaction, 'id'> | null;
   suggestions: SuggestionIndex;
 }
 
@@ -32,48 +34,55 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onAdd, 
   onUpdate,
   onDelete,
+  onDuplicate,
   initialDate, 
   editingTransaction,
+  prefilledTransaction,
   suggestions
 }) => {
   const isEditing = !!editingTransaction;
+  const sourceTransaction = editingTransaction ?? prefilledTransaction ?? null;
   const safeInitialDate = (initialDate && isValid(initialDate)) ? initialDate : new Date();
   
   const amountInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   
   const getInitialAmount = () => {
-    if (!editingTransaction) return '';
-    const multiplier = editingTransaction.type === '支出' ? -1 : 1;
-    return (editingTransaction.amount * multiplier).toString();
+    if (!sourceTransaction) return '';
+    const multiplier = sourceTransaction.type === '支出' ? -1 : 1;
+    return (sourceTransaction.amount * multiplier).toString();
   };
 
-  const [activeTab, setActiveTab] = useState<TransactionType>(editingTransaction?.type || '支出');
-  const [amount, setAmount] = useState(getInitialAmount());
-  const [currency, setCurrency] = useState(editingTransaction?.currency || 'TWD');
-  const [availableCurrencies, setAvailableCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
-  const [isSubView, setIsSubView] = useState(false);
-  const [categoryId, setCategoryId] = useState<string | undefined>(editingTransaction?.categoryId);
-  const [subCategoryId, setSubCategoryId] = useState<string | undefined>(editingTransaction?.subCategoryId);
-  const [isCategoryCollapsed, setIsCategoryCollapsed] = useState(
-    editingTransaction?.type === '支出'
-      ? !!(editingTransaction?.categoryId && editingTransaction?.subCategoryId)
-      : !!editingTransaction?.categoryId
-  );
-  const [name, setName] = useState(editingTransaction?.name || ''); 
-  const [note, setNote] = useState(editingTransaction?.note || ''); 
-  const [merchant, setMerchant] = useState(editingTransaction?.merchant || ''); 
-  const [paymentMethod, setPaymentMethod] = useState<string>(editingTransaction?.paymentMethod || '現金');
-  
-  const [currentDateStr, setCurrentDateStr] = useState(
-    editingTransaction ? format(new Date(toEpochMillis(editingTransaction.timestamp)), 'yyyy-MM-dd') : format(safeInitialDate, 'yyyy-MM-dd')
-  );
-  const [currentTime, setCurrentTime] = useState(
-    editingTransaction ? format(new Date(toEpochMillis(editingTransaction.timestamp)), 'HH:mm') : format(new Date(), 'HH:mm')
+  const getSourceDate = () => (
+    sourceTransaction ? format(new Date(toEpochMillis(sourceTransaction.timestamp)), 'yyyy-MM-dd') : format(safeInitialDate, 'yyyy-MM-dd')
   );
 
+  const getSourceTime = () => (
+    sourceTransaction ? format(new Date(toEpochMillis(sourceTransaction.timestamp)), 'HH:mm') : format(new Date(), 'HH:mm')
+  );
+
+  const [activeTab, setActiveTab] = useState<TransactionType>(sourceTransaction?.type || '支出');
+  const [amount, setAmount] = useState(getInitialAmount());
+  const [currency, setCurrency] = useState(sourceTransaction?.currency || 'TWD');
+  const [availableCurrencies, setAvailableCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
+  const [isSubView, setIsSubView] = useState(false);
+  const [categoryId, setCategoryId] = useState<string | undefined>(sourceTransaction?.categoryId);
+  const [subCategoryId, setSubCategoryId] = useState<string | undefined>(sourceTransaction?.subCategoryId);
+  const [isCategoryCollapsed, setIsCategoryCollapsed] = useState(
+    sourceTransaction?.type === '支出'
+      ? !!(sourceTransaction?.categoryId && sourceTransaction?.subCategoryId)
+      : !!sourceTransaction?.categoryId
+  );
+  const [name, setName] = useState(sourceTransaction?.name || ''); 
+  const [note, setNote] = useState(sourceTransaction?.note || ''); 
+  const [merchant, setMerchant] = useState(sourceTransaction?.merchant || ''); 
+  const [paymentMethod, setPaymentMethod] = useState<string>(sourceTransaction?.paymentMethod || '現金');
+  
+  const [currentDateStr, setCurrentDateStr] = useState(getSourceDate());
+  const [currentTime, setCurrentTime] = useState(getSourceTime());
+
   const [tagList, setTagList] = useState<string[]>(
-    editingTransaction?.tags ? editingTransaction.tags.split(/\s+/).filter(t => t.length > 0) : []
+    sourceTransaction?.tags ? sourceTransaction.tags.split(/\s+/).filter(t => t.length > 0) : []
   );
   const [tagInput, setTagInput] = useState('');
   const [aiInput, setAiInput] = useState('');
@@ -81,6 +90,29 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [aiError, setAiError] = useState('');
   const hasApiKey = !!process.env.API_KEY;
   const suggestionLimit = 6;
+
+  useEffect(() => {
+    setActiveTab(sourceTransaction?.type || '支出');
+    setAmount(getInitialAmount());
+    setCategoryId(sourceTransaction?.categoryId);
+    setSubCategoryId(sourceTransaction?.subCategoryId);
+    setIsSubView(false);
+    setIsCategoryCollapsed(
+      sourceTransaction?.type === '支出'
+        ? !!(sourceTransaction?.categoryId && sourceTransaction?.subCategoryId)
+        : !!sourceTransaction?.categoryId
+    );
+    setName(sourceTransaction?.name || '');
+    setNote(sourceTransaction?.note || '');
+    setMerchant(sourceTransaction?.merchant || '');
+    setPaymentMethod(sourceTransaction?.paymentMethod || '現金');
+    setCurrentDateStr(getSourceDate());
+    setCurrentTime(getSourceTime());
+    setTagList(sourceTransaction?.tags ? sourceTransaction.tags.split(/\s+/).filter(t => t.length > 0) : []);
+    setTagInput('');
+    setAiInput('');
+    setAiError('');
+  }, [sourceTransaction]);
 
   useEffect(() => {
     let isMounted = true;
@@ -91,14 +123,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       if (!isMounted) return;
       const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
       setAvailableCurrencies(enabledCurrencies);
-      if (!isEditing) {
+      if (!sourceTransaction) {
         setCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
       }
     });
     return () => {
       isMounted = false;
     };
-  }, [isEditing]);
+  }, [sourceTransaction]);
 
   useLayoutEffect(() => {
     if (amountInputRef.current && !isEditing) {
@@ -142,7 +174,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleExpandCategoryPicker = () => {
     setIsCategoryCollapsed(false);
-    setIsSubView(isEditing && activeTab === '支出' && !!categoryId);
+    setIsSubView(activeTab === '支出' && !!categoryId);
   };
 
   const toggleCurrency = () => {
@@ -286,6 +318,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         onDelete(editingTransaction.id);
         onClose();
       }
+    }
+  };
+
+  const handleDuplicate = () => {
+    if (isEditing && onDuplicate && editingTransaction) {
+      onDuplicate(editingTransaction);
     }
   };
 
@@ -635,9 +673,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         {isEditing && (
-          <button onClick={handleDelete} className="w-full py-5 text-red-500 text-sm font-bold flex items-center justify-center gap-2 bg-red-500/5 rounded-2xl border border-red-500/10 active:bg-red-500/20 transition-all mt-4">
-            <Trash2 size={20} /><span>刪除這筆紀錄</span>
-          </button>
+          <>
+            <button onClick={handleDuplicate} className="w-full py-5 text-cyan-400 text-sm font-bold flex items-center justify-center gap-2 bg-cyan-500/5 rounded-2xl border border-cyan-500/10 active:bg-cyan-500/20 transition-all mt-4">
+              <Copy size={20} /><span>複製項目</span>
+            </button>
+            <button onClick={handleDelete} className="w-full py-5 text-red-500 text-sm font-bold flex items-center justify-center gap-2 bg-red-500/5 rounded-2xl border border-red-500/10 active:bg-red-500/20 transition-all">
+              <Trash2 size={20} /><span>刪除這筆紀錄</span>
+            </button>
+          </>
         )}
         </div>
       </div>

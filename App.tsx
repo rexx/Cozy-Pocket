@@ -135,7 +135,9 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalInstanceKey, setModalInstanceKey] = useState(0);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [prefilledTransaction, setPrefilledTransaction] = useState<Omit<Transaction, 'id'> | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
   const [syncProgressUI, setSyncProgressUI] = useState<{
@@ -153,6 +155,7 @@ const App: React.FC = () => {
   });
   const activeSyncTaskRef = useRef(0);
   const syncHideTimerRef = useRef<number | null>(null);
+  const duplicateReopenTimerRef = useRef<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [toastMessage, setToastMessage] = useState('');
@@ -373,6 +376,9 @@ const App: React.FC = () => {
       if (toastHideTimerRef.current !== null) {
         window.clearTimeout(toastHideTimerRef.current);
       }
+      if (duplicateReopenTimerRef.current !== null) {
+        window.clearTimeout(duplicateReopenTimerRef.current);
+      }
     };
   }, []);
 
@@ -498,6 +504,12 @@ const App: React.FC = () => {
     }
   };
 
+  const closeTransactionModal = useCallback(() => {
+    setIsModalOpen(false);
+    setEditingTransaction(null);
+    setPrefilledTransaction(null);
+  }, []);
+
   const previewTagRename = useCallback(async (oldTag: string, newTag: string) => {
     return buildTagRenamePreview(transactions, oldTag, newTag);
   }, [transactions]);
@@ -552,9 +564,55 @@ const App: React.FC = () => {
   }, [refreshData, showToast, transactions, triggerPendingSync]);
 
   const handleEditItem = (tx: Transaction) => {
+    if (duplicateReopenTimerRef.current !== null) {
+      window.clearTimeout(duplicateReopenTimerRef.current);
+      duplicateReopenTimerRef.current = null;
+    }
+    setPrefilledTransaction(null);
     setEditingTransaction(tx);
+    setModalInstanceKey((prev) => prev + 1);
     setIsModalOpen(true);
   };
+
+  const handleDuplicateItem = useCallback((tx: Transaction) => {
+    const timestamp = toEpochSeconds(Date.now());
+    if (duplicateReopenTimerRef.current !== null) {
+      window.clearTimeout(duplicateReopenTimerRef.current);
+    }
+    setIsModalOpen(false);
+    setEditingTransaction(null);
+    setPrefilledTransaction(null);
+    duplicateReopenTimerRef.current = window.setTimeout(() => {
+      setPrefilledTransaction({
+        type: tx.type,
+        amount: tx.amount,
+        currency: tx.currency,
+        categoryId: tx.categoryId,
+        subCategoryId: tx.subCategoryId,
+        name: tx.name,
+        note: tx.note,
+        merchant: tx.merchant,
+        paymentMethod: tx.paymentMethod,
+        timestamp,
+        readableDateTime: formatReadableDateTime(timestamp),
+        tags: tx.tags
+      });
+      setModalInstanceKey((prev) => prev + 1);
+      setIsModalOpen(true);
+      duplicateReopenTimerRef.current = null;
+    }, 30);
+  }, []);
+
+  const openNewTransactionModal = useCallback(() => {
+    if (duplicateReopenTimerRef.current !== null) {
+      window.clearTimeout(duplicateReopenTimerRef.current);
+      duplicateReopenTimerRef.current = null;
+    }
+    setEditingTransaction(null);
+    setPrefilledTransaction(null);
+    setModalInstanceKey((prev) => prev + 1);
+    setIsModalOpen(true);
+  }, []);
 
   const openSearchPage = () => {
     setActiveView('search');
@@ -597,12 +655,15 @@ const App: React.FC = () => {
         />
         {isModalOpen && (
           <AddTransactionModal
+            key={modalInstanceKey}
             initialDate={selectedDate}
             editingTransaction={editingTransaction}
-            onClose={() => setIsModalOpen(false)}
+            prefilledTransaction={prefilledTransaction}
+            onClose={closeTransactionModal}
             onAdd={addTransaction}
             onUpdate={updateTransaction}
             onDelete={deleteTransaction}
+            onDuplicate={handleDuplicateItem}
             suggestions={suggestionIndex}
           />
         )}
@@ -631,12 +692,15 @@ const App: React.FC = () => {
         />
         {isModalOpen && (
           <AddTransactionModal
+            key={modalInstanceKey}
             initialDate={selectedDate}
             editingTransaction={editingTransaction}
-            onClose={() => setIsModalOpen(false)}
+            prefilledTransaction={prefilledTransaction}
+            onClose={closeTransactionModal}
             onAdd={addTransaction}
             onUpdate={updateTransaction}
             onDelete={deleteTransaction}
+            onDuplicate={handleDuplicateItem}
             suggestions={suggestionIndex}
           />
         )}
@@ -660,12 +724,15 @@ const App: React.FC = () => {
         />
         {isModalOpen && (
           <AddTransactionModal
+            key={modalInstanceKey}
             initialDate={selectedDate}
             editingTransaction={editingTransaction}
-            onClose={() => setIsModalOpen(false)}
+            prefilledTransaction={prefilledTransaction}
+            onClose={closeTransactionModal}
             onAdd={addTransaction}
             onUpdate={updateTransaction}
             onDelete={deleteTransaction}
+            onDuplicate={handleDuplicateItem}
             suggestions={suggestionIndex}
           />
         )}
@@ -689,12 +756,15 @@ const App: React.FC = () => {
         />
         {isModalOpen && (
           <AddTransactionModal
+            key={modalInstanceKey}
             initialDate={selectedDate}
             editingTransaction={editingTransaction}
-            onClose={() => setIsModalOpen(false)}
+            prefilledTransaction={prefilledTransaction}
+            onClose={closeTransactionModal}
             onAdd={addTransaction}
             onUpdate={updateTransaction}
             onDelete={deleteTransaction}
+            onDuplicate={handleDuplicateItem}
             suggestions={suggestionIndex}
           />
         )}
@@ -722,18 +792,21 @@ const App: React.FC = () => {
         onOpenSettings={() => setActiveView('settings')}
         onOpenSyncStatus={() => setActiveView('sync')}
         onOpenStats={() => setActiveView('stats')}
-        onOpenAddTransaction={() => { setEditingTransaction(null); setIsModalOpen(true); }}
+        onOpenAddTransaction={openNewTransactionModal}
         onTransactionClick={handleEditItem}
         formatStatAmount={formatStatAmount}
       />
       {isModalOpen && (
         <AddTransactionModal
+          key={modalInstanceKey}
           initialDate={selectedDate}
           editingTransaction={editingTransaction}
-          onClose={() => setIsModalOpen(false)}
+          prefilledTransaction={prefilledTransaction}
+          onClose={closeTransactionModal}
           onAdd={addTransaction}
           onUpdate={updateTransaction}
           onDelete={deleteTransaction}
+          onDuplicate={handleDuplicateItem}
           suggestions={suggestionIndex}
         />
       )}
