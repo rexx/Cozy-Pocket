@@ -222,8 +222,8 @@ this.version(1).stores({
 - 行為：以 `create` 分批補送待同步資料。
 - 離線例外：若目前離線，直接跳過，不標記為失敗。
 
-7. 同步狀態頁手動同步（Manual Retry from Sync Progress Page）
-- 觸發：使用者在同步狀態頁點擊「同步待同步」。
+7. 同步狀態頁手動同步（Manual Retry from Sync Status Page）
+- 觸發：使用者在同步狀態頁點擊右上角同步按鈕（tooltip / aria-label 為「立即同步」）。
 - 行為：執行 `syncPending`，重新嘗試所有 `syncStatus !== 'synced'` 的資料。
 - 離線例外：按鈕應停用，並提示需恢復連線後再重試。
 
@@ -251,7 +251,7 @@ this.version(1).stores({
 - 全域錯誤列應顯示失敗交易 `id` 與錯誤摘要，避免只顯示「同步失敗」或失敗筆數。
 - 同步狀態頁對 `syncStatus === error` 的交易，應顯示 `lastSyncError` 詳細內容。
 - 若錯誤來自瀏覽器層級且無可讀 response，可顯示診斷提示（例如 `Failed to fetch`、sync URL、origin、online 狀態與可能原因）；若後端有回傳 `message`，則應以後端訊息為主。
-- 若目前離線，同步狀態頁會顯示離線提示，並停用「同步待同步」按鈕。
+- 若目前離線，同步狀態頁會顯示離線提示，並停用右上角同步按鈕；同步中時同樣停用該按鈕。
 
 ## 6.3 通知與狀態呈現規則（目前實作）
 - 前端目前有 5 種通知 / 狀態呈現機制：
