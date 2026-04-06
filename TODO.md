@@ -3,15 +3,16 @@
 ## 整體建議順序
 
 1. 🔴 支援商家更名，並確認既有交易紀錄、搜尋、統計與同步資料都能一致反映新名稱。
-2. 🔴 將 `SettingsPage` 拆成區塊元件，例如偏好設定、同步設定、Tag 管理、匯入匯出與危險操作區。
-3. 🔴 讓 `SyncStatusPage` 支援隱藏已成功項目的篩選，聚焦尚未處理或失敗的資料。
+2. ✅ `SettingsPage` 已拆成單頁區段元件：偏好設定、同步設定、Tag 管理、匯入匯出與危險操作區，並完成視覺一致化。
+3. ✅ `SyncStatusPage` 已支援預設隱藏已成功項目的篩選，讓使用者聚焦尚未處理或失敗的資料。
 4. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。
 5. 🔴 將 `AddTransactionModal` 中阻擋式的 `alert()` 驗證改為 modal 內的內嵌錯誤提示。
 6. 🔴 將 `AddTransactionModal` 中刪除用的 `confirm()` 改為 app 內建的確認 UI，讓互動風格與其他頁面一致。
 7. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。
 8. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。
 9. 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。
-10. 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。
+10. 🟡 評估是否將 `SettingsPage` 內的 section 進一步升級為獨立 page，讓偏好設定、同步設定、Tag 管理、匯入匯出與危險操作可各自擁有更完整的資訊架構。
+11. 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。
 
 ## 通知與互動體驗
 
@@ -37,14 +38,14 @@
 ## 導航與頁面架構
 
 - 🔴 讓同步狀態頁從 `SettingsPage` 進入時，返回時可回到原始頁面，而不是一律回首頁。
-- 🔴 將 `SettingsPage` 拆成區塊元件，例如偏好設定、同步設定、Tag 管理、匯入匯出與危險操作區。
-- 🔴 讓 `SyncStatusPage` 支援隱藏已成功項目的篩選，聚焦尚未處理或失敗的資料。
+- ✅ `SettingsPage` 已拆成單頁區段元件，下一步可視需要抽共用 page-shell 或 section state helper。
+- 🟡 評估是否將 `SettingsPage` 內的 section 升級成獨立 page，避免單頁設定在功能繼續擴張後再次膨脹。
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。
 
 ### 建議順序
 1. 同步狀態頁返回來源感知
-2. `SettingsPage` 區塊拆分
+2. 評估 `SettingsPage` section page 化
 3. `SyncStatusPage` 互動升級
 4. 共用 page-shell 整理
 
