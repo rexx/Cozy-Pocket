@@ -137,10 +137,11 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, 
                   <TransactionItem
                     transaction={tx}
                     onClick={() => {}}
+                    showDateTime
                   />
                   {tx.syncStatus === 'error' && tx.lastSyncError && (
-                    <div className="px-5 pb-4 -mt-2">
-                      <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2">
+                    <div className="px-4 py-4">
+                      <div className="rounded-none border border-rose-400/20 bg-rose-500/10 px-3 py-2">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-200">詳細錯誤</p>
                         <p className="mt-1 break-all text-[11px] font-medium leading-relaxed text-rose-100">
                           {tx.lastSyncError}

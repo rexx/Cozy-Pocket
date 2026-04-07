@@ -140,7 +140,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const handleEnabledCurrencyToggle = async (currency: string) => {
     const isEnabled = enabledCurrencies.includes(currency);
     if (isEnabled && enabledCurrencies.length === 1) {
-      setStatus({ type: 'error', message: '至少要保留一個可用幣別' });
+      const message = '至少要保留一個可用幣別';
+      setStatus({ type: 'error', message });
+      onNotify(message);
       return;
     }
 
@@ -567,7 +569,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 <div className="min-w-0">
                   <h2 className="text-base font-black tracking-[0.02em] text-white">商家管理</h2>
                   <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                    商家清單改到獨立頁面管理，避免設定頁被長列表撐滿。
+                    整理商家名稱，並查看相關交易。
                   </p>
                 </div>
               </div>

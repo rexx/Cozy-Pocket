@@ -2,11 +2,8 @@ import React from 'react';
 import { ArrowUpDown, Database, Download, Upload } from 'lucide-react';
 import { Transaction } from '../../types';
 import SettingsSection, {
-  sectionAmberButtonClassName,
-  sectionCyanButtonClassName,
   sectionLabelClassName,
   sectionPanelClassName,
-  sectionRedButtonClassName,
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
 
@@ -41,7 +38,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
   return (
     <SettingsSection
       title="匯入匯出"
-      description="匯出完整備份，或從 CSV 預覽後再附加或覆寫匯入。"
+      description="匯出備份，或從 CSV 匯入資料。"
       icon={ArrowUpDown}
       accentClassName="border-amber-400/20 bg-amber-500/12 text-amber-200"
     >
@@ -57,7 +54,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
             </div>
           </div>
           <div className="mt-auto">
-            <button type="button" onClick={onExportToCsv} className={`${sectionCyanButtonClassName} w-full`}>
+            <button type="button" onClick={onExportToCsv} className={`${sectionSecondaryButtonClassName} w-full`}>
               <Download size={16} />
               立即匯出 CSV
             </button>
@@ -111,14 +108,14 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
               <button
                 type="button"
                 onClick={() => onImportFromPreview('append')}
-                className={sectionAmberButtonClassName}
+                className={sectionSecondaryButtonClassName}
               >
                 附加匯入
               </button>
               <button
                 type="button"
                 onClick={() => onImportFromPreview('overwrite')}
-                className={sectionRedButtonClassName}
+                className={sectionSecondaryButtonClassName}
               >
                 覆寫匯入
               </button>

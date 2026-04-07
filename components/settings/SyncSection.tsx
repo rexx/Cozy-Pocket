@@ -30,7 +30,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
   return (
     <SettingsSection
       title="同步設定"
-      description="管理雲端同步端點與手動查看同步進度。"
+      description="設定雲端同步，並查看同步狀態。"
       icon={CloudUpload}
       accentClassName="border-indigo-400/20 bg-indigo-500/12 text-indigo-200"
     >

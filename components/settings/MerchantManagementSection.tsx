@@ -45,7 +45,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   return (
     <SettingsSection
       title="商家管理"
-      description="批次更名既有商家，並同步更新所有相關交易。"
+      description="整理商家名稱，並查看相關交易。"
       icon={Store}
       accentClassName="border-amber-400/20 bg-amber-500/12 text-amber-200"
     >

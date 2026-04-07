@@ -45,7 +45,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
   return (
     <SettingsSection
       title="Tag 管理"
-      description="更名既有 tag，預覽受影響筆數，並檢查相關交易內容。"
+      description="整理 tag 名稱，並查看相關交易。"
       icon={Tags}
       accentClassName="border-cyan-400/20 bg-cyan-500/12 text-cyan-200"
     >
