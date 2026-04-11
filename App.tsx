@@ -900,6 +900,7 @@ const App: React.FC = () => {
           }}
           isSyncing={syncProgressUI.visible}
           isOffline={isOfflineMode}
+          onTransactionClick={handleEditItem}
         />
         {isModalOpen && (
           <AddTransactionModal

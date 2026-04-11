@@ -249,6 +249,7 @@ this.version(1).stores({
   - `error`：同步失敗
 - App 另提供「同步狀態頁」，顯示四種狀態的筆數統計、交易列表，以及手動同步待同步資料的入口。
 - 同步狀態頁預設啟用「隱藏已成功項目」，只顯示 `pending`、`syncing`、`error`；使用者可手動切回顯示全部。
+- 同步狀態頁中的交易項目可直接開啟既有編輯 modal，讓使用者就地修正待同步或失敗資料。
 - 全域錯誤列應顯示失敗交易 `id` 與錯誤摘要，避免只顯示「同步失敗」或失敗筆數。
 - 同步狀態頁對 `syncStatus === error` 的交易，應顯示 `lastSyncError` 詳細內容。
 - 若錯誤來自瀏覽器層級且無可讀 response，可顯示診斷提示（例如 `Failed to fetch`、sync URL、origin、online 狀態與可能原因）；若後端有回傳 `message`，則應以後端訊息為主。

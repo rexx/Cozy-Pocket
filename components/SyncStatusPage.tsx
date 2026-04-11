@@ -11,6 +11,7 @@ interface SyncStatusPageProps {
   onSyncNow: () => Promise<void>;
   isSyncing: boolean;
   isOffline: boolean;
+  onTransactionClick: (transaction: Transaction) => void;
 }
 
 type SyncStatusKey = 'pending' | 'syncing' | 'synced' | 'error';
@@ -40,7 +41,14 @@ const getSyncStatusKey = (tx: Transaction): SyncStatusKey => (
         : 'pending'
 );
 
-const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, onSyncNow, isSyncing, isOffline }) => {
+const SyncStatusPage: React.FC<SyncStatusPageProps> = ({
+  transactions,
+  onClose,
+  onSyncNow,
+  isSyncing,
+  isOffline,
+  onTransactionClick,
+}) => {
   const [hideSyncedItems, setHideSyncedItems] = useState(true);
 
   const groupedCounts = useMemo(() => {
@@ -136,7 +144,7 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({ transactions, onClose, 
                 <div key={tx.id} className="border-b border-white/5 last:border-0">
                   <TransactionItem
                     transaction={tx}
-                    onClick={() => {}}
+                    onClick={onTransactionClick}
                     showDateTime
                   />
                   {tx.syncStatus === 'error' && tx.lastSyncError && (
