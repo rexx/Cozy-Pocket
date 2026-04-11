@@ -20,6 +20,13 @@ import { getMonthTransactions, getStatsByCurrency } from './services/statsServic
 import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 
+type AppView = 'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management';
+
+interface AppHistoryState {
+  view: AppView;
+  syncReturnView?: 'home' | 'settings';
+}
+
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
   if (errors.length === 0) return null;
   return (
@@ -132,7 +139,7 @@ const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
 };
 
 const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management'>('home');
+  const [activeView, setActiveView] = useState<AppView>('home');
   const [syncReturnView, setSyncReturnView] = useState<'home' | 'settings'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -164,6 +171,7 @@ const App: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [isOfflineMode, setIsOfflineMode] = useState(isOffline());
   const toastHideTimerRef = useRef<number | null>(null);
+  const isApplyingHistoryRef = useRef(false);
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -276,6 +284,17 @@ const App: React.FC = () => {
       }
     };
     initData();
+  }, []);
+
+  useEffect(() => {
+    const currentState = window.history.state as AppHistoryState | null;
+    if (!currentState || !currentState.view) {
+      window.history.replaceState({ view: 'home', syncReturnView: 'home' } satisfies AppHistoryState, '');
+      return;
+    }
+
+    setActiveView(currentState.view);
+    setSyncReturnView(currentState.syncReturnView === 'settings' ? 'settings' : 'home');
   }, []);
 
   useEffect(() => {
@@ -425,9 +444,24 @@ const App: React.FC = () => {
     setActiveView('sync');
   }, []);
 
+  const navigateBack = useCallback((fallbackView: AppView, fallbackSyncReturnView?: 'home' | 'settings') => {
+    const currentState = window.history.state as AppHistoryState | null;
+    const hasAppHistory = Boolean(currentState && currentState.view && currentState.view !== fallbackView);
+
+    if (hasAppHistory && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    if (fallbackSyncReturnView) {
+      setSyncReturnView(fallbackSyncReturnView);
+    }
+    setActiveView(fallbackView);
+  }, []);
+
   const closeSyncStatusPage = useCallback(() => {
-    setActiveView(syncReturnView);
-  }, [syncReturnView]);
+    navigateBack(syncReturnView, syncReturnView);
+  }, [navigateBack, syncReturnView]);
 
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     let attempts = 0;
@@ -686,13 +720,59 @@ const App: React.FC = () => {
   };
 
   const closeSearchPage = () => {
-    setActiveView('home');
+    navigateBack('home');
     setSearchQuery('');
   };
 
   const formatStatAmount = (val: number, currency: string) => {
     return formatCurrencyAmount(val, currency, { withSpace: true });
   };
+
+  useEffect(() => {
+    const nextState: AppHistoryState = {
+      view: activeView,
+      syncReturnView,
+    };
+
+    if (isApplyingHistoryRef.current) {
+      isApplyingHistoryRef.current = false;
+      window.history.replaceState(nextState, '');
+      return;
+    }
+
+    const currentState = window.history.state as AppHistoryState | null;
+    if (currentState?.view === activeView && currentState?.syncReturnView === syncReturnView) {
+      return;
+    }
+
+    if (activeView === 'home') {
+      window.history.replaceState(nextState, '');
+      return;
+    }
+
+    window.history.pushState(nextState, '');
+  }, [activeView, syncReturnView]);
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as AppHistoryState | null;
+      const nextView = state?.view ?? 'home';
+      const nextSyncReturnView = state?.syncReturnView === 'settings' ? 'settings' : 'home';
+
+      isApplyingHistoryRef.current = true;
+      setActiveView(nextView);
+      setSyncReturnView(nextSyncReturnView);
+
+      if (nextView !== 'search') {
+        setSearchQuery('');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -716,7 +796,7 @@ const App: React.FC = () => {
           transactions={transactions}
           initialDate={selectedDate}
           defaultCurrency={defaultCurrency}
-          onBack={() => setActiveView('home')}
+          onBack={() => navigateBack('home')}
           onTransactionClick={handleEditItem}
         />
         {isModalOpen && (
@@ -743,7 +823,7 @@ const App: React.FC = () => {
         <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
         <SettingsPage
-          onClose={() => setActiveView('home')}
+          onClose={() => navigateBack('home')}
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
@@ -782,7 +862,7 @@ const App: React.FC = () => {
         {toastMessage && <SuccessToast message={toastMessage} />}
         <MerchantManagementPage
           transactions={transactions}
-          onClose={() => setActiveView('settings')}
+          onClose={() => navigateBack('settings')}
           onDataChange={refreshData}
           onPreviewMerchantRename={previewMerchantRename}
           onRenameMerchant={renameMerchant}
