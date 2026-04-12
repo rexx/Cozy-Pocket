@@ -3,6 +3,7 @@ import { Plus, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import Calendar from './Calendar';
 import TransactionItem from './TransactionItem';
 import { Transaction } from '../types';
+import { useHorizontalSwipe } from './useHorizontalSwipe';
 
 interface HomePageProps {
   selectedDate: Date;
@@ -47,6 +48,10 @@ const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const dailyCurrencyCount = Object.keys(dailyStatsByCurrency).length;
   const monthlyCurrencyCount = Object.keys(monthlyStatsByCurrency).length;
+  const { swipeHandlers, shouldSuppressClick } = useHorizontalSwipe({
+    onSwipeLeft: onNextDay,
+    onSwipeRight: onPrevDay,
+  });
 
   return (
     <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
@@ -86,10 +91,21 @@ const HomePage: React.FC<HomePageProps> = ({
             <Plus size={36} strokeWidth={2.5} />
           </button>
         </div>
-        <div className="overflow-y-auto no-scrollbar overscroll-contain h-full min-h-0">
+        <div
+          className="overflow-y-auto no-scrollbar overscroll-contain h-full min-h-0"
+          style={{ touchAction: 'pan-y' }}
+          {...swipeHandlers}
+        >
           <div className="mt-2 min-h-[calc(100%+1px)] space-y-1 pb-[calc(8.5rem+env(safe-area-inset-bottom))]">
             {dailyTransactions.length > 0 ? (
-              dailyTransactions.map(tx => <TransactionItem key={tx.id} transaction={tx} onClick={onTransactionClick} />)
+              dailyTransactions.map(tx => (
+                <TransactionItem
+                  key={tx.id}
+                  transaction={tx}
+                  onClick={onTransactionClick}
+                  shouldSuppressClick={shouldSuppressClick}
+                />
+              ))
             ) : (
               <div className="flex flex-col items-center justify-center py-20 px-10 text-center">
                 <div className="text-7xl mb-6 filter grayscale opacity-40">☕</div>
@@ -100,7 +116,10 @@ const HomePage: React.FC<HomePageProps> = ({
             <div className="px-6 pt-12">
               <button
                 type="button"
-                onClick={onOpenStats}
+                onClick={() => {
+                  if (shouldSuppressClick()) return;
+                  onOpenStats();
+                }}
                 className="w-full bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl text-left transition-all hover:border-cyan-500/20 hover:bg-[#2a2d44]/70 active:scale-[0.99]"
               >
                 <div className="flex-1 border-r border-white/5 pr-4 space-y-1.5 opacity-60">

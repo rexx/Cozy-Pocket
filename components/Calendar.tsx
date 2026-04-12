@@ -14,6 +14,7 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Search, Settings, CloudOff } from 'lucide-react';
 import { toEpochSeconds } from '../time';
+import { useHorizontalSwipe } from './useHorizontalSwipe';
 
 interface CalendarProps {
   selectedDate: Date;
@@ -60,6 +61,10 @@ const Calendar: React.FC<CalendarProps> = ({
   const prevMonth = () => onDateSelect(addMonths(safeDate, -1));
   const goToToday = () => onDateSelect(new Date());
   const monthNavButtonClassName = 'pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all';
+  const { swipeHandlers, shouldSuppressClick } = useHorizontalSwipe({
+    onSwipeLeft: nextMonth,
+    onSwipeRight: prevMonth,
+  });
 
   const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
 
@@ -165,7 +170,11 @@ const Calendar: React.FC<CalendarProps> = ({
         </div>
       </div>
 
-      <div className="relative">
+      <div
+        className="relative"
+        style={{ touchAction: 'pan-y' }}
+        {...swipeHandlers}
+      >
         <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between px-2">
           <button
             onClick={prevMonth}
@@ -207,7 +216,10 @@ const Calendar: React.FC<CalendarProps> = ({
             return (
               <div 
                 key={i} 
-                onClick={() => onDateSelect(day)}
+                onClick={() => {
+                  if (shouldSuppressClick()) return;
+                  onDateSelect(day);
+                }}
                 className="relative flex flex-col items-center justify-center cursor-pointer py-1"
               >
                 <div className={`

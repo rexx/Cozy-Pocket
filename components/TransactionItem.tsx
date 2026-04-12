@@ -11,6 +11,7 @@ interface TransactionItemProps {
   transaction: Transaction;
   onClick?: (transaction: Transaction) => void;
   showDateTime?: boolean;
+  shouldSuppressClick?: () => boolean;
 }
 
 const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { dotClassName: string; title: string }> = {
@@ -32,7 +33,12 @@ const SYNC_STATUS_UI: Record<'pending' | 'syncing' | 'synced' | 'error', { dotCl
   }
 };
 
-const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick, showDateTime = false }) => {
+const TransactionItem: React.FC<TransactionItemProps> = ({
+  transaction,
+  onClick,
+  showDateTime = false,
+  shouldSuppressClick,
+}) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
   const subCategory = category.subcategories?.find(s => s.id === transaction.subCategoryId);
   const isIncome = transaction.type === '收入';
@@ -74,7 +80,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction, onClick,
 
   return (
     <div 
-      onClick={() => onClick?.(transaction)}
+      onClick={() => {
+        if (shouldSuppressClick?.()) return;
+        onClick?.(transaction);
+      }}
       className={`flex items-center gap-4 py-4 px-5 transition-all duration-200 border-b border-white/5 last:border-0 group ${
         onClick ? 'cursor-pointer active:bg-white/5' : ''
       }`}
