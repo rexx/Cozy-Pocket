@@ -61,6 +61,8 @@ const Calendar: React.FC<CalendarProps> = ({
   const prevMonth = () => onDateSelect(addMonths(safeDate, -1));
   const goToToday = () => onDateSelect(new Date());
   const monthNavButtonClassName = 'pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all';
+  const iconButtonClassName = 'flex h-9 w-9 items-center justify-center text-gray-500 transition-all hover:text-cyan-400 active:scale-90';
+  const actionSlotClassName = 'flex h-9 items-center justify-center';
   const { swipeHandlers, shouldSuppressClick } = useHorizontalSwipe({
     onSwipeLeft: nextMonth,
     onSwipeRight: prevMonth,
@@ -88,13 +90,26 @@ const Calendar: React.FC<CalendarProps> = ({
 
   return (
     <div className="bg-[#1a1c2c] p-4 pt-0 select-none">
-      <div className="grid grid-cols-3 items-center mb-4 px-1">
-        <div className="flex items-center gap-1 justify-self-start">
-          <div className="w-9 flex justify-center">
+      <div className="mb-4 flex w-full items-center gap-2 px-1">
+        <div className="flex min-w-0 flex-1 items-center justify-between">
+          <div className={actionSlotClassName}>
+            <button
+              onClick={onSearchClick}
+              className={iconButtonClassName}
+              title="搜尋"
+              aria-label="搜尋"
+            >
+              <Search size={22} />
+            </button>
+          </div>
+
+          <div className={`${actionSlotClassName} w-10`}>
             {!isCurrentlyToday && (
-              <button 
+              <button
                 onClick={goToToday}
                 className="flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-black px-2 py-1.5 rounded-lg active:scale-90 transition-all shadow-[0_0_10px_rgba(34,211,238,0.1)]"
+                title="今天"
+                aria-label="今天"
               >
                 今
               </button>
@@ -102,9 +117,9 @@ const Calendar: React.FC<CalendarProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex-none">
           <div className="relative">
-            <input 
+            <input
               type="date"
               className="bg-[#252538] text-white text-xs font-bold px-3 py-2 rounded-full border border-white/10 appearance-none text-center cursor-pointer active:bg-white/5 transition-colors w-32"
               style={{ colorScheme: 'dark' }}
@@ -114,59 +129,60 @@ const Calendar: React.FC<CalendarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 justify-self-end">
-          {isOffline ? (
-            <div
-              className="text-amber-300 p-2"
-              title="目前離線，雲端同步與 AI 暫停"
-              aria-label="目前離線，雲端同步與 AI 暫停"
-            >
-              <CloudOff size={20} />
+        <div className="flex min-w-0 flex-1 items-center">
+          <div className="ml-auto flex items-center gap-1">
+            <div className={actionSlotClassName}>
+              {isOffline ? (
+                <div
+                  className="flex h-9 w-9 items-center justify-center text-amber-300"
+                  title="目前離線，雲端同步與 AI 暫停"
+                  aria-label="目前離線，雲端同步與 AI 暫停"
+                >
+                  <CloudOff size={20} />
+                </div>
+              ) : isSyncProgressVisible ? (
+                <button
+                  onClick={onSyncProgressClick}
+                  className={`${iconButtonClassName} relative`}
+                  title="開啟同步狀態頁"
+                  aria-label="開啟同步狀態頁"
+                >
+                  <svg className="h-5 w-5 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.5"
+                      fill="none"
+                      className="stroke-white/10"
+                      strokeWidth="3"
+                    />
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.5"
+                      fill="none"
+                      className="stroke-cyan-400 animate-spin origin-center"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeDasharray="24 76"
+                      pathLength="100"
+                    />
+                  </svg>
+                </button>
+              ) : null}
             </div>
-          ) : isSyncProgressVisible && (
-            <button
-              onClick={onSyncProgressClick}
-              className="relative text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
-              title="開啟同步狀態頁"
-              aria-label="開啟同步狀態頁"
-            >
-              <svg className="h-5 w-5 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  className="stroke-white/10"
-                  strokeWidth="3"
-                />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15.5"
-                  fill="none"
-                  className="stroke-cyan-400 animate-spin origin-center"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeDasharray="24 76"
-                  pathLength="100"
-                />
-              </svg>
-            </button>
-          )}
-          <button 
-            onClick={onSettingsClick}
-            className="text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
-            title="資料管理"
-          >
-            <Settings size={20} />
-          </button>
 
-          <button 
-            onClick={onSearchClick}
-            className="text-gray-500 p-2 hover:text-cyan-400 active:scale-90 transition-all"
-          >
-            <Search size={22} />
-          </button>
+            <div className={actionSlotClassName}>
+              <button
+                onClick={onSettingsClick}
+                className={iconButtonClassName}
+                title="資料管理"
+                aria-label="資料管理"
+              >
+                <Settings size={20} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
