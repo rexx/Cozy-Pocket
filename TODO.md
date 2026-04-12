@@ -7,19 +7,20 @@
 3. ✅ `SyncStatusPage` 已支援預設隱藏已成功項目的篩選，讓使用者聚焦尚未處理或失敗的資料。
 4. ✅ `SyncStatusPage` 的項目已可直接點入既有編輯 modal，方便從同步清單修正失敗或待同步資料。
 5. ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。
-6. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。
-7. 🔴 將 `AddTransactionModal` 中阻擋式的 `alert()` 驗證改為 modal 內的內嵌錯誤提示。
-8. 🔴 將 `AddTransactionModal` 中刪除用的 `confirm()` 改為 app 內建的確認 UI，讓互動風格與其他頁面一致。
-9. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。
-10. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。
-11. 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。
-12. 🟡 評估是否將 `SettingsPage` 內更多 section 進一步升級為獨立 page，讓偏好設定、同步設定、Tag 管理、匯入匯出與危險操作可各自擁有更完整的資訊架構。
-13. 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。
+6. 🔴 將首頁月曆縮小為一週顯示，讓主要視圖更聚焦近期日期與交易。
+7. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。
+8. 🔴 將 `AddTransactionModal` 中阻擋式的 `alert()` 驗證改為 modal 內的內嵌錯誤提示。
+9. 🔴 將 `AddTransactionModal` 中刪除用的 `confirm()` 改為 app 內建的確認 UI，並評估以 `swal2` 統一 alert / confirm 互動風格。
+10. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。
+11. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。
+12. 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。
+13. 🟡 評估是否將 `SettingsPage` 內更多 section 進一步升級為獨立 page，讓偏好設定、同步設定、Tag 管理、匯入匯出與危險操作可各自擁有更完整的資訊架構。
+14. 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。
 
 ## 通知與互動體驗
 
 - 🔴 將 `AddTransactionModal` 中阻擋式的 `alert()` 驗證改為 modal 內的內嵌錯誤提示。
-- 🔴 將 `AddTransactionModal` 中刪除用的 `confirm()` 改為 app 內建的確認 UI，讓互動風格與其他頁面一致。
+- 🔴 將 `AddTransactionModal` 中刪除用的 `confirm()` 改為 app 內建的確認 UI，並評估以 `swal2` 統一 alert / confirm 互動風格。
 - 🔴 當同步部分失敗時，從頁內狀態訊息提供可直接前往同步狀態頁的操作按鈕。
 - 🟡 抽出共用的通知文案與摘要組裝 helper，避免 toast 與頁內狀態訊息逐漸分歧。
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。
@@ -51,6 +52,10 @@
 1. 評估 `SettingsPage` section page 化
 2. `SyncStatusPage` 互動升級
 3. 共用 page-shell 整理
+
+## 首頁與日曆體驗
+
+- 🔴 將首頁月曆縮小為一週顯示，讓首頁資訊密度更集中在近期日期，並保留既有日期切換的可用性。
 
 ## 商家與資料維護
 
