@@ -53,6 +53,50 @@ const HomePage: React.FC<HomePageProps> = ({
     onSwipeRight: onPrevDay,
   });
 
+  const buildVisibleStatLines = (stats: { income: number; expense: number }, currency: string) => {
+    const lines: Array<{ key: 'income' | 'expense'; text: string; className: string }> = [];
+
+    if (stats.income > 0) {
+      lines.push({
+        key: 'income',
+        text: `+${formatStatAmount(stats.income, currency)}`,
+        className: 'text-rose-400/80 font-bold text-[11px] tabular-nums truncate',
+      });
+    }
+
+    if (stats.expense > 0) {
+      lines.push({
+        key: 'expense',
+        text: `-${formatStatAmount(stats.expense, currency)}`,
+        className: 'text-emerald-400/80 font-bold text-[11px] tabular-nums truncate',
+      });
+    }
+
+    return lines;
+  };
+
+  const buildVisibleDailyStatLines = (stats: { income: number; expense: number }, currency: string) => {
+    const lines: Array<{ key: 'income' | 'expense'; text: string; className: string }> = [];
+
+    if (stats.income > 0) {
+      lines.push({
+        key: 'income',
+        text: `+${formatStatAmount(stats.income, currency)}`,
+        className: 'text-rose-400 font-black text-[11px] tabular-nums tracking-tighter leading-none truncate',
+      });
+    }
+
+    if (stats.expense > 0) {
+      lines.push({
+        key: 'expense',
+        text: `-${formatStatAmount(stats.expense, currency)}`,
+        className: 'text-emerald-400 font-black text-[11px] tabular-nums tracking-tighter leading-none truncate',
+      });
+    }
+
+    return lines;
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
       <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
@@ -130,8 +174,9 @@ const HomePage: React.FC<HomePageProps> = ({
                   {Object.entries(monthlyStatsByCurrency).length > 0 ? (
                     Object.entries(monthlyStatsByCurrency).map(([curr, stats]) => (
                       <div key={curr} className="mb-2 last:mb-0">
-                        <div className="text-rose-400/80 font-bold text-[11px] tabular-nums truncate">+{formatStatAmount(stats.income, curr)}</div>
-                        <div className="text-emerald-400/80 font-bold text-[11px] tabular-nums truncate">-{formatStatAmount(stats.expense, curr)}</div>
+                        {buildVisibleStatLines(stats, curr).map((line) => (
+                          <div key={line.key} className={line.className}>{line.text}</div>
+                        ))}
                       </div>
                     )).slice(0, 2)
                   ) : (
@@ -148,8 +193,9 @@ const HomePage: React.FC<HomePageProps> = ({
                   {Object.entries(dailyStatsByCurrency).length > 0 ? (
                     Object.entries(dailyStatsByCurrency).map(([curr, stats]) => (
                       <div key={curr} className="mb-3 last:mb-0">
-                        <div className="text-rose-400 font-black text-[11px] tabular-nums tracking-tighter leading-none truncate">+{formatStatAmount(stats.income, curr)}</div>
-                        <div className="text-emerald-400 font-black text-[11px] tabular-nums tracking-tighter leading-none truncate">-{formatStatAmount(stats.expense, curr)}</div>
+                        {buildVisibleDailyStatLines(stats, curr).map((line) => (
+                          <div key={line.key} className={line.className}>{line.text}</div>
+                        ))}
                       </div>
                     ))
                   ) : (
