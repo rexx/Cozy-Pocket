@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 import Calendar from './Calendar';
 import TransactionItem from './TransactionItem';
 import { Transaction } from '../types';
@@ -164,12 +164,12 @@ const HomePage: React.FC<HomePageProps> = ({
                   if (shouldSuppressClick()) return;
                   onOpenStats();
                 }}
-                className="w-full bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-center shadow-xl text-left transition-all hover:border-cyan-500/20 hover:bg-[#2a2d44]/70 active:scale-[0.99]"
+                className="w-full bg-[#24273c]/50 border border-white/5 rounded-[1.2rem] p-4 flex items-start shadow-xl text-left transition-all hover:border-cyan-500/20 hover:bg-[#2a2d44]/70 active:scale-[0.99]"
               >
-                <div className="flex-1 border-r border-white/5 pr-4 space-y-1.5 opacity-60">
-                  <div className="flex items-center justify-between mb-1">
+                <div className="flex-1 self-stretch border-r border-white/5 pr-4 space-y-1.5 opacity-60">
+                  <div className="flex items-center gap-1 mb-1">
                     <span className="text-gray-500 text-[9px] font-black uppercase tracking-[0.1em]">本月</span>
-                    {monthlyCurrencyCount > 1 && <Layers size={10} className="text-cyan-500" />}
+                    {monthlyCurrencyCount > 1 && <Globe size={10} className="text-cyan-500" aria-hidden="true" />}
                   </div>
                   {Object.entries(monthlyStatsByCurrency).length > 0 ? (
                     Object.entries(monthlyStatsByCurrency).map(([curr, stats]) => (
@@ -187,8 +187,8 @@ const HomePage: React.FC<HomePageProps> = ({
 
                 <div className="flex-[1.2] pl-4 space-y-1.5 text-right">
                   <div className="flex items-center justify-end gap-1 mb-1">
-                    {dailyCurrencyCount > 1 && <span className="text-[8px] text-cyan-400 font-black uppercase">📦 多幣別</span>}
                     <span className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">本日</span>
+                    {dailyCurrencyCount > 1 && <Globe size={10} className="text-cyan-500" aria-hidden="true" />}
                   </div>
                   {Object.entries(dailyStatsByCurrency).length > 0 ? (
                     Object.entries(dailyStatsByCurrency).map(([curr, stats]) => (
