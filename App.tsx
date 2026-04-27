@@ -463,6 +463,10 @@ const App: React.FC = () => {
     navigateBack(syncReturnView, syncReturnView);
   }, [navigateBack, syncReturnView]);
 
+  const selectTransactionDate = useCallback((transaction: Pick<Transaction, 'timestamp'>) => {
+    setSelectedDate(new Date(toEpochMillis(transaction.timestamp)));
+  }, []);
+
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     let attempts = 0;
     const maxAttempts = 10;
@@ -479,6 +483,7 @@ const App: React.FC = () => {
         } as Transaction;
         await db.transactions.add(transaction);
         setTransactions(prev => [transaction, ...prev]);
+        selectTransactionDate(transaction);
         showToast('已儲存新紀錄');
 
       void (async () => {
@@ -519,6 +524,7 @@ const App: React.FC = () => {
       };
       await db.transactions.put(merged);
       setTransactions(prev => prev.map(t => t.id === updatedTx.id ? merged : t));
+      selectTransactionDate(merged);
       setEditingTransaction(null);
       showToast('已儲存修改');
 
