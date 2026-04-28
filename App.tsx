@@ -10,7 +10,7 @@ import SearchPage from './components/SearchPage';
 import HomePage from './components/HomePage';
 import MonthlyStatsPage from './components/MonthlyStatsPage';
 import MerchantManagementPage from './components/MerchantManagementPage';
-import { SuggestionIndex, SuggestionItem, Transaction } from './types';
+import { CalendarViewMode, SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
@@ -26,6 +26,15 @@ interface AppHistoryState {
   view: AppView;
   syncReturnView?: 'home' | 'settings';
 }
+
+const HOME_CALENDAR_VIEW_MODE_STORAGE_KEY = 'home-calendar-view-mode';
+
+const getInitialCalendarViewMode = (): CalendarViewMode => {
+  if (typeof window === 'undefined') return 'month';
+
+  const storedValue = window.localStorage.getItem(HOME_CALENDAR_VIEW_MODE_STORAGE_KEY);
+  return storedValue === 'week' || storedValue === 'month' ? storedValue : 'month';
+};
 
 const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
   if (errors.length === 0) return null;
@@ -142,6 +151,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('home');
   const [syncReturnView, setSyncReturnView] = useState<'home' | 'settings'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(getInitialCalendarViewMode);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -250,6 +260,10 @@ const App: React.FC = () => {
       throw err;
     }
   };
+
+  useEffect(() => {
+    window.localStorage.setItem(HOME_CALENDAR_VIEW_MODE_STORAGE_KEY, calendarViewMode);
+  }, [calendarViewMode]);
 
   useEffect(() => {
     const initData = async () => {
@@ -964,6 +978,7 @@ const App: React.FC = () => {
       {toastMessage && <SuccessToast message={toastMessage} />}
       <HomePage
         selectedDate={selectedDate}
+        calendarViewMode={calendarViewMode}
         transactions={transactions}
         dailyTransactions={dailyTransactions}
         monthlyStatsByCurrency={monthlyStatsByCurrency}
@@ -972,6 +987,7 @@ const App: React.FC = () => {
         isOffline={isOfflineMode}
         isSyncProgressVisible={syncProgressUI.visible}
         onDateSelect={setSelectedDate}
+        onCalendarViewModeChange={setCalendarViewMode}
         onPrevDay={() => setSelectedDate(addDays(selectedDate, -1))}
         onNextDay={() => setSelectedDate(addDays(selectedDate, 1))}
         onOpenSearch={openSearchPage}

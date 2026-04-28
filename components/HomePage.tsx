@@ -1,12 +1,13 @@
 import React from 'react';
-import { Plus, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Globe, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import Calendar from './Calendar';
 import TransactionItem from './TransactionItem';
-import { Transaction } from '../types';
+import { CalendarViewMode, Transaction } from '../types';
 import { useHorizontalSwipe } from './useHorizontalSwipe';
 
 interface HomePageProps {
   selectedDate: Date;
+  calendarViewMode: CalendarViewMode;
   transactions: Transaction[];
   dailyTransactions: Transaction[];
   monthlyStatsByCurrency: Record<string, { income: number; expense: number }>;
@@ -15,6 +16,7 @@ interface HomePageProps {
   isOffline: boolean;
   isSyncProgressVisible: boolean;
   onDateSelect: (date: Date) => void;
+  onCalendarViewModeChange: (mode: CalendarViewMode) => void;
   onPrevDay: () => void;
   onNextDay: () => void;
   onOpenSearch: () => void;
@@ -28,6 +30,7 @@ interface HomePageProps {
 
 const HomePage: React.FC<HomePageProps> = ({
   selectedDate,
+  calendarViewMode,
   transactions,
   dailyTransactions,
   monthlyStatsByCurrency,
@@ -36,6 +39,7 @@ const HomePage: React.FC<HomePageProps> = ({
   isOffline,
   isSyncProgressVisible,
   onDateSelect,
+  onCalendarViewModeChange,
   onPrevDay,
   onNextDay,
   onOpenSearch,
@@ -48,6 +52,9 @@ const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const dailyCurrencyCount = Object.keys(dailyStatsByCurrency).length;
   const monthlyCurrencyCount = Object.keys(monthlyStatsByCurrency).length;
+  const nextCalendarViewMode: CalendarViewMode = calendarViewMode === 'week' ? 'month' : 'week';
+  const CalendarToggleIcon = calendarViewMode === 'week' ? ChevronDown : ChevronUp;
+  const calendarToggleLabel = calendarViewMode === 'week' ? '展開月曆' : '收合為週曆';
   const { swipeHandlers, shouldSuppressClick } = useHorizontalSwipe({
     onSwipeLeft: onNextDay,
     onSwipeRight: onPrevDay,
@@ -99,9 +106,10 @@ const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-      <div className="flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
+      <div className="relative flex-none z-30 bg-[#1a1c2c] shadow-lg shadow-black/40">
         <Calendar 
           selectedDate={selectedDate}
+          viewMode={calendarViewMode}
           onDateSelect={onDateSelect}
           onSearchClick={onOpenSearch}
           onSettingsClick={onOpenSettings}
@@ -110,6 +118,16 @@ const HomePage: React.FC<HomePageProps> = ({
           isOffline={isOffline}
           transactions={transactions}
         />
+        <button
+          type="button"
+          onClick={() => onCalendarViewModeChange(nextCalendarViewMode)}
+          className="absolute bottom-0 left-1/2 z-50 inline-flex h-8 w-8 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#24273c] text-gray-300 shadow-[0_6px_18px_rgba(0,0,0,0.35)] ring-4 ring-[#1a1c2c] transition-all hover:text-white active:scale-95"
+          aria-expanded={calendarViewMode === 'month'}
+          aria-label={calendarToggleLabel}
+          title={calendarToggleLabel}
+        >
+          <CalendarToggleIcon size={17} strokeWidth={2.8} />
+        </button>
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">

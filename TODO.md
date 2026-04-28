@@ -8,7 +8,7 @@
 4. ✅ `SyncStatusPage` 的項目已可直接點入既有編輯 modal，方便從同步清單修正失敗或待同步資料。
 5. ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。
 6. ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
-7. 🔴 將首頁月曆縮小為一週顯示，讓主要視圖更聚焦近期日期與交易。（計劃：[home-week-calendar.md](docs/todo-references/home-week-calendar.md)）
+7. ✅ 首頁已支援週／月切換模式，並會記住使用者最後一次選擇，讓近期交易與整月分布都能快速查看。
 8. 🔴 修正今天按鈕的光暈上方被截斷的視覺問題。（計劃：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
 9. 🔴 修正設定頁面 header 顏色不符合整體視覺設計的問題。（計劃：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
 10. ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
@@ -61,7 +61,7 @@
 ## 首頁與日曆體驗
 
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
-- 🔴 將首頁月曆縮小為一週顯示，讓首頁資訊密度更集中在近期日期，並保留既有日期切換的可用性。（計劃：[home-week-calendar.md](docs/todo-references/home-week-calendar.md)）
+- ✅ 首頁已支援週／月切換模式：週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。
 - 🔴 修正今天按鈕的光暈上方被截斷的視覺問題。（示意圖：[today-button-glow-clipped.jpg](docs/todo-references/today-button-glow-clipped.jpg)；計劃：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
 - 🟡 將交易項目的支付方式改為可用圖示顯示，提升列表辨識度。（示意圖：[payment-method-icon.jpg](docs/todo-references/payment-method-icon.jpg)；計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 

@@ -1,34 +1,39 @@
 
 import React from 'react';
 import {
-  format, 
-  endOfMonth, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameMonth, 
-  isSameDay, 
-  addMonths, 
+  addDays,
+  addMonths,
+  eachDayOfInterval,
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
+  format,
   getDay,
   isValid,
-  endOfDay
+  isSameDay,
+  isSameMonth,
+  startOfWeek
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Search, Settings, CloudOff } from 'lucide-react';
 import { toEpochSeconds } from '../time';
 import { useHorizontalSwipe } from './useHorizontalSwipe';
+import { CalendarViewMode, Transaction } from '../types';
 
 interface CalendarProps {
   selectedDate: Date;
+  viewMode: CalendarViewMode;
   onDateSelect: (date: Date) => void;
   onSearchClick: () => void;
   onSettingsClick: () => void;
   onSyncProgressClick?: () => void;
   isSyncProgressVisible?: boolean;
   isOffline?: boolean;
-  transactions: any[];
+  transactions: Transaction[];
 }
 
 const Calendar: React.FC<CalendarProps> = ({
   selectedDate,
+  viewMode,
   onDateSelect,
   onSearchClick,
   onSettingsClick,
@@ -40,35 +45,39 @@ const Calendar: React.FC<CalendarProps> = ({
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
   const today = new Date();
   const isCurrentlyToday = isSameDay(safeDate, today);
-  
   const monthStart = new Date(safeDate.getFullYear(), safeDate.getMonth(), 1);
   const monthEnd = endOfMonth(monthStart);
-  
+  const weekStart = startOfWeek(safeDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(safeDate, { weekStartsOn: 1 });
+
   const dayOfWeekForStart = monthStart.getDay();
   const diffToMonday = (dayOfWeekForStart === 0 ? -6 : 1) - dayOfWeekForStart;
-  const startDate = new Date(monthStart);
-  startDate.setDate(monthStart.getDate() + diffToMonday);
-  startDate.setHours(0, 0, 0, 0);
+  const monthGridStart = new Date(monthStart);
+  monthGridStart.setDate(monthStart.getDate() + diffToMonday);
+  monthGridStart.setHours(0, 0, 0, 0);
 
-  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const startDate = viewMode === 'week' ? weekStart : monthGridStart;
+  const endDate = viewMode === 'week' ? weekEnd : endOfWeek(monthEnd, { weekStartsOn: 1 });
 
   const calendarDays = eachDayOfInterval({
     start: startDate,
     end: endDate,
   });
 
-  const nextMonth = () => onDateSelect(addMonths(safeDate, 1));
-  const prevMonth = () => onDateSelect(addMonths(safeDate, -1));
+  const goToNextPeriod = () => onDateSelect(viewMode === 'week' ? addDays(safeDate, 7) : addMonths(safeDate, 1));
+  const goToPrevPeriod = () => onDateSelect(viewMode === 'week' ? addDays(safeDate, -7) : addMonths(safeDate, -1));
   const goToToday = () => onDateSelect(new Date());
   const monthNavButtonClassName = 'pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all';
   const iconButtonClassName = 'flex h-9 w-9 items-center justify-center text-gray-500 transition-all hover:text-cyan-400 active:scale-90';
   const actionSlotClassName = 'flex h-9 items-center justify-center';
   const { swipeHandlers, shouldSuppressClick } = useHorizontalSwipe({
-    onSwipeLeft: nextMonth,
-    onSwipeRight: prevMonth,
+    onSwipeLeft: goToNextPeriod,
+    onSwipeRight: goToPrevPeriod,
   });
 
   const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
+  const previousPeriodLabel = viewMode === 'week' ? '上一週' : '上個月';
+  const nextPeriodLabel = viewMode === 'week' ? '下一週' : '下個月';
 
   const hasTransactions = (day: Date) => {
     // Fix: replace missing startOfDay with manual date creation
@@ -90,7 +99,7 @@ const Calendar: React.FC<CalendarProps> = ({
 
   return (
     <div className="bg-[#1a1c2c] p-4 pt-0 select-none">
-      <div className="mb-4 flex w-full items-center gap-2 px-1">
+      <div className="mb-3 flex w-full items-center gap-2 px-1">
         <div className="flex min-w-0 flex-1 items-center justify-between">
           <div className={actionSlotClassName}>
             <button
@@ -193,24 +202,24 @@ const Calendar: React.FC<CalendarProps> = ({
       >
         <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between px-2">
           <button
-            onClick={prevMonth}
+            onClick={goToPrevPeriod}
             className={monthNavButtonClassName}
-            aria-label="切換到上個月"
-            title="上個月"
+            aria-label={`切換到${previousPeriodLabel}`}
+            title={previousPeriodLabel}
           >
             <ChevronLeft size={18} />
           </button>
           <button
-            onClick={nextMonth}
+            onClick={goToNextPeriod}
             className={monthNavButtonClassName}
-            aria-label="切換到下個月"
-            title="下個月"
+            aria-label={`切換到${nextPeriodLabel}`}
+            title={nextPeriodLabel}
           >
             <ChevronRight size={18} />
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-y-1 text-center">
+        <div className={`grid grid-cols-7 text-center ${viewMode === 'week' ? 'gap-y-2' : 'gap-y-1'}`}>
           {weekDays.map(day => (
             <span key={day} className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{day}</span>
           ))}
@@ -236,7 +245,7 @@ const Calendar: React.FC<CalendarProps> = ({
                   if (shouldSuppressClick()) return;
                   onDateSelect(day);
                 }}
-                className="relative flex flex-col items-center justify-center cursor-pointer py-1"
+                className={`relative flex flex-col items-center justify-center cursor-pointer ${viewMode === 'week' ? 'py-2' : 'py-1'}`}
               >
                 <div className={`
                   w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300
