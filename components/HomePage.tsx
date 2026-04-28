@@ -126,14 +126,14 @@ const HomePage: React.FC<HomePageProps> = ({
           aria-label={calendarToggleLabel}
           title={calendarToggleLabel}
         >
-          <CalendarToggleIcon size={17} strokeWidth={2.8} />
+          <CalendarToggleIcon size={18} />
         </button>
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">
           <button
             onClick={onPrevDay}
-            className="pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+            className="pointer-events-auto w-8 h-8 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
             aria-label="切換到昨天"
             title="昨天"
           >
@@ -141,7 +141,7 @@ const HomePage: React.FC<HomePageProps> = ({
           </button>
           <button
             onClick={onNextDay}
-            className="pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+            className="pointer-events-auto w-8 h-8 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
             aria-label="切換到明天"
             title="明天"
           >

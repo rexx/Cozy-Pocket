@@ -67,7 +67,7 @@ const Calendar: React.FC<CalendarProps> = ({
   const goToNextPeriod = () => onDateSelect(viewMode === 'week' ? addDays(safeDate, 7) : addMonths(safeDate, 1));
   const goToPrevPeriod = () => onDateSelect(viewMode === 'week' ? addDays(safeDate, -7) : addMonths(safeDate, -1));
   const goToToday = () => onDateSelect(new Date());
-  const monthNavButtonClassName = 'pointer-events-auto w-9 h-9 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all';
+  const monthNavButtonClassName = 'pointer-events-auto w-8 h-8 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all';
   const iconButtonClassName = 'flex h-9 w-9 items-center justify-center text-gray-500 transition-all hover:text-cyan-400 active:scale-90';
   const actionSlotClassName = 'flex h-9 items-center justify-center';
   const { swipeHandlers, shouldSuppressClick } = useHorizontalSwipe({
