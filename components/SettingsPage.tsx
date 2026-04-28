@@ -13,6 +13,7 @@ import SyncSection from './settings/SyncSection';
 import TagManagementSection from './settings/TagManagementSection';
 import ImportExportSection from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
+import { confirmAction } from '../services/dialogService';
 
 interface SettingsPageProps {
   onClose: () => void;
@@ -420,9 +421,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
 
     if (mode === 'overwrite') {
-      const firstConfirm = confirm(`將覆蓋目前所有資料，並匯入 ${importPreview.validRows} 筆。確定要繼續嗎？`);
+      const firstConfirm = await confirmAction({
+        title: '覆蓋匯入資料？',
+        text: `將覆蓋目前所有資料，並匯入 ${importPreview.validRows} 筆。確定要繼續嗎？`,
+        confirmButtonText: '繼續',
+        cancelButtonText: '取消',
+        tone: 'danger',
+      });
       if (!firstConfirm) return;
-      const secondConfirm = confirm('再次確認：此操作會先清空現有資料，且無法復原。確定要「完全覆蓋」嗎？');
+      const secondConfirm = await confirmAction({
+        title: '再次確認覆蓋匯入',
+        text: '此操作會先清空現有資料，且無法復原。確定要「完全覆蓋」嗎？',
+        confirmButtonText: '完全覆蓋',
+        cancelButtonText: '取消',
+        tone: 'danger',
+      });
       if (!secondConfirm) return;
     }
 
@@ -431,16 +444,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       importPreview.duplicateInFileCount > 0
     );
     if (hasDuplicateOverwriteRisk) {
-      const duplicateConfirm = confirm(
-        `偵測到重複 ID（既有 ${importPreview.duplicateWithExistingCount} 筆、檔案內 ${importPreview.duplicateInFileCount} 筆），這些資料會被覆蓋。確定要匯入嗎？`
-      );
+      const duplicateConfirm = await confirmAction({
+        title: '偵測到重複 ID',
+        text: `既有 ${importPreview.duplicateWithExistingCount} 筆、檔案內 ${importPreview.duplicateInFileCount} 筆，這些資料會被覆蓋。確定要匯入嗎？`,
+        confirmButtonText: '仍要匯入',
+        cancelButtonText: '取消',
+      });
       if (!duplicateConfirm) return;
     }
-    const finalConfirm = confirm(
-      mode === 'overwrite'
-        ? `最後確認：即將覆寫匯入 ${importPreview.validRows} 筆，確定執行？`
-        : `最後確認：即將附加匯入 ${importPreview.validRows} 筆，確定執行？`
-    );
+    const finalConfirm = await confirmAction({
+      title: mode === 'overwrite' ? '執行覆寫匯入？' : '執行附加匯入？',
+      text: mode === 'overwrite'
+        ? `即將覆寫匯入 ${importPreview.validRows} 筆，確定執行？`
+        : `即將附加匯入 ${importPreview.validRows} 筆，確定執行？`,
+      confirmButtonText: '確認匯入',
+      cancelButtonText: '取消',
+      tone: mode === 'overwrite' ? 'danger' : 'default',
+    });
     if (!finalConfirm) return;
 
     try {
@@ -486,7 +506,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const resetLocalData = async () => {
-    if (!confirm('這會清除 Local Storage 與 IndexedDB 的所有資料，且無法復原。確定要重置嗎？')) return;
+    const confirmed = await confirmAction({
+      title: '重置本機資料？',
+      text: '這會清除 Local Storage 與 IndexedDB 的所有資料，且無法復原。',
+      confirmButtonText: '重置',
+      cancelButtonText: '取消',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     try {
       setStatus({ type: 'idle', message: '' });
       localStorage.clear();
@@ -501,6 +528,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const insertExamples = async () => {
+    const confirmed = await confirmAction({
+      title: '插入範例資料？',
+      text: '這會加入多筆預設範例交易，方便驗證畫面或 demo。',
+      confirmButtonText: '插入',
+      cancelButtonText: '取消',
+      tone: 'default',
+    });
+    if (!confirmed) return;
+
     try {
       const count = await onInsertExamples();
       onDataChange();

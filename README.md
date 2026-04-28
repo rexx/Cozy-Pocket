@@ -33,6 +33,7 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 *   App 啟動後會自動補送尚未同步完成的資料。
 *   交易列表會顯示同步狀態點，且可從「同步狀態頁」查看待同步 / 同步中 / 已同步 / 失敗總覽。
 *   通知分工採用短 toast + 頁內詳細 status 的雙層設計：短成功摘要走 toast，長結果與部分失敗細節保留在頁內狀態區塊。
+*   需要使用者確認的危險操作使用 `sweetalert2` app 內對話框；交易新增、修改、刪除成功目前使用 `sweetalert2` auto-dismiss toast。
 
 完整規格請見：[Cloud Sync Specification](docs/cloud-sync-specification.md)
 
@@ -43,6 +44,7 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 *   **樣式處理**：Tailwind CSS v4（本地建置，非 CDN）
 *   **資料庫**：Dexie.js (IndexedDB)
 *   **日期處理**：date-fns
+*   **確認與交易成功提示**：sweetalert2
 *   **圖示庫**：Lucide React
 *   **人工智慧**：@google/genai (Gemini 3 Flash)
 *   **PWA**：Vite PWA Plugin + Service Worker precache

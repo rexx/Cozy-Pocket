@@ -9,12 +9,12 @@
 5. ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。
 6. ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
 7. ✅ 首頁已支援週／月切換模式，並會記住使用者最後一次選擇，讓近期交易與整月分布都能快速查看。
-8. 🔴 修正今天按鈕的光暈上方被截斷的視覺問題。（計劃：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
-9. 🔴 修正設定頁面 header 顏色不符合整體視覺設計的問題。（計劃：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
+8. ✅ `AddTransactionModal` 的表單驗證已改為 modal 內嵌錯誤提示，並保留低調欄位標示。
+9. ✅ 需要確認的危險操作已改用 `swal2` app 內對話框，交易新增／修改／刪除成功則試用 `swal2` auto-dismiss toast。
 10. ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
-11. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
-12. 🔴 將 `AddTransactionModal` 中阻擋式的 `alert()` 驗證改為 modal 內的內嵌錯誤提示。（計劃：[add-transaction-inline-validation.md](docs/todo-references/add-transaction-inline-validation.md)）
-13. 🔴 將 `AddTransactionModal` 中刪除用的 `confirm()` 改為 app 內建的確認 UI，並評估以 `swal2` 統一 alert / confirm 互動風格。（計劃：[app-confirm-dialogs.md](docs/todo-references/app-confirm-dialogs.md)）
+11. 🔴 修正今天按鈕的光暈上方被截斷的視覺問題。（計劃：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
+12. 🔴 修正設定頁面 header 顏色不符合整體視覺設計的問題。（計劃：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
+13. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
 14. 🟡 將交易項目的支付方式改為可用圖示顯示，提升列表辨識度。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 15. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
 16. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。（計劃：[category-stats.md](docs/todo-references/category-stats.md)）
@@ -24,8 +24,9 @@
 
 ## 通知與互動體驗
 
-- 🔴 將 `AddTransactionModal` 中阻擋式的 `alert()` 驗證改為 modal 內的內嵌錯誤提示。（計劃：[add-transaction-inline-validation.md](docs/todo-references/add-transaction-inline-validation.md)）
-- 🔴 將 `AddTransactionModal` 中刪除用的 `confirm()` 改為 app 內建的確認 UI，並評估以 `swal2` 統一 alert / confirm 互動風格。（計劃：[app-confirm-dialogs.md](docs/todo-references/app-confirm-dialogs.md)）
+- ✅ `AddTransactionModal` 中阻擋式的 `alert()` 驗證已改為 modal 內嵌錯誤提示。
+- ✅ `AddTransactionModal` 刪除確認、設定頁匯入／重置／插入範例資料確認已改用 `swal2` app 內對話框。
+- ✅ 交易新增、修改、刪除成功已試用 `swal2` auto-dismiss toast。
 - 🔴 當同步部分失敗時，從頁內狀態訊息提供可直接前往同步狀態頁的操作按鈕。（計劃：[sync-failure-status-link.md](docs/todo-references/sync-failure-status-link.md)）
 - 🟡 抽出共用的通知文案與摘要組裝 helper，避免 toast 與頁內狀態訊息逐漸分歧。（計劃：[notification-message-helper.md](docs/todo-references/notification-message-helper.md)）
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。（計劃：[settings-status-types.md](docs/todo-references/settings-status-types.md)）
@@ -36,12 +37,11 @@
   - Tag 更名應遵守與匯入、同步設定相同的 toast / status 分工。
 
 ### 建議順序
-1. `AddTransactionModal` 內嵌驗證
-2. app 內刪除確認 UI
-3. 通知 helper 抽離
-4. status type 精緻化與同步失敗操作按鈕
-5. toast 元件優化
-6. UI 測試補齊
+1. 同步部分失敗時提供可直接前往同步狀態頁的操作按鈕
+2. 抽出共用通知文案與摘要組裝 helper
+3. status type 精緻化
+4. toast 元件優化
+5. UI 測試補齊
 
 ## 導航與頁面架構
 
@@ -89,3 +89,33 @@
 ## AI 功能
 
 - 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
+
+## Bundle / Chunk 優化待辦
+
+- 🔴 將非首頁 page 改為 `React.lazy`
+  - 目標：降低初始主 bundle，避免 `App.tsx` 一開始就靜態吃進所有頁面。
+  - 優先對象：`SettingsPage`、`SyncStatusPage`、`SearchPage`、`MonthlyStatsPage`、`MerchantManagementPage`、`AddTransactionModal`。
+  - 驗證：重新比較 build 後的 `index-*.js` raw / gzip 大小，確認主 chunk 明顯下降且頁面切換正常。
+- 🟡 將 `sweetalert2` 改為動態載入
+  - 目標：把 `dialogService` 從主 bundle 移出，只在實際開啟 confirm dialog 時載入。
+  - 做法：將 `dialogService` 內的 `sweetalert2` 改為 `import('sweetalert2')`。
+  - 驗證：確認 `sweetalert2` 不再進主 `index-*` chunk，且 `AddTransactionModal`、`SettingsPage` 的 confirm 行為不變。
+- 🟡 持續拆薄 `App.tsx`
+  - 目標：降低 page orchestration 與 shared state 集中在單一檔案的耦合，讓 page-level lazy load 更自然。
+  - 方向：把 page loader、transaction modal orchestration、shared data hooks 逐步拆出。
+  - 驗證：`App.tsx` 行數與靜態 import 數量下降，且 routing / modal 流程維持穩定。
+
+### 暫時不建議
+
+- 🟢 不優先拆 `HomePage` / `Calendar` 成 lazy chunk
+  - 原因：屬於首屏必要內容，通常對 initial load 幫助有限。
+- 🟢 不優先把 `lucide-react` 再切得更碎
+  - 原因：目前已從 wildcard import 改成明確 icon map，後續收益有限。
+- 🟢 不改走 CDN external 依賴
+  - 原因：對目前的 Vite + PWA 架構不划算，會增加部署、快取與離線相容性複雜度。
+
+### 建議順序
+
+1. 非首頁頁面全面改為 `React.lazy`
+2. `sweetalert2` 改為動態載入
+3. 持續拆薄 `App.tsx`

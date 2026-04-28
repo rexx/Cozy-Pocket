@@ -19,6 +19,7 @@ import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
 import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
+import { showAutoDismissToast } from './services/dialogService';
 
 type AppView = 'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management';
 
@@ -498,7 +499,7 @@ const App: React.FC = () => {
         await db.transactions.add(transaction);
         setTransactions(prev => [transaction, ...prev]);
         selectTransactionDate(transaction);
-        showToast('已儲存新紀錄');
+        void showAutoDismissToast({ title: '已儲存新紀錄' });
 
       void (async () => {
         if (isOffline()) {
@@ -540,7 +541,7 @@ const App: React.FC = () => {
       setTransactions(prev => prev.map(t => t.id === updatedTx.id ? merged : t));
       selectTransactionDate(merged);
       setEditingTransaction(null);
-      showToast('已儲存修改');
+      void showAutoDismissToast({ title: '已儲存修改' });
 
       void (async () => {
         if (isOffline()) {
@@ -565,6 +566,7 @@ const App: React.FC = () => {
       await db.transactions.delete(id);
       setTransactions(prev => prev.filter(t => t.id !== id));
       setEditingTransaction(null);
+      void showAutoDismissToast({ title: '已刪除紀錄' });
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `Delete Error: ${err.message}`]);
     }

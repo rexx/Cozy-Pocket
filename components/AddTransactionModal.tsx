@@ -4,7 +4,7 @@ import {
   X, Check, Trash2, Copy, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
   Store, Tag, Banknote, CreditCard, SmartphoneNfc, ArrowLeftRight,
-  Sparkles, Loader2, Globe
+  Sparkles, Loader2, Globe, AlertCircle
 } from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import { SuggestionItem, SuggestionIndex, Transaction, TransactionType } from '../types';
@@ -14,8 +14,15 @@ import { isOffline } from '../services/networkService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 import { categoryIconMap } from './categoryIcons';
 import PageHeader from './PageHeader';
+import { confirmAction } from '../services/dialogService';
 
 const IconMap = categoryIconMap;
+
+interface ValidationErrors {
+  amount?: string;
+  category?: string;
+  subCategory?: string;
+}
 
 interface AddTransactionModalProps {
   onClose: () => void;
@@ -88,6 +95,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [aiInput, setAiInput] = useState('');
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const hasApiKey = !!process.env.API_KEY;
   const suggestionLimit = 6;
 
@@ -112,6 +120,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setTagInput('');
     setAiInput('');
     setAiError('');
+    setValidationErrors({});
   }, [sourceTransaction]);
 
   useEffect(() => {
@@ -142,6 +151,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setActiveTab(tab);
     setIsSubView(false);
     setIsCategoryCollapsed(false);
+    setValidationErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
     if (!isEditing) {
       setCategoryId(undefined);
       setSubCategoryId(undefined);
@@ -150,6 +160,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleMainCategoryClick = (id: string) => {
     setCategoryId(id);
+    setValidationErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
     if (activeTab === '支出') {
       setSubCategoryId(undefined);
       setIsSubView(true);
@@ -165,6 +176,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setSubCategoryId(id);
     setIsSubView(false);
     setIsCategoryCollapsed(true);
+    setValidationErrors((prev) => ({ ...prev, subCategory: undefined }));
   };
 
   const handleBackToMain = () => {
@@ -263,15 +275,29 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    const parsedAmount = parseFloat(amount || '0');
-    if (isNaN(parsedAmount)) return alert("請輸入有效的數字");
-    if (!categoryId) return alert("請選擇類別");
-    if (activeTab === '支出' && !subCategoryId) {
-      alert("請選擇子類別");
-      setIsSubView(true);
-      setIsCategoryCollapsed(false);
+    const normalizedAmount = amount.trim();
+    const parsedAmount = Number(normalizedAmount);
+    const nextErrors: ValidationErrors = {};
+
+    if (!normalizedAmount || !Number.isFinite(parsedAmount)) {
+      nextErrors.amount = '請輸入有效的數字';
+    }
+    if (!categoryId) {
+      nextErrors.category = '請選擇類別';
+    } else if (activeTab === '支出' && !subCategoryId) {
+      nextErrors.subCategory = '請選擇子類別';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setValidationErrors(nextErrors);
+      if (categoryId && activeTab === '支出' && !subCategoryId) {
+        setIsSubView(true);
+        setIsCategoryCollapsed(false);
+      }
       return;
     }
+
+    setValidationErrors({});
     
     const multiplier = activeTab === '支出' ? -1 : 1;
     const finalAmount = parsedAmount * multiplier;
@@ -312,9 +338,17 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (isEditing && onDelete && editingTransaction) {
-      if (confirm('確定要刪除這筆紀錄嗎？')) {
+      const confirmed = await confirmAction({
+        title: '刪除這筆紀錄？',
+        text: '這筆交易會立即從本機資料中移除。',
+        confirmButtonText: '刪除',
+        cancelButtonText: '保留',
+        tone: 'danger',
+        icon: 'warning',
+      });
+      if (confirmed) {
         onDelete(editingTransaction.id);
         onClose();
       }
@@ -347,6 +381,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const categoriesToDisplay = activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const currentMainCat = categoriesToDisplay.find(c => c.id === categoryId);
   const currentSubCategory = currentMainCat?.subcategories?.find(item => item.id === subCategoryId);
+  const validationMessages = Object.values(validationErrors).filter(Boolean);
   const collapsedCategoryIcon = activeTab === '支出' && currentSubCategory
     ? currentSubCategory.icon
     : currentMainCat?.icon;
@@ -476,6 +511,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
       <div className="flex-1 overflow-y-auto px-4 pt-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         <div className="min-h-[calc(100%+1px)] space-y-4 pb-10">
+        {validationMessages.length > 0 && (
+          <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-100 shadow-lg">
+            <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-300" />
+            <div className="space-y-1 text-sm font-bold leading-relaxed">
+              {validationMessages.map((message) => (
+                <p key={message}>{message}</p>
+              ))}
+            </div>
+          </div>
+        )}
         {hasApiKey && !isEditing && (
           <div className="px-2 mb-2">
             <form onSubmit={handleAiSubmit} className="relative group">
@@ -515,12 +560,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
 
-        <div className={`${isCategoryCollapsed ? 'mb-3' : 'px-2 mb-6 min-h-[180px]'}`}>
+        <div className={`${isCategoryCollapsed ? 'mb-3' : 'px-2 mb-6 min-h-[180px]'} ${validationErrors.category || validationErrors.subCategory ? 'rounded-3xl border border-red-400/20 p-3' : ''}`}>
           {isCategoryCollapsed && currentMainCat ? (
             <button
               type="button"
               onClick={handleExpandCategoryPicker}
-              className="w-full rounded-3xl border border-white/10 bg-[#252538] px-3 py-3 shadow-lg transition-all active:scale-[0.99]"
+              className={`w-full rounded-3xl border bg-[#252538] px-3 py-3 shadow-lg transition-all active:scale-[0.99] ${validationErrors.category || validationErrors.subCategory ? 'border-red-400/20' : 'border-white/10'}`}
             >
               <div className="flex items-center gap-4">
                 <div
@@ -586,7 +631,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <PaymentIcon size={16} className="text-gray-500" />
             <span className="text-white truncate ml-2 text-right flex-1 text-sm font-bold">{paymentMethod}</span>
           </button>
-          <div className="flex items-center bg-[#252538] rounded-2xl h-14 px-3 border border-white/5 shadow-lg min-w-0 overflow-hidden">
+          <div className={`flex items-center bg-[#252538] rounded-2xl h-14 px-3 border shadow-lg min-w-0 overflow-hidden ${validationErrors.amount ? 'border-red-400/40' : 'border-white/5'}`}>
             <button onClick={toggleCurrency} className="flex items-center gap-1.5 pr-3 mr-3 border-r border-white/10 shrink-0 active:scale-95 transition-transform">
               <Globe size={14} className="text-gray-500" />
               <span className="text-[11px] text-gray-300 font-black tracking-widest">{currency}</span>
@@ -598,7 +643,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               inputMode="decimal"
               placeholder="0"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                if (validationErrors.amount) {
+                  setValidationErrors((prev) => ({ ...prev, amount: undefined }));
+                }
+              }}
               className={`flex-1 min-w-0 w-0 bg-transparent text-right text-2xl font-black leading-none focus:outline-none placeholder-gray-600 ${activeTab === '收入' ? 'text-rose-400' : 'text-emerald-400'}`}
             />
           </div>
