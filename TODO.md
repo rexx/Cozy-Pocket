@@ -62,7 +62,7 @@
 
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
 - ✅ 首頁已支援週／月切換模式：週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。
-- ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（示意圖：[today-button-glow-clipped.jpg](docs/todo-references/today-button-glow-clipped.jpg)；紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
+- ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
 - 🟡 將交易項目的支付方式改為可用圖示顯示，提升列表辨識度。（示意圖：[payment-method-icon.jpg](docs/todo-references/payment-method-icon.jpg)；計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 
 ## 設定頁體驗
@@ -104,6 +104,18 @@
   - 目標：降低 page orchestration 與 shared state 集中在單一檔案的耦合，讓 page-level lazy load 更自然。
   - 方向：把 page loader、transaction modal orchestration、shared data hooks 逐步拆出。
   - 驗證：`App.tsx` 行數與靜態 import 數量下降，且 routing / modal 流程維持穩定。
+- 🟡 建立 bundle size baseline 與驗收門檻
+  - 目標：避免只憑感覺判斷 bundle 優化是否有效。
+  - 方向：每次優化前後記錄主 `index-*.js` raw / gzip、總 PWA precache 大小，以及主要 chunk 列表。
+  - 驗證：TODO 或 PR 描述中能清楚列出優化前後數字，並說明變化是否符合預期。
+- 🟡 評估 PWA precache 對 lazy chunk 的實際影響
+  - 目標：釐清 lazy load 對首屏下載與 service worker 安裝快取總量的不同影響。
+  - 方向：檢查 Workbox precache 清單，確認新拆出的 lazy chunk 是否仍被預快取。
+  - 驗證：分別記錄 initial load chunk 與 precache total，避免只看主 bundle 下降。
+- 🟡 為 lazy-loaded page / dialog 補上 fallback 或 prefetch 策略
+  - 目標：避免初次開啟非首頁 page、交易 modal 或 confirm dialog 時出現可感知延遲。
+  - 方向：為 `React.lazy` 頁面設計符合現有視覺的 `Suspense` fallback，並評估在 idle 或使用者接近操作時預載高頻功能。
+  - 驗證：第一次進入設定頁、統計頁、交易 modal 與刪除確認時不會出現空白或明顯卡頓。
 
 ### 暫時不建議
 
@@ -118,4 +130,7 @@
 
 1. 非首頁頁面全面改為 `React.lazy`
 2. `sweetalert2` 改為動態載入
-3. 持續拆薄 `App.tsx`
+3. 建立 bundle size baseline 與驗收門檻
+4. 評估 PWA precache 對 lazy chunk 的實際影響
+5. 為 lazy-loaded page / dialog 補上 fallback 或 prefetch 策略
+6. 持續拆薄 `App.tsx`
