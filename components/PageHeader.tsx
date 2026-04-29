@@ -16,7 +16,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   rightSlot,
 }) => {
   return (
-    <div className="flex items-center justify-between border-b border-white/5 bg-[#1e1e2d] px-4 py-4">
+    <div className="flex items-center justify-between border-b border-white/5 bg-[#1a1c2c] px-4 pb-4 pt-0">
       <button
         type="button"
         onClick={onLeftAction}

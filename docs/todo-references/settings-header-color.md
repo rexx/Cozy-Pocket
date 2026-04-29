@@ -1,34 +1,35 @@
-# 設定頁 Header 外框色延伸計劃
+# 設定頁 Header 外框色延伸紀錄
 
 本項目實作時會使用新的 git worktree 進行開發，不直接修改目前 repo 根目錄；建議 worktree 路徑為 `worktrees/settings-header-color`，完成後再由該分支提交與合併。
 
 ## 摘要
 
-- 修正設定頁 header 顏色與 PWA 外框色不一致的問題。
-- Header bar 應使用與 PWA 外框相同的 `#1a1c2c`，也就是 `index.html` 的 `theme-color` 與 manifest 的 `background_color/theme_color`。
-- Header 背景需要一路延伸到畫面頂端，讓狀態列/外框區域與設定頁 header 看起來是同一塊連續色面。
+- 已修正設定頁 header 顏色與 PWA 外框色不一致的問題。
+- 共用 `PageHeader` 已改用與 PWA 外框相同的 `#1a1c2c`，也就是 `index.html` 的 `theme-color` 與 manifest 的 `background_color/theme_color`。
+- Header 背景一路延伸到畫面頂端，讓狀態列/外框區域與頁面 header 看起來是同一塊連續色面。
+- Header 上方 padding 已縮減為 `pt-0`，對齊首頁月曆的頂部留白節奏。
 - 參考圖：`docs/todo-references/settings-header-color.jpg`。
-- 優先針對設定頁處理；不要為了這個需求改變首頁或其他頁面的視覺層級。
+- 最終改為所有共用 `PageHeader` 的頁面一致套用，包含設定頁、同步狀態頁、搜尋頁、統計頁、商家管理頁與新增／編輯交易 modal。
 
 ## 關鍵變更
 
-- 將設定頁使用的 header bar 背景改為 `#1a1c2c`，與 PWA 外框色一致，不使用目前較亮的 `#1e1e2d` 作為設定頁 header 背景。
-- 讓設定頁 header 的同色背景延伸到 viewport 最上方；若需要額外容器，應只補同色 top band，不改動內容區的 spacing 或 section layout。
+- 將 `PageHeader` 背景改為 `#1a1c2c`，與 PWA 外框色一致，不再使用較亮的 `#1e1e2d` 作為共用頁面 header 背景。
+- 讓 header 的同色背景延伸到 viewport 最上方，不改動內容區的 spacing 或 section layout。
+- 將 `PageHeader` 的垂直 padding 從 `py-4` 調整為 `pt-0 pb-4`，降低手機 PWA 狀態列下方的空白感。
 - 保留 header 下緣分隔線與返回按鈕/標題對比，避免 header 變成和內容區混在一起。
-- 若共用 `PageHeader` 會影響其他頁面，為 `PageHeader` 增加可選 `className`、`tone` 或 `backgroundClassName`，由 `SettingsPage` 指定外框色。
-- 不調整 `index.html` 的 `theme-color` 或 manifest 色值；這次是讓設定頁 header 對齊既有 PWA 外框色。
+- 不調整 `index.html` 的 `theme-color` 或 manifest 色值；這次是讓共用 page header 對齊既有 PWA 外框色。
 
 ## 介面與型別
 
-- 優先不新增 public API。
-- 若需要新增 `PageHeader` props，限定為可選的 `className`、`tone` 或 `backgroundClassName`，既有呼叫點維持預設行為。
+- 未新增 public API。
+- `PageHeader` 既有呼叫點不需要新增 props，所有使用點都直接套用一致 header 色與頂部留白。
 
-## 測試計劃
+## 驗證
 
-- 執行 `npm run build`。
-- 手動檢查設定頁 header 與 PWA 外框/狀態列區域同色，視覺上一路延伸到畫面頂端。
-- 在手機 PWA 模式與一般瀏覽器模式檢查 header 背景、底線、返回按鈕與標題對齊。
-- 檢查同步狀態頁、統計頁、商家管理頁 header 沒有因共用元件調整而非預期變色。
+- 已執行 `npm run build`。
+- 已用 dev server 手動檢查手機網址可開啟。
+- 需在手機 PWA 模式與一般瀏覽器模式檢查 header 背景、底線、返回按鈕與標題對齊。
+- 需檢查設定頁、同步狀態頁、搜尋頁、統計頁、商家管理頁與新增／編輯交易 modal 的 header 皆為一致外框色。
 
 ## 假設
 

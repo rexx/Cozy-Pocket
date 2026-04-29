@@ -13,7 +13,7 @@
 9. ✅ 需要確認的危險操作已改用 `swal2` app 內對話框，交易新增／修改／刪除成功則試用 `swal2` auto-dismiss toast。
 10. ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
 11. ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
-12. 🔴 修正設定頁面 header 顏色不符合整體視覺設計的問題。（計劃：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
+12. ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（紀錄：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
 13. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
 14. ✅ 交易列表已支援支付方式文字／圖示顯示偏好，預設保留文字並可在偏好設定切換。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 15. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
@@ -67,7 +67,7 @@
 
 ## 設定頁體驗
 
-- 🔴 修正設定頁面 header 顏色不符合整體視覺設計的問題。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；計劃：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
+- ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；紀錄：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
 
 ## 商家與資料維護
 
