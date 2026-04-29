@@ -116,7 +116,7 @@ const Calendar: React.FC<CalendarProps> = ({
             {!isCurrentlyToday && (
               <button
                 onClick={goToToday}
-                className="flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-black px-2 py-1.5 rounded-lg active:scale-90 transition-all shadow-[0_0_10px_rgba(34,211,238,0.1)]"
+                className="flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-black px-2 py-1.5 rounded-lg active:scale-90 transition-all"
                 title="今天"
                 aria-label="今天"
               >

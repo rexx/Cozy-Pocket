@@ -12,7 +12,7 @@
 8. ✅ `AddTransactionModal` 的表單驗證已改為 modal 內嵌錯誤提示，並保留低調欄位標示。
 9. ✅ 需要確認的危險操作已改用 `swal2` app 內對話框，交易新增／修改／刪除成功則試用 `swal2` auto-dismiss toast。
 10. ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
-11. 🔴 修正今天按鈕的光暈上方被截斷的視覺問題。（計劃：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
+11. ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
 12. 🔴 修正設定頁面 header 顏色不符合整體視覺設計的問題。（計劃：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
 13. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
 14. 🟡 將交易項目的支付方式改為可用圖示顯示，提升列表辨識度。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
@@ -62,7 +62,7 @@
 
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
 - ✅ 首頁已支援週／月切換模式：週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。
-- 🔴 修正今天按鈕的光暈上方被截斷的視覺問題。（示意圖：[today-button-glow-clipped.jpg](docs/todo-references/today-button-glow-clipped.jpg)；計劃：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
+- ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（示意圖：[today-button-glow-clipped.jpg](docs/todo-references/today-button-glow-clipped.jpg)；紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
 - 🟡 將交易項目的支付方式改為可用圖示顯示，提升列表辨識度。（示意圖：[payment-method-icon.jpg](docs/todo-references/payment-method-icon.jpg)；計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 
 ## 設定頁體驗
