@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Search as SearchIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { Transaction } from '../types';
+import { PaymentMethodDisplayMode, Transaction } from '../types';
 import { toEpochMillis } from '../time';
 import TransactionItem from './TransactionItem';
 import PageHeader from './PageHeader';
@@ -10,6 +10,7 @@ interface SearchPageProps {
   searchQuery: string;
   filteredTransactions: Transaction[];
   searchInputRef: React.RefObject<HTMLInputElement | null>;
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onBack: () => void;
   onQueryChange: (value: string) => void;
   onClearQuery: () => void;
@@ -20,6 +21,7 @@ const SearchPage: React.FC<SearchPageProps> = ({
   searchQuery,
   filteredTransactions,
   searchInputRef,
+  paymentMethodDisplayMode,
   onBack,
   onQueryChange,
   onClearQuery,
@@ -61,7 +63,11 @@ const SearchPage: React.FC<SearchPageProps> = ({
               {filteredTransactions.map(tx => (
                 <div key={tx.id}>
                   <div className="px-5 py-1 bg-white/5 border-l-2 border-cyan-500/50"><span className="text-[10px] text-gray-500 font-bold">{format(new Date(toEpochMillis(tx.timestamp)), 'yyyy-MM-dd')}</span></div>
-                  <TransactionItem transaction={tx} onClick={onTransactionClick} />
+                  <TransactionItem
+                    transaction={tx}
+                    onClick={onTransactionClick}
+                    paymentMethodDisplayMode={paymentMethodDisplayMode}
+                  />
                 </div>
               ))}
             </>

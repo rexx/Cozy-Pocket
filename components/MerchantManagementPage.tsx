@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { Transaction } from '../types';
+import { PaymentMethodDisplayMode, Transaction } from '../types';
 import { MerchantRenamePreview, getMerchantUsageSummaries, normalizeMerchantName } from '../services/merchantService';
 import PageHeader from './PageHeader';
 import MerchantManagementSection from './settings/MerchantManagementSection';
 
 interface MerchantManagementPageProps {
   transactions: Transaction[];
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onClose: () => void;
   onDataChange: () => void;
   onPreviewMerchantRename: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview>;
@@ -17,6 +18,7 @@ interface MerchantManagementPageProps {
 
 const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
   transactions,
+  paymentMethodDisplayMode,
   onClose,
   onDataChange,
   onPreviewMerchantRename,
@@ -168,6 +170,7 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
             renamedMerchantInput={renamedMerchantInput}
             merchantRenamePreview={merchantRenamePreview}
             merchantTransactions={merchantTransactions}
+            paymentMethodDisplayMode={paymentMethodDisplayMode}
             isMerchantPreviewLoading={isMerchantPreviewLoading}
             isMerchantRenameSubmitting={isMerchantRenameSubmitting}
             isMerchantTransactionsLoading={isMerchantTransactionsLoading}

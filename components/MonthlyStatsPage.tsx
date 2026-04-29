@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { addMonths, addYears, format } from 'date-fns';
 import { ArrowDownUp, ArrowLeft, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { formatCurrencyAmount } from '../constants';
-import { PaymentMethod, Transaction, TransactionType } from '../types';
+import { PaymentMethod, PaymentMethodDisplayMode, Transaction, TransactionType } from '../types';
 import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
@@ -14,6 +14,7 @@ interface MonthlyStatsPageProps {
   transactions: Transaction[];
   initialDate: Date;
   defaultCurrency: string;
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onBack: () => void;
   onTransactionClick: (transaction: Transaction) => void;
 }
@@ -22,6 +23,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   transactions,
   initialDate,
   defaultCurrency,
+  paymentMethodDisplayMode,
   onBack,
   onTransactionClick,
 }) => {
@@ -341,6 +343,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                               key={transaction.id}
                               transaction={transaction}
                               onClick={onTransactionClick}
+                              paymentMethodDisplayMode={paymentMethodDisplayMode}
                               showDateTime
                             />
                           ))
@@ -360,6 +363,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                               key={transaction.id}
                               transaction={transaction}
                               onClick={onTransactionClick}
+                              paymentMethodDisplayMode={paymentMethodDisplayMode}
                               showDateTime
                             />
                           ))

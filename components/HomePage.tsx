@@ -2,7 +2,7 @@ import React from 'react';
 import { Plus, Globe, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import Calendar from './Calendar';
 import TransactionItem from './TransactionItem';
-import { CalendarViewMode, Transaction } from '../types';
+import { CalendarViewMode, PaymentMethodDisplayMode, Transaction } from '../types';
 import { useHorizontalSwipe } from './useHorizontalSwipe';
 
 interface HomePageProps {
@@ -15,6 +15,7 @@ interface HomePageProps {
   defaultCurrency: string;
   isOffline: boolean;
   isSyncProgressVisible: boolean;
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onDateSelect: (date: Date) => void;
   onCalendarViewModeChange: (mode: CalendarViewMode) => void;
   onPrevDay: () => void;
@@ -38,6 +39,7 @@ const HomePage: React.FC<HomePageProps> = ({
   defaultCurrency,
   isOffline,
   isSyncProgressVisible,
+  paymentMethodDisplayMode,
   onDateSelect,
   onCalendarViewModeChange,
   onPrevDay,
@@ -165,6 +167,7 @@ const HomePage: React.FC<HomePageProps> = ({
                   key={tx.id}
                   transaction={tx}
                   onClick={onTransactionClick}
+                  paymentMethodDisplayMode={paymentMethodDisplayMode}
                   shouldSuppressClick={shouldSuppressClick}
                 />
               ))

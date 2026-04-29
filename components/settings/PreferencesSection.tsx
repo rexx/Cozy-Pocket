@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Globe } from 'lucide-react';
+import { ChevronDown, ChevronUp, CreditCard, Globe, Type, type LucideIcon } from 'lucide-react';
 import { getCurrencyDisplay, SUPPORTED_CURRENCIES } from '../../constants';
+import { type PaymentMethodDisplayMode } from '../../types';
 import SettingsSection, {
   sectionSecondaryButtonClassName,
   sectionLabelClassName,
@@ -11,15 +12,28 @@ import SettingsSection, {
 interface PreferencesSectionProps {
   defaultCurrency: string;
   enabledCurrencies: string[];
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onDefaultCurrencyChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onEnabledCurrencyToggle: (currency: string) => void;
+  onPaymentMethodDisplayModeChange: (mode: PaymentMethodDisplayMode) => void;
 }
+
+const PAYMENT_METHOD_DISPLAY_OPTIONS: Array<{
+  value: PaymentMethodDisplayMode;
+  label: string;
+  Icon: LucideIcon;
+}> = [
+  { value: 'text', label: '文字', Icon: Type },
+  { value: 'icon', label: '圖示', Icon: CreditCard },
+];
 
 const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   defaultCurrency,
   enabledCurrencies,
+  paymentMethodDisplayMode,
   onDefaultCurrencyChange,
   onEnabledCurrencyToggle,
+  onPaymentMethodDisplayModeChange,
 }) => {
   const [isCurrencyListVisible, setIsCurrencyListVisible] = useState(false);
   const getCurrencyOptionLabel = (currency: string) => `${currency} (${getCurrencyDisplay(currency)})`;
@@ -27,12 +41,41 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   return (
     <SettingsSection
       title="偏好設定"
-      description="設定預設幣別與可切換的幣別。"
+      description="設定預設幣別、可切換幣別與交易列表顯示方式。"
       icon={Globe}
       accentClassName="border-cyan-400/20 bg-cyan-500/12 text-cyan-200"
     >
       <div className={sectionPanelClassName}>
         <div className="space-y-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className={sectionLabelClassName}>Payment Method Display</p>
+              <p className="text-sm text-slate-300">控制交易列表中的支付方式要顯示為圖示或文字。</p>
+            </div>
+            <div className="grid w-full grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-[#0f1321] p-1 sm:w-auto sm:min-w-[11rem]">
+              {PAYMENT_METHOD_DISPLAY_OPTIONS.map((option) => {
+                const OptionIcon = option.Icon;
+                const isActive = paymentMethodDisplayMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onPaymentMethodDisplayModeChange(option.value)}
+                    aria-pressed={isActive}
+                    className={`inline-flex h-10 items-center justify-center gap-2 rounded-[0.9rem] px-3 text-sm font-black transition-all ${
+                      isActive
+                        ? 'bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <OptionIcon size={15} strokeWidth={2.4} />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className={sectionLabelClassName}>Default Currency</p>

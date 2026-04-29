@@ -3,7 +3,7 @@ import React, { useState, useRef, useLayoutEffect, useEffect, useMemo } from 're
 import { 
   X, Check, Trash2, Copy, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
-  Store, Tag, Banknote, CreditCard, SmartphoneNfc, ArrowLeftRight,
+  Store, Tag,
   Sparkles, Loader2, Globe, AlertCircle
 } from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
@@ -15,6 +15,7 @@ import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 import { categoryIconMap } from './categoryIcons';
 import PageHeader from './PageHeader';
 import { confirmAction } from '../services/dialogService';
+import { getPaymentMethodIconOrFallback } from './paymentMethodIcons';
 
 const IconMap = categoryIconMap;
 
@@ -367,17 +368,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setPaymentMethod(methods[(currentIndex + 1) % methods.length]);
   };
 
-  const getPaymentIcon = (method: string) => {
-    switch (method) {
-      case '現金': return Banknote;
-      case '信用卡': return CreditCard;
-      case '電子支付': return SmartphoneNfc;
-      case '轉帳': return ArrowLeftRight;
-      default: return Banknote;
-    }
-  };
-
-  const PaymentIcon = getPaymentIcon(paymentMethod);
+  const PaymentIcon = getPaymentMethodIconOrFallback(paymentMethod);
   const categoriesToDisplay = activeTab === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const currentMainCat = categoriesToDisplay.find(c => c.id === categoryId);
   const currentSubCategory = currentMainCat?.subcategories?.find(item => item.id === subCategoryId);

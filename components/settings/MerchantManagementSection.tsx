@@ -1,6 +1,6 @@
 import React from 'react';
 import { PencilLine, Store } from 'lucide-react';
-import { Transaction } from '../../types';
+import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { MerchantRenamePreview, MerchantUsageSummary } from '../../services/merchantService';
 import TransactionItem from '../TransactionItem';
 import SettingsSection, {
@@ -17,6 +17,7 @@ interface MerchantManagementSectionProps {
   renamedMerchantInput: string;
   merchantRenamePreview: MerchantRenamePreview | null;
   merchantTransactions: Transaction[];
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   isMerchantPreviewLoading: boolean;
   isMerchantRenameSubmitting: boolean;
   isMerchantTransactionsLoading: boolean;
@@ -33,6 +34,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   renamedMerchantInput,
   merchantRenamePreview,
   merchantTransactions,
+  paymentMethodDisplayMode,
   isMerchantPreviewLoading,
   isMerchantRenameSubmitting,
   isMerchantTransactionsLoading,
@@ -144,6 +146,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                         key={tx.id}
                         transaction={tx}
                         onClick={onMerchantTransactionClick}
+                        paymentMethodDisplayMode={paymentMethodDisplayMode}
                         showDateTime
                       />
                     ))

@@ -1,16 +1,18 @@
 
 import React from 'react';
-import { Transaction } from '../types';
+import { PaymentMethodDisplayMode, Transaction } from '../types';
 import { CATEGORIES, formatCurrencyAmount } from '../constants';
 import { MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import { toEpochMillis } from '../time';
 import { categoryIconMap } from './categoryIcons';
+import { getPaymentMethodIcon } from './paymentMethodIcons';
 
 interface TransactionItemProps {
   transaction: Transaction;
   onClick?: (transaction: Transaction) => void;
   showDateTime?: boolean;
+  paymentMethodDisplayMode?: PaymentMethodDisplayMode;
   shouldSuppressClick?: () => boolean;
 }
 
@@ -37,6 +39,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   onClick,
   showDateTime = false,
+  paymentMethodDisplayMode = 'text',
   shouldSuppressClick,
 }) => {
   const category = CATEGORIES.find(c => c.id === transaction.categoryId) || CATEGORIES[CATEGORIES.length - 1];
@@ -77,6 +80,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   );
   const syncStatus = transaction.syncStatus || 'pending';
   const syncStatusUi = SYNC_STATUS_UI[syncStatus];
+  const paymentMethodIcon = paymentMethodDisplayMode === 'icon'
+    ? getPaymentMethodIcon(transaction.paymentMethod)
+    : null;
+  const PaymentMethodIcon = paymentMethodIcon;
 
   return (
     <div 
@@ -117,9 +124,19 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
             {subtitleParts.join(' · ')}
           </p>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-500 font-black uppercase tracking-widest border border-white/5">
-              {transaction.paymentMethod}
-            </span>
+            {PaymentMethodIcon ? (
+              <span
+                title={transaction.paymentMethod}
+                aria-label={transaction.paymentMethod}
+                className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-white/5 bg-white/5 text-gray-500"
+              >
+                <PaymentMethodIcon size={13} strokeWidth={2.5} />
+              </span>
+            ) : (
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-500 font-black uppercase tracking-widest border border-white/5">
+                {transaction.paymentMethod}
+              </span>
+            )}
             <span className={`font-black text-lg tabular-nums ${isIncome ? 'text-rose-400' : 'text-emerald-400'}`}>
               {formattedAmount}
             </span>

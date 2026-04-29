@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { ArrowLeft, AlertTriangle, CheckCircle2, Store } from 'lucide-react';
-import { Transaction } from '../types';
+import { PaymentMethodDisplayMode, Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
@@ -14,6 +14,7 @@ import TagManagementSection from './settings/TagManagementSection';
 import ImportExportSection from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
 import { confirmAction } from '../services/dialogService';
+import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY } from '../preferences';
 
 interface SettingsPageProps {
   onClose: () => void;
@@ -24,6 +25,8 @@ interface SettingsPageProps {
   onOpenMerchantManagement: () => void;
   onNotify: (message: string) => void;
   isOffline: boolean;
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
+  onPaymentMethodDisplayModeChange: (mode: PaymentMethodDisplayMode) => void;
   tagSummaries: TagUsageSummary[];
   onPreviewTagRename: (oldTag: string, newTag: string) => Promise<TagRenamePreview>;
   onRenameTag: (oldTag: string, newTag: string) => Promise<TagRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
@@ -41,6 +44,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenMerchantManagement,
   onNotify,
   isOffline,
+  paymentMethodDisplayMode,
+  onPaymentMethodDisplayModeChange,
   tagSummaries,
   onPreviewTagRename,
   onRenameTag,
@@ -160,6 +165,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       { key: 'enabledCurrencies', value: nextEnabledCurrencies },
       { key: 'defaultCurrency', value: nextDefaultCurrency }
     ]);
+    onDataChange();
+  };
+
+  const handlePaymentMethodDisplayModeChange = async (mode: PaymentMethodDisplayMode) => {
+    setStatus({ type: 'idle', message: '' });
+    onPaymentMethodDisplayModeChange(mode);
+    await db.settings.put({ key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: mode });
     onDataChange();
   };
 
@@ -563,8 +575,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             <PreferencesSection
               defaultCurrency={defaultCurrency}
               enabledCurrencies={enabledCurrencies}
+              paymentMethodDisplayMode={paymentMethodDisplayMode}
               onDefaultCurrencyChange={handleDefaultCurrencyChange}
               onEnabledCurrencyToggle={(currency) => void handleEnabledCurrencyToggle(currency)}
+              onPaymentMethodDisplayModeChange={(mode) => void handlePaymentMethodDisplayModeChange(mode)}
             />
             <SyncSection
               syncApiUrl={syncApiUrl}
@@ -583,6 +597,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             renamedTagInput={renamedTagInput}
             tagRenamePreview={tagRenamePreview}
             tagTransactions={tagTransactions}
+            paymentMethodDisplayMode={paymentMethodDisplayMode}
             isTagPreviewLoading={isTagPreviewLoading}
             isTagRenameSubmitting={isTagRenameSubmitting}
             isTagTransactionsLoading={isTagTransactionsLoading}

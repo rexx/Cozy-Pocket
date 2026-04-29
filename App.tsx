@@ -10,7 +10,7 @@ import SearchPage from './components/SearchPage';
 import HomePage from './components/HomePage';
 import MonthlyStatsPage from './components/MonthlyStatsPage';
 import MerchantManagementPage from './components/MerchantManagementPage';
-import { CalendarViewMode, SuggestionIndex, SuggestionItem, Transaction } from './types';
+import { CalendarViewMode, PaymentMethodDisplayMode, SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
@@ -20,6 +20,7 @@ import { getMonthTransactions, getStatsByCurrency } from './services/statsServic
 import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 import { showAutoDismissToast } from './services/dialogService';
+import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getPaymentMethodDisplayMode } from './preferences';
 
 type AppView = 'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management';
 
@@ -161,6 +162,7 @@ const App: React.FC = () => {
   const [prefilledTransaction, setPrefilledTransaction] = useState<Omit<Transaction, 'id'> | null>(null);
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
+  const [paymentMethodDisplayMode, setPaymentMethodDisplayMode] = useState<PaymentMethodDisplayMode>('text');
   const [syncProgressUI, setSyncProgressUI] = useState<{
     visible: boolean;
     label: string;
@@ -208,12 +210,14 @@ const App: React.FC = () => {
     try {
       const allTransactions = await db.transactions.toArray();
       setTransactions(allTransactions);
-      const [defaultCurrencySetting, enabledCurrenciesSetting] = await Promise.all([
+      const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting] = await Promise.all([
         db.settings.get('defaultCurrency'),
-        db.settings.get('enabledCurrencies')
+        db.settings.get('enabledCurrencies'),
+        db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY)
       ]);
       const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
       setDefaultCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
+      setPaymentMethodDisplayMode(getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value));
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
     }
@@ -281,15 +285,18 @@ const App: React.FC = () => {
             await db.transactions.bulkPut(normalized);
           }
         }
-        const [defaultCurrencySetting, enabledCurrenciesSetting] = await Promise.all([
+        const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting] = await Promise.all([
           db.settings.get('defaultCurrency'),
-          db.settings.get('enabledCurrencies')
+          db.settings.get('enabledCurrencies'),
+          db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY)
         ]);
         const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
         const safeDefaultCurrency = getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies);
+        const safePaymentMethodDisplayMode = getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value);
         await db.settings.bulkPut([
           { key: 'enabledCurrencies', value: enabledCurrencies },
-          { key: 'defaultCurrency', value: safeDefaultCurrency }
+          { key: 'defaultCurrency', value: safeDefaultCurrency },
+          { key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: safePaymentMethodDisplayMode }
         ]);
         await refreshData();
       } catch (err: any) {
@@ -818,6 +825,7 @@ const App: React.FC = () => {
           transactions={transactions}
           initialDate={selectedDate}
           defaultCurrency={defaultCurrency}
+          paymentMethodDisplayMode={paymentMethodDisplayMode}
           onBack={() => navigateBack('home')}
           onTransactionClick={handleEditItem}
         />
@@ -853,6 +861,8 @@ const App: React.FC = () => {
           onOpenMerchantManagement={() => setActiveView('merchant-management')}
           onNotify={showToast}
           isOffline={isOfflineMode}
+          paymentMethodDisplayMode={paymentMethodDisplayMode}
+          onPaymentMethodDisplayModeChange={setPaymentMethodDisplayMode}
           tagSummaries={tagUsageSummaries}
           onPreviewTagRename={previewTagRename}
           onRenameTag={renameTag}
@@ -884,6 +894,7 @@ const App: React.FC = () => {
         {toastMessage && <SuccessToast message={toastMessage} />}
         <MerchantManagementPage
           transactions={transactions}
+          paymentMethodDisplayMode={paymentMethodDisplayMode}
           onClose={() => navigateBack('settings')}
           onDataChange={refreshData}
           onPreviewMerchantRename={previewMerchantRename}
@@ -922,6 +933,7 @@ const App: React.FC = () => {
           }}
           isSyncing={syncProgressUI.visible}
           isOffline={isOfflineMode}
+          paymentMethodDisplayMode={paymentMethodDisplayMode}
           onTransactionClick={handleEditItem}
         />
         {isModalOpen && (
@@ -951,6 +963,7 @@ const App: React.FC = () => {
           searchQuery={searchQuery}
           filteredTransactions={filteredTransactions}
           searchInputRef={searchInputRef}
+          paymentMethodDisplayMode={paymentMethodDisplayMode}
           onBack={closeSearchPage}
           onQueryChange={setSearchQuery}
           onClearQuery={() => setSearchQuery('')}
@@ -988,6 +1001,7 @@ const App: React.FC = () => {
         defaultCurrency={defaultCurrency}
         isOffline={isOfflineMode}
         isSyncProgressVisible={syncProgressUI.visible}
+        paymentMethodDisplayMode={paymentMethodDisplayMode}
         onDateSelect={setSelectedDate}
         onCalendarViewModeChange={setCalendarViewMode}
         onPrevDay={() => setSelectedDate(addDays(selectedDate, -1))}

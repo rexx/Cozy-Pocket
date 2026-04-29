@@ -15,7 +15,7 @@
 11. ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
 12. 🔴 修正設定頁面 header 顏色不符合整體視覺設計的問題。（計劃：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
 13. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
-14. 🟡 將交易項目的支付方式改為可用圖示顯示，提升列表辨識度。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
+14. ✅ 交易列表已支援支付方式文字／圖示顯示偏好，預設保留文字並可在偏好設定切換。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 15. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
 16. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。（計劃：[category-stats.md](docs/todo-references/category-stats.md)）
 17. 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。（計劃：[merchant-stats.md](docs/todo-references/merchant-stats.md)）
@@ -63,7 +63,7 @@
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
 - ✅ 首頁已支援週／月切換模式：週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。
 - ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
-- 🟡 將交易項目的支付方式改為可用圖示顯示，提升列表辨識度。（示意圖：[payment-method-icon.jpg](docs/todo-references/payment-method-icon.jpg)；計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
+- ✅ 交易項目的支付方式已支援文字／圖示顯示偏好，預設保留文字，圖示模式使用與新增／編輯 modal 一致的圖示。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 
 ## 設定頁體驗
 

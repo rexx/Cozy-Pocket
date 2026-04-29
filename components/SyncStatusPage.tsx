@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { Transaction } from '../types';
+import { PaymentMethodDisplayMode, Transaction } from '../types';
 import { toEpochMillis } from '../time';
 import TransactionItem from './TransactionItem';
 import PageHeader from './PageHeader';
@@ -11,6 +11,7 @@ interface SyncStatusPageProps {
   onSyncNow: () => Promise<void>;
   isSyncing: boolean;
   isOffline: boolean;
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onTransactionClick: (transaction: Transaction) => void;
 }
 
@@ -47,6 +48,7 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({
   onSyncNow,
   isSyncing,
   isOffline,
+  paymentMethodDisplayMode,
   onTransactionClick,
 }) => {
   const [hideSyncedItems, setHideSyncedItems] = useState(true);
@@ -145,6 +147,7 @@ const SyncStatusPage: React.FC<SyncStatusPageProps> = ({
                   <TransactionItem
                     transaction={tx}
                     onClick={onTransactionClick}
+                    paymentMethodDisplayMode={paymentMethodDisplayMode}
                     showDateTime
                   />
                   {tx.syncStatus === 'error' && tx.lastSyncError && (

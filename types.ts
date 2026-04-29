@@ -1,5 +1,6 @@
 
 export type PaymentMethod = '現金' | '信用卡' | '電子支付' | '轉帳';
+export type PaymentMethodDisplayMode = 'text' | 'icon';
 export type TransactionType = '支出' | '收入';
 export type CalendarViewMode = 'week' | 'month';
 

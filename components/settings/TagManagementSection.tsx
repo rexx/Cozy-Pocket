@@ -1,6 +1,6 @@
 import React from 'react';
 import { PencilLine, Tags } from 'lucide-react';
-import { Transaction } from '../../types';
+import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { TagRenamePreview, TagUsageSummary } from '../../services/tagService';
 import TransactionItem from '../TransactionItem';
 import SettingsSection, {
@@ -17,6 +17,7 @@ interface TagManagementSectionProps {
   renamedTagInput: string;
   tagRenamePreview: TagRenamePreview | null;
   tagTransactions: Transaction[];
+  paymentMethodDisplayMode: PaymentMethodDisplayMode;
   isTagPreviewLoading: boolean;
   isTagRenameSubmitting: boolean;
   isTagTransactionsLoading: boolean;
@@ -33,6 +34,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
   renamedTagInput,
   tagRenamePreview,
   tagTransactions,
+  paymentMethodDisplayMode,
   isTagPreviewLoading,
   isTagRenameSubmitting,
   isTagTransactionsLoading,
@@ -144,6 +146,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
                         key={tx.id}
                         transaction={tx}
                         onClick={onTagTransactionClick}
+                        paymentMethodDisplayMode={paymentMethodDisplayMode}
                         showDateTime
                       />
                     ))
