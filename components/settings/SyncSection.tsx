@@ -1,5 +1,5 @@
 import React from 'react';
-import { CloudUpload } from 'lucide-react';
+import { CloudDownload, CloudUpload, Database, History } from 'lucide-react';
 import SettingsSection, {
   sectionCyanButtonClassName,
   sectionInputClassName,
@@ -15,6 +15,9 @@ interface SyncSectionProps {
   setSyncToken: (value: string) => void;
   onSaveSyncConfig: () => void;
   onOpenSyncProgress: () => void;
+  onOpenPullDialog: () => void;
+  onOpenPullReports: () => void;
+  onUseMockSyncConfig: () => void;
   isOffline: boolean;
 }
 
@@ -25,6 +28,9 @@ const SyncSection: React.FC<SyncSectionProps> = ({
   setSyncToken,
   onSaveSyncConfig,
   onOpenSyncProgress,
+  onOpenPullDialog,
+  onOpenPullReports,
+  onUseMockSyncConfig,
   isOffline,
 }) => {
   return (
@@ -63,6 +69,18 @@ const SyncSection: React.FC<SyncSectionProps> = ({
             <button type="button" onClick={onOpenSyncProgress} className={sectionSecondaryButtonClassName}>
               <CloudUpload size={16} />
               開啟同步狀態頁
+            </button>
+            <button type="button" onClick={onOpenPullDialog} className={sectionSecondaryButtonClassName}>
+              <CloudDownload size={16} />
+              從 cloud 拉回本機
+            </button>
+            <button type="button" onClick={onOpenPullReports} className={sectionSecondaryButtonClassName}>
+              <History size={16} />
+              查看 pull 紀錄
+            </button>
+            <button type="button" onClick={onUseMockSyncConfig} className={sectionSecondaryButtonClassName}>
+              <Database size={16} />
+              使用 mock API
             </button>
           </div>
         </div>

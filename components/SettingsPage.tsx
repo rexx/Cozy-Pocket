@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { ArrowLeft, AlertTriangle, CheckCircle2, Store } from 'lucide-react';
-import { PaymentMethodDisplayMode, Transaction } from '../types';
+import { PaymentMethodDisplayMode, PullReport, Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
@@ -22,7 +22,10 @@ interface SettingsPageProps {
   onInsertExamples: () => Promise<number>;
   onTriggerSync: (label: string) => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
   onOpenSyncProgress: () => void;
+  onOpenPullReports: (reportId?: string) => void;
   onOpenMerchantManagement: () => void;
+  onPullFromCloud: (year: string) => Promise<{ report: PullReport }>;
+  pullYearOptions: string[];
   onNotify: (message: string) => void;
   isOffline: boolean;
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
@@ -35,13 +38,19 @@ interface SettingsPageProps {
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
+const MOCK_SYNC_API_URL = 'mock://cloud-sync';
+const MOCK_SYNC_TOKEN = 'mock-token';
+
 const SettingsPage: React.FC<SettingsPageProps> = ({
   onClose,
   onDataChange,
   onInsertExamples,
   onTriggerSync,
   onOpenSyncProgress,
+  onOpenPullReports,
   onOpenMerchantManagement,
+  onPullFromCloud,
+  pullYearOptions,
   onNotify,
   isOffline,
   paymentMethodDisplayMode,
@@ -75,6 +84,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     duplicateWithExistingCount: number;
     duplicateInFileCount: number;
   } | null>(null);
+  const [isPullDialogOpen, setIsPullDialogOpen] = useState(false);
+  const [selectedPullYear, setSelectedPullYear] = useState('');
+  const [isPullSubmitting, setIsPullSubmitting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -90,6 +102,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (tokenSetting?.value) setSyncToken(tokenSetting.value);
     });
   }, []);
+
+  useEffect(() => {
+    if (pullYearOptions.length === 0) {
+      setSelectedPullYear('');
+      return;
+    }
+
+    setSelectedPullYear((current) => (
+      current && pullYearOptions.includes(current)
+        ? current
+        : pullYearOptions[0]
+    ));
+  }, [pullYearOptions]);
 
   useEffect(() => {
     if (!selectedTagToRename) return;
@@ -201,6 +226,77 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       }
     } catch (err: any) {
       setStatus({ type: 'error', message: `同步設定儲存失敗: ${err.message}` });
+    }
+  };
+
+  const useMockSyncConfig = () => {
+    setSyncApiUrl(MOCK_SYNC_API_URL);
+    setSyncToken(MOCK_SYNC_TOKEN);
+    setStatus({
+      type: 'success',
+      message: '已填入 mock API 設定\n按「儲存同步設定」後即可使用本機 mock cloud 測試。',
+    });
+  };
+
+  const openPullDialog = () => {
+    setStatus({ type: 'idle', message: '' });
+    setIsPullDialogOpen(true);
+  };
+
+  const closePullDialog = () => {
+    if (isPullSubmitting) return;
+    setIsPullDialogOpen(false);
+  };
+
+  const handlePullFromCloud = async () => {
+    if (!selectedPullYear) {
+      setStatus({ type: 'error', message: '請先選擇要 pull 的年份' });
+      return;
+    }
+
+    try {
+      setIsPullSubmitting(true);
+      setStatus({ type: 'idle', message: '' });
+      const { report } = await onPullFromCloud(selectedPullYear);
+      setIsPullDialogOpen(false);
+      onOpenPullReports(report.id);
+
+      if (report.status === 'failed') {
+        setStatus({
+          type: 'error',
+          message: `Pull ${report.year} 年資料失敗\n${report.runError || '請稍後再試'}`,
+        });
+        return;
+      }
+
+      const summaryMessage = [
+        `Fetched ${report.summary.fetched}`,
+        `Inserted ${report.summary.insertedFromCloud}`,
+        `Updated ${report.summary.updatedFromCloud}`,
+        `Local Updated ${report.summary.pushedLocalUpdateToCloud ?? 0}`,
+        `Local Inserted ${report.summary.insertedLocalOnlyToCloud ?? 0}`,
+        `Unchanged ${report.summary.unchanged}`,
+        `Failed ${report.summary.failed}`,
+      ].join(' / ');
+
+      if (report.status === 'partial') {
+        onNotify(`已完成 ${report.year} 年 pull，但有部分失敗`);
+        setStatus({
+          type: 'error',
+          message: `已完成 ${report.year} 年 pull，但有部分失敗\n${summaryMessage}`,
+        });
+        return;
+      }
+
+      onNotify(`已從 cloud 拉回 ${report.year} 年資料`);
+      setStatus({
+        type: 'success',
+        message: `已完成 ${report.year} 年 pull\n${summaryMessage}`,
+      });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || '從 cloud 拉資料失敗' });
+    } finally {
+      setIsPullSubmitting(false);
     }
   };
 
@@ -587,6 +683,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               setSyncToken={setSyncToken}
               onSaveSyncConfig={() => void saveSyncConfig()}
               onOpenSyncProgress={onOpenSyncProgress}
+              onOpenPullDialog={openPullDialog}
+              onOpenPullReports={onOpenPullReports}
+              onUseMockSyncConfig={useMockSyncConfig}
               isOffline={isOffline}
             />
           </div>
@@ -666,6 +765,52 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           </div>
         </div>
       </div>
+
+      {isPullDialogOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 px-4">
+          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#171a29] p-6 shadow-2xl">
+            <h2 className="text-lg font-black text-white">從 cloud 拉回本機</h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-300">
+              一次只處理單一年份。系統會依 version 與 updatedAt 自動判斷要更新本機或回推雲端，並留下完整 pull 報告。
+            </p>
+
+            <div className="mt-5 space-y-3">
+              <label className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+                選擇年份
+              </label>
+              <select
+                value={selectedPullYear}
+                onChange={(e) => setSelectedPullYear(e.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-[#0f1321] px-3 py-3 text-sm font-bold text-white outline-none"
+              >
+                {pullYearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={closePullDialog}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black text-slate-100"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePullFromCloud()}
+                disabled={isPullSubmitting || !selectedPullYear}
+                className="rounded-2xl border border-cyan-400/25 bg-cyan-500/15 px-4 py-3 text-sm font-black text-cyan-200 disabled:opacity-40"
+              >
+                {isPullSubmitting ? '處理中...' : '開始 pull'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

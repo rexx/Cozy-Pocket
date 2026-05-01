@@ -1,8 +1,9 @@
 /**
  * Cozy Pocket - Google Apps Script (Phase 1)
  * - action: "create" (upsert by id)
- * - payload: { token, action, items: Transaction[] }
- * - response: 200-wrapping JSON with per-item results
+ * - action: "get" (pull by year)
+ * - payload: { token, action, items?: Transaction[], year?: string }
+ * - response: 200-wrapping JSON with per-item results or pull items
  *
  * Setup:
  * 1) Open your Google Sheet -> Extensions -> Apps Script
@@ -44,18 +45,27 @@ function doPost(e) {
       return json({ status: 'unauthorized' });
     }
 
-    if (body.action !== 'create') {
-      return json({ status: 'error', message: 'Invalid action. Phase 1 supports only action=create.' });
-    }
-
-    const items = Array.isArray(body.items) ? body.items : [];
-    if (items.length === 0) {
-      return json({ status: 'error', message: 'items is required and must be a non-empty array' });
-    }
-
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const results = processCreateItems(ss, items);
-    return json({ status: 'success', results: results });
+    if (body.action === 'create') {
+      const items = Array.isArray(body.items) ? body.items : [];
+      if (items.length === 0) {
+        return json({ status: 'error', message: 'items is required and must be a non-empty array' });
+      }
+
+      const results = processCreateItems(ss, items);
+      return json({ status: 'success', results: results });
+    }
+
+    if (body.action === 'get') {
+      const year = String(body.year || '').trim();
+      if (!year) {
+        return json({ status: 'error', message: 'year is required for action=get' });
+      }
+
+      return json({ status: 'success', year: year, items: processGetItems(ss, year) });
+    }
+
+    return json({ status: 'error', message: 'Invalid action. Supported actions: create, get.' });
   } catch (err) {
     return json({ status: 'error', message: String(err && err.message ? err.message : err) });
   }
@@ -258,6 +268,36 @@ function loadRecordMap(sheet) {
     };
   }
   return map;
+}
+
+function processGetItems(ss, year) {
+  const sheet = ss.getSheetByName(year);
+  if (!sheet || sheet.getLastRow() <= 1) {
+    return [];
+  }
+
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, SHEET_HEADERS.length).getValues();
+  return values.map(function (row) {
+    return {
+      id: String(row[0] || '').trim(),
+      type: String(row[1] || ''),
+      amount: Number(row[2] || 0),
+      currency: String(row[3] || ''),
+      categoryId: String(row[4] || ''),
+      subCategoryId: String(row[5] || ''),
+      name: String(row[6] || ''),
+      merchant: String(row[7] || ''),
+      note: String(row[8] || ''),
+      timestamp: toNumber(row[9], 0),
+      readableDateTime: String(row[10] || ''),
+      paymentMethod: String(row[11] || ''),
+      tags: String(row[12] || ''),
+      updatedAt: toNumber(row[13], 0),
+      version: toNumber(row[14], 1),
+    };
+  }).filter(function (item) {
+    return item.id;
+  });
 }
 
 function resolveSyncDecision(existing, incomingVersion, incomingUpdatedAt) {

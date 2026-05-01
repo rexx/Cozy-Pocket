@@ -10,10 +10,11 @@ import SearchPage from './components/SearchPage';
 import HomePage from './components/HomePage';
 import MonthlyStatsPage from './components/MonthlyStatsPage';
 import MerchantManagementPage from './components/MerchantManagementPage';
-import { CalendarViewMode, PaymentMethodDisplayMode, SuggestionIndex, SuggestionItem, Transaction } from './types';
+import PullReportsPage from './components/PullReportsPage';
+import { CalendarViewMode, PaymentMethodDisplayMode, PullReport, SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
-import { SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
+import { pullTransactionsFromCloud, SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { buildMerchantRenamePreview, getTransactionsByMerchant, normalizeMerchantName, renameMerchantInTransactions } from './services/merchantService';
 import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
@@ -22,7 +23,7 @@ import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 import { showAutoDismissToast } from './services/dialogService';
 import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getPaymentMethodDisplayMode } from './preferences';
 
-type AppView = 'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management';
+type AppView = 'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management' | 'pull-reports';
 
 interface AppHistoryState {
   view: AppView;
@@ -155,6 +156,8 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(getInitialCalendarViewMode);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [pullReports, setPullReports] = useState<PullReport[]>([]);
+  const [focusedPullReportId, setFocusedPullReportId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalInstanceKey, setModalInstanceKey] = useState(0);
@@ -208,8 +211,12 @@ const App: React.FC = () => {
 
   const refreshData = useCallback(async () => {
     try {
-      const allTransactions = await db.transactions.toArray();
+      const [allTransactions, allPullReports] = await Promise.all([
+        db.transactions.toArray(),
+        db.pullReports.orderBy('createdAt').reverse().toArray(),
+      ]);
       setTransactions(allTransactions);
+      setPullReports(allPullReports);
       const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting] = await Promise.all([
         db.settings.get('defaultCurrency'),
         db.settings.get('enabledCurrencies'),
@@ -460,10 +467,31 @@ const App: React.FC = () => {
 
   const suggestionIndex = useMemo<SuggestionIndex>(() => buildSuggestionIndex(transactions), [transactions]);
   const tagUsageSummaries = useMemo(() => getTagUsageSummaries(transactions), [transactions]);
+  const pullYearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years = new Set<string>([
+      String(currentYear - 1),
+      String(currentYear),
+      String(currentYear + 1),
+    ]);
+
+    for (const tx of transactions) {
+      years.add(String(new Date(toEpochMillis(tx.timestamp)).getFullYear()));
+    }
+
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [transactions]);
 
   const openSyncStatusFrom = useCallback((origin: 'home' | 'settings') => {
     setSyncReturnView(origin);
     setActiveView('sync');
+  }, []);
+
+  const openPullReportsPage = useCallback((reportId?: string) => {
+    if (reportId) {
+      setFocusedPullReportId(reportId);
+    }
+    setActiveView('pull-reports');
   }, []);
 
   const navigateBack = useCallback((fallbackView: AppView, fallbackSyncReturnView?: 'home' | 'settings') => {
@@ -488,6 +516,17 @@ const App: React.FC = () => {
   const selectTransactionDate = useCallback((transaction: Pick<Transaction, 'timestamp'>) => {
     setSelectedDate(new Date(toEpochMillis(transaction.timestamp)));
   }, []);
+
+  const pullYearFromCloud = useCallback(async (year: string) => {
+    const result = await pullTransactionsFromCloud(year);
+    await refreshData();
+    return result;
+  }, [refreshData]);
+
+  const deletePullReport = useCallback(async (reportId: string) => {
+    await db.pullReports.delete(reportId);
+    await refreshData();
+  }, [refreshData]);
 
   const addTransaction = async (newTx: Omit<Transaction, 'id'>) => {
     let attempts = 0;
@@ -858,7 +897,10 @@ const App: React.FC = () => {
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
           onOpenSyncProgress={() => openSyncStatusFrom('settings')}
+          onOpenPullReports={openPullReportsPage}
           onOpenMerchantManagement={() => setActiveView('merchant-management')}
+          onPullFromCloud={pullYearFromCloud}
+          pullYearOptions={pullYearOptions}
           onNotify={showToast}
           isOffline={isOfflineMode}
           paymentMethodDisplayMode={paymentMethodDisplayMode}
@@ -868,6 +910,35 @@ const App: React.FC = () => {
           onRenameTag={renameTag}
           onGetTagTransactions={getTagTransactions}
           onTagTransactionClick={handleEditItem}
+        />
+        {isModalOpen && (
+          <AddTransactionModal
+            key={modalInstanceKey}
+            initialDate={selectedDate}
+            editingTransaction={editingTransaction}
+            prefilledTransaction={prefilledTransaction}
+            onClose={closeTransactionModal}
+            onAdd={addTransaction}
+            onUpdate={updateTransaction}
+            onDelete={deleteTransaction}
+            onDuplicate={handleDuplicateItem}
+            suggestions={suggestionIndex}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (activeView === 'pull-reports') {
+    return (
+      <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
+        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        {toastMessage && <SuccessToast message={toastMessage} />}
+        <PullReportsPage
+          reports={pullReports}
+          focusReportId={focusedPullReportId}
+          onClose={() => navigateBack('settings')}
+          onDeleteReport={deletePullReport}
         />
         {isModalOpen && (
           <AddTransactionModal
