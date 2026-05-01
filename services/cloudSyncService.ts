@@ -230,11 +230,11 @@ const buildMockTransaction = (
     subCategoryId: 'lunch',
     name: `Mock ${idSuffix}`,
     merchant: 'Mock Shop',
-    note: 'Mock pull fixture',
+    note: 'Mock year sync fixture',
     timestamp,
     readableDateTime: formatReadableDateTime(timestamp),
     paymentMethod: '現金',
-    tags: 'mock pull',
+    tags: 'mock sync',
     updatedAt: toEpochMillis(timestamp),
     version: 1,
     syncStatus: 'synced',
@@ -766,14 +766,14 @@ const fetchPullItemsWithConfig = async (
         year,
         error: json?.status === 'unauthorized'
           ? normalizeErrorMessage(json?.message, 'Unauthorized')
-          : normalizeErrorMessage(json?.message, 'Pull failed'),
+          : normalizeErrorMessage(json?.message, 'Year sync fetch failed'),
       };
     }
 
     if (!Array.isArray(json.items)) {
       return {
         year,
-        error: 'Missing items array in pull response',
+        error: 'Missing items array in sync response',
       };
     }
 
@@ -1023,7 +1023,7 @@ export const pullTransactionsFromCloud = async (year: string): Promise<PullTrans
   if (!normalizedYear) {
     return {
       report: await persistPullReport(
-        createPullReportRecord(year, summary, entries, 'Pull year is required')
+        createPullReportRecord(year, summary, entries, 'Sync year is required')
       ),
     };
   }
@@ -1104,7 +1104,7 @@ export const pullTransactionsFromCloud = async (year: string): Promise<PullTrans
           summary,
           transactionId,
           'local_write_failed',
-          normalizeErrorMessage(error, 'Failed to write pulled transaction'),
+          normalizeErrorMessage(error, 'Failed to write cloud transaction'),
           undefined,
           nextTx
         );

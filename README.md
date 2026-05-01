@@ -27,12 +27,12 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 
 ## 3. 雲端同步規格 (Cloud Sync Specification)
 
-目前已實作 **Phase 1.5（create + pending sync + manual pull by year）** 的雲端同步流程：
+目前已實作 **Phase 1.5（create + pending sync + manual year sync）** 的雲端同步流程：
 *   透過 Google Apps Script 將資料自動備份至 Google Sheets。
 *   新增、更新、匯入、插入範例資料後會觸發同步。
 *   App 啟動後會自動補送尚未同步完成的資料。
-*   使用者可從設定頁手動指定年份，將 cloud 資料拉回本機，並依 `version` / `updatedAt` 自動 merge。
-*   每次 pull 都會在本地保存完整報告，可回看變更紀錄與手動刪除報告。
+*   使用者可從設定頁手動指定年份，執行年度雲端同步，並依 `version` / `updatedAt` 自動雙向 merge。
+*   每次年度雲端同步都會在本地保存完整報告，可回看變更紀錄與手動刪除報告。
 *   交易列表會顯示同步狀態點，且可從「同步狀態頁」查看待同步 / 同步中 / 已同步 / 失敗總覽。
 *   通知分工採用短 toast + 頁內詳細 status 的雙層設計：短成功摘要走 toast，長結果與部分失敗細節保留在頁內狀態區塊。
 *   需要使用者確認的危險操作使用 `sweetalert2` app 內對話框；交易新增、修改、刪除成功目前使用 `sweetalert2` auto-dismiss toast。
@@ -45,7 +45,7 @@ Sync API URL: mock://cloud-sync
 Sync Token: mock-token
 ```
 
-mock cloud 會保存在瀏覽器 `localStorage`，支援 `create` upsert 與按年份 `get` pull，不需要先部署 Google Apps Script。
+mock cloud 會保存在瀏覽器 `localStorage`，支援 `create` upsert 與按年份 `get` 讀取，不需要先部署 Google Apps Script。
 
 完整規格請見：[Cloud Sync Specification](docs/cloud-sync-specification.md)
 

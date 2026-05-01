@@ -1,9 +1,9 @@
 /**
  * Cozy Pocket - Google Apps Script (Phase 1)
  * - action: "create" (upsert by id)
- * - action: "get" (pull by year)
+ * - action: "get" (fetch by year for manual year sync)
  * - payload: { token, action, items?: Transaction[], year?: string }
- * - response: 200-wrapping JSON with per-item results or pull items
+ * - response: 200-wrapping JSON with per-item results or fetched items
  *
  * Setup:
  * 1) Open your Google Sheet -> Extensions -> Apps Script

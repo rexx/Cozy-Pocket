@@ -250,7 +250,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handlePullFromCloud = async () => {
     if (!selectedPullYear) {
-      setStatus({ type: 'error', message: '請先選擇要 pull 的年份' });
+      setStatus({ type: 'error', message: '請先選擇要同步的年份' });
       return;
     }
 
@@ -264,37 +264,37 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (report.status === 'failed') {
         setStatus({
           type: 'error',
-          message: `Pull ${report.year} 年資料失敗\n${report.runError || '請稍後再試'}`,
+          message: `${report.year} 年年度雲端同步失敗\n${report.runError || '請稍後再試'}`,
         });
         return;
       }
 
       const summaryMessage = [
-        `Fetched ${report.summary.fetched}`,
-        `Inserted ${report.summary.insertedFromCloud}`,
-        `Updated ${report.summary.updatedFromCloud}`,
-        `Local Updated ${report.summary.pushedLocalUpdateToCloud ?? 0}`,
-        `Local Inserted ${report.summary.insertedLocalOnlyToCloud ?? 0}`,
-        `Unchanged ${report.summary.unchanged}`,
-        `Failed ${report.summary.failed}`,
+        `雲端讀取 ${report.summary.fetched}`,
+        `雲端新增本機 ${report.summary.insertedFromCloud}`,
+        `雲端覆蓋本機 ${report.summary.updatedFromCloud}`,
+        `本機覆蓋雲端 ${report.summary.pushedLocalUpdateToCloud ?? 0}`,
+        `本機新增雲端 ${report.summary.insertedLocalOnlyToCloud ?? 0}`,
+        `未變更 ${report.summary.unchanged}`,
+        `失敗 ${report.summary.failed}`,
       ].join(' / ');
 
       if (report.status === 'partial') {
-        onNotify(`已完成 ${report.year} 年 pull，但有部分失敗`);
+        onNotify(`已完成 ${report.year} 年年度雲端同步，但有部分失敗`);
         setStatus({
           type: 'error',
-          message: `已完成 ${report.year} 年 pull，但有部分失敗\n${summaryMessage}`,
+          message: `已完成 ${report.year} 年年度雲端同步，但有部分失敗\n${summaryMessage}`,
         });
         return;
       }
 
-      onNotify(`已從 cloud 拉回 ${report.year} 年資料`);
+      onNotify(`已完成 ${report.year} 年年度雲端同步`);
       setStatus({
         type: 'success',
-        message: `已完成 ${report.year} 年 pull\n${summaryMessage}`,
+        message: `已完成 ${report.year} 年年度雲端同步\n${summaryMessage}`,
       });
     } catch (err: any) {
-      setStatus({ type: 'error', message: err.message || '從 cloud 拉資料失敗' });
+      setStatus({ type: 'error', message: err.message || '年度雲端同步失敗' });
     } finally {
       setIsPullSubmitting(false);
     }
@@ -769,9 +769,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       {isPullDialogOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 px-4">
           <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#171a29] p-6 shadow-2xl">
-            <h2 className="text-lg font-black text-white">從 cloud 拉回本機</h2>
+            <h2 className="text-lg font-black text-white">年度雲端同步</h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-300">
-              一次只處理單一年份。系統會依 version 與 updatedAt 自動判斷要更新本機或回推雲端，並留下完整 pull 報告。
+              一次只處理單一年份。系統會先讀取該年份雲端資料，再依 version 與 updatedAt 自動判斷要更新本機或回推雲端，並留下完整同步報告。
             </p>
 
             <div className="mt-5 space-y-3">
@@ -805,7 +805,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
                 disabled={isPullSubmitting || !selectedPullYear}
                 className="rounded-2xl border border-cyan-400/25 bg-cyan-500/15 px-4 py-3 text-sm font-black text-cyan-200 disabled:opacity-40"
               >
-                {isPullSubmitting ? '處理中...' : '開始 pull'}
+                {isPullSubmitting ? '處理中...' : '開始同步'}
               </button>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 ## 1. 範圍與決策
 - 同步模式：**Phase 1.5（個人用 / Simple Token）**。
-- 功能範圍：`create + sync + 手動 pull by year`。
+- 功能範圍：`create + sync + 手動年度雲端同步`。
 - `id` 來源：**前端產生並送出**。
 - 本次不做：`get/update/delete`、`keepalive`、`Service Worker Background Sync`、OAuth。
 - 離線策略：**核心記帳可離線，雲同步不在離線時強行送出**。
@@ -87,11 +87,11 @@ this.version(1).stores({
 
 ### 4.1.1 API 路線圖（目前）
 - **Phase 1**：`create`（POST）
-- **Phase 1.5**：`get`（POST / pull by year）
+- **Phase 1.5**：`get`（POST / by year，供年度雲端同步讀取雲端資料）
 - **Phase 3**：`update`（POST）
 - **Phase 4**：`delete`（POST）
 
-### 4.1.2 Pull Request Body（get by year）
+### 4.1.2 Get Request Body（by year）
 - 傳輸格式：`payload=<urlencoded JSON>`
 - `payload` 內容（JSON）：
 ```json
@@ -102,10 +102,10 @@ this.version(1).stores({
 }
 ```
 
-- 一次只拉單一年份。
+- 一次只讀取單一年份。
 - `year` 對應 Google Sheets 中的年份工作表名稱。
 
-### 4.1.3 Pull Response Body
+### 4.1.3 Get Response Body
 ```json
 {
   "status": "success",
@@ -332,18 +332,18 @@ this.version(1).stores({
 - 後續策略：增加手動重試入口與重試統計。
 
 ### 7.5 雲端有資料、本地沒有
-- 情境：其他裝置已上傳，本機未同步拉回。
+- 情境：其他裝置已上傳，本機尚未取得該筆資料。
 - 風險：本地列表與雲端不一致。
-- 現行處理：提供手動 `pull by year` 入口，不自動在啟動時合併。
-- 現行策略：指定年份 pull 時，若本地不存在該筆 `id`，直接新增到本地。
+- 現行處理：提供手動年度雲端同步入口，不自動在啟動時合併。
+- 現行策略：指定年份同步時，若本地不存在該筆 `id`，直接新增到本地。
 
 ### 7.6 同一筆資料內容被修改
 - 情境：多裝置對同一 `id` 先後修改。
 - 風險：版本衝突與資料覆寫爭議。
 - 現行處理：已在 `create`（upsert）實作 conflict policy（`version` 優先，`updatedAt` 次之）。
-- 現行策略：手動 pull 時沿用同一規則做雙向 merge；若本地較新，pull 完成後會再回推雲端。
+- 現行策略：手動年度雲端同步時沿用同一規則做雙向 merge；若本地較新，同步流程會再回推雲端。
 
-### 7.7 Pull 衝突解決規則
+### 7.7 年度雲端同步衝突解決規則
 - 適用情境：本地與雲端都存在同一 `id`，且資料內容不同。
 - 比較欄位：`version`（主）與 `updatedAt`（輔）。
 - 規則：
@@ -353,12 +353,12 @@ this.version(1).stores({
   - 若 `version` 與 `updatedAt` 皆相同：視為相同版本，不做變更。
 - 設計說明：
   - 使用者在 App 本地端調整資料時，`version` 必須 +1，`updatedAt` 必須更新為最新時間。
-  - 若 pull 判定為本地較新，前端會把該筆列入本次回推清單，使用既有 `create` upsert 讓雲端收斂。
-  - 若 pull 判定為雲端較新，前端會直接覆蓋本地。
+  - 若年度雲端同步判定為本地較新，前端會把該筆列入本次回推清單，使用既有 `create` upsert 讓雲端收斂。
+  - 若年度雲端同步判定為雲端較新，前端會直接覆蓋本地。
   - 若指定年份中只有本地有資料、雲端沒有，該筆也會列入回推清單。
 
-### 7.7.1 Pull 報告
-- 每次手動 pull 都會在本地保存一筆完整報告，包含：
+### 7.7.1 同步報告
+- 每次手動年度雲端同步都會在本地保存一筆完整報告，包含：
   - `year`
   - `fetched`
   - `insertedFromCloud`
@@ -369,7 +369,7 @@ this.version(1).stores({
   - `failed`
 - `insertedFromCloud`、`updatedFromCloud`、`pushedLocalUpdateToCloud`、`insertedLocalOnlyToCloud` 會保留完整 id list 與 transaction 快照。
 - `unchanged` 只保留 id list，不保存快照。
-- pull 報告可在 UI 中查看與手動刪除；刪除報告不影響任何交易資料。
+- 同步報告可在 UI 中查看與手動刪除；刪除報告不影響任何交易資料。
 
 ### 7.8 補充風險清單
 - 說明：以下為未來擴充同步時常見衝突來源，Phase 1 先記錄不實作。

@@ -72,11 +72,11 @@ const SyncSection: React.FC<SyncSectionProps> = ({
             </button>
             <button type="button" onClick={onOpenPullDialog} className={sectionSecondaryButtonClassName}>
               <CloudDownload size={16} />
-              從 cloud 拉回本機
+              執行年度雲端同步
             </button>
             <button type="button" onClick={onOpenPullReports} className={sectionSecondaryButtonClassName}>
               <History size={16} />
-              查看 pull 紀錄
+              查看同步紀錄
             </button>
             <button type="button" onClick={onUseMockSyncConfig} className={sectionSecondaryButtonClassName}>
               <Database size={16} />

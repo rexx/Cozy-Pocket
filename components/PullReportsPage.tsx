@@ -29,7 +29,7 @@ const STATUS_UI: Record<PullReport['status'], { label: string; className: string
 type ReportCategory = 'fetched' | PullReportEntry['action'];
 
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
-  fetched: '雲端拉回',
+  fetched: '雲端讀取',
   insertedFromCloud: '雲端新增本機',
   updatedFromCloud: '雲端覆蓋本機',
   pushedLocalUpdateToCloud: '本機覆蓋雲端',
@@ -171,7 +171,7 @@ const PullReportsPage: React.FC<PullReportsPageProps> = ({
   return (
     <div className="flex h-full w-full flex-col bg-[#1a1c2c] text-slate-200">
       <PageHeader
-        title="Pull 紀錄"
+        title="同步紀錄"
         leftAction={<ArrowLeft size={26} />}
         onLeftAction={onClose}
       />
@@ -183,9 +183,9 @@ const PullReportsPage: React.FC<PullReportsPageProps> = ({
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-500/10 text-cyan-200">
                 <FileSearch size={24} />
               </div>
-              <p className="mt-4 text-sm font-black text-white">目前還沒有 pull 紀錄</p>
+              <p className="mt-4 text-sm font-black text-white">目前還沒有同步紀錄</p>
               <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                從設定頁執行按年份 pull 後，完整報告會保存在本機，之後可在這裡回看。
+                從設定頁執行年度雲端同步後，完整報告會保存在本機，之後可在這裡回看。
               </p>
             </div>
           ) : (
@@ -216,12 +216,6 @@ const PullReportsPage: React.FC<PullReportsPageProps> = ({
                             {STATUS_UI[report.status].label}
                           </span>
                         </div>
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-300">
-                          <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">Fetched {report.summary.fetched}</div>
-                          <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">Failed {report.summary.failed}</div>
-                          <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">Insert {report.summary.insertedFromCloud}</div>
-                          <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2">Update {report.summary.updatedFromCloud}</div>
-                        </div>
                       </button>
                     );
                   })}
@@ -235,7 +229,7 @@ const PullReportsPage: React.FC<PullReportsPageProps> = ({
                       <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
                         {new Date(selectedReport.createdAt).toLocaleString('zh-TW', { hour12: false })}
                       </p>
-                      <h2 className="mt-1 text-xl font-black text-white">{selectedReport.year} 年 Pull 報告</h2>
+                      <h2 className="mt-1 text-xl font-black text-white">{selectedReport.year} 年同步報告</h2>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`rounded-2xl border px-3 py-2 text-xs font-black ${STATUS_UI[selectedReport.status].className}`}>
@@ -282,16 +276,7 @@ const PullReportsPage: React.FC<PullReportsPageProps> = ({
 
                   {selectedCategory && (
                     <div className="mt-6">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-black text-white">
-                          {CATEGORY_LABELS[selectedCategory]}
-                        </h3>
-                        <span className="rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-black text-slate-300">
-                          {selectedEntries.length} 筆
-                        </span>
-                      </div>
-
-                      <div className="mt-4 space-y-4">
+                      <div className="space-y-4">
                         {selectedEntries.length === 0 ? (
                           <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center text-xs font-bold text-slate-500">
                             這個分類沒有可顯示的項目
@@ -406,9 +391,9 @@ const PullReportsPage: React.FC<PullReportsPageProps> = ({
       {reportIdPendingDelete && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 px-4">
           <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#171a29] p-6 shadow-2xl">
-            <h2 className="text-lg font-black text-white">刪除 pull 報告</h2>
+            <h2 className="text-lg font-black text-white">刪除同步報告</h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-300">
-              這只會刪掉本地保存的 pull 報告，不會回滾或刪除任何交易資料。
+              這只會刪掉本地保存的同步報告，不會回滾或刪除任何交易資料。
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
