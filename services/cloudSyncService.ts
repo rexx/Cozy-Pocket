@@ -198,6 +198,10 @@ const toPayloadItem = (tx: Transaction) => ({
 
 type SyncPayloadItem = ReturnType<typeof toPayloadItem>;
 
+const hasSamePersistedPayload = (local: Transaction, cloud: Transaction): boolean => {
+  return JSON.stringify(toPayloadItem(local)) === JSON.stringify(toPayloadItem(cloud));
+};
+
 interface MockCloudState {
   items: Record<string, SyncPayloadItem>;
 }
@@ -211,6 +215,10 @@ const getItemYear = (item: Pick<SyncPayloadItem, 'timestamp'>): string => {
 const isMockDemoTransactionId = (id: string, year?: string) => {
   const prefix = year ? `${MOCK_DEMO_ID_PREFIX}-${year}-` : `${MOCK_DEMO_ID_PREFIX}-`;
   return id.startsWith(prefix);
+};
+
+const shouldSimulateMockLocalWriteFailure = (config: SyncConfig, transactionId: string): boolean => {
+  return isMockSyncConfig(config) && transactionId.includes('local-write-fail');
 };
 
 const buildMockTransaction = (
@@ -388,6 +396,14 @@ const prepareMockPullFixture = async (year: string): Promise<PullApiItem[]> => {
       updatedAt: updatedAtBase + 2_000,
       version: 1,
     }),
+    buildMockTransaction(year, 'cloud-only-local-write-fail', {
+      name: 'Mock cloud only local write fail',
+      merchant: 'Cloud Write Fail',
+      amount: -45,
+      timestamp: timestamp + 900,
+      updatedAt: updatedAtBase + 3_000,
+      version: 1,
+    }),
   ];
   const cloudNewerPairs = [
     {
@@ -429,6 +445,44 @@ const prepareMockPullFixture = async (year: string): Promise<PullApiItem[]> => {
         timestamp: timestamp + 1_800,
         updatedAt: updatedAtBase + 12_000,
         version: 2,
+        syncStatus: 'synced',
+      }),
+    },
+    {
+      cloud: buildMockTransaction(year, 'cloud-updatedAt-newer-pharmacy', {
+        name: 'Mock cloud updatedAt newer pharmacy',
+        merchant: 'Cloud Pharmacy',
+        amount: -390,
+        timestamp: timestamp + 2_100,
+        updatedAt: updatedAtBase + 24_000,
+        version: 2,
+      }),
+      local: buildMockTransaction(year, 'cloud-updatedAt-newer-pharmacy', {
+        name: 'Mock local stale pharmacy',
+        merchant: 'Local Pharmacy',
+        amount: -350,
+        timestamp: timestamp + 2_100,
+        updatedAt: updatedAtBase + 14_000,
+        version: 2,
+        syncStatus: 'synced',
+      }),
+    },
+    {
+      cloud: buildMockTransaction(year, 'cloud-newer-local-write-fail', {
+        name: 'Mock cloud newer local write fail',
+        merchant: 'Cloud Update Fail',
+        amount: -610,
+        timestamp: timestamp + 2_250,
+        updatedAt: updatedAtBase + 25_000,
+        version: 3,
+      }),
+      local: buildMockTransaction(year, 'cloud-newer-local-write-fail', {
+        name: 'Mock local write fail target',
+        merchant: 'Local Update Fail',
+        amount: -560,
+        timestamp: timestamp + 2_250,
+        updatedAt: updatedAtBase + 15_000,
+        version: 1,
         syncStatus: 'synced',
       }),
     },
@@ -475,6 +529,29 @@ const prepareMockPullFixture = async (year: string): Promise<PullApiItem[]> => {
       }),
     },
     {
+      cloud: buildMockTransaction(year, 'local-updatedAt-newer-cinema', {
+        name: 'Mock cloud stale cinema',
+        merchant: 'Old Cinema',
+        amount: -260,
+        categoryId: 'entertainment',
+        subCategoryId: 'other_entertainment',
+        timestamp: timestamp + 3_150,
+        updatedAt: updatedAtBase + 31_500,
+        version: 3,
+      }),
+      local: buildMockTransaction(year, 'local-updatedAt-newer-cinema', {
+        name: 'Mock local updatedAt newer cinema',
+        merchant: 'Fresh Cinema',
+        amount: -360,
+        categoryId: 'entertainment',
+        subCategoryId: 'other_entertainment',
+        timestamp: timestamp + 3_150,
+        updatedAt: updatedAtBase + 41_500,
+        version: 3,
+        syncStatus: 'synced',
+      }),
+    },
+    {
       cloud: buildMockTransaction(year, 'local-newer-push-fail', {
         name: 'Mock cloud older push fail',
         merchant: 'Old Cloud Fail',
@@ -512,6 +589,27 @@ const prepareMockPullFixture = async (year: string): Promise<PullApiItem[]> => {
       updatedAt: updatedAtBase + 51_000,
       version: 3,
     }),
+  ];
+  const sameRevisionMismatchPairs = [
+    {
+      cloud: buildMockTransaction(year, 'same-revision-cloud-source', {
+        name: 'Mock cloud source amount',
+        merchant: 'Cloud Source Store',
+        amount: -480,
+        timestamp: timestamp + 4_500,
+        updatedAt: updatedAtBase + 55_000,
+        version: 2,
+      }),
+      local: buildMockTransaction(year, 'same-revision-cloud-source', {
+        name: 'Mock local cache drift amount',
+        merchant: 'Local Cache Store',
+        amount: -999,
+        timestamp: timestamp + 4_500,
+        updatedAt: updatedAtBase + 55_000,
+        version: 2,
+        syncStatus: 'synced',
+      }),
+    },
   ];
   const localOnlyItems = [
     buildMockTransaction(year, 'local-only-breakfast', {
@@ -577,6 +675,7 @@ const prepareMockPullFixture = async (year: string): Promise<PullApiItem[]> => {
     ...cloudNewerPairs.map((pair) => pair.cloud),
     ...localNewerPairs.map((pair) => pair.cloud),
     ...unchangedItems,
+    ...sameRevisionMismatchPairs.map((pair) => pair.cloud),
   ].forEach((tx) => {
     state.items[tx.id] = toPayloadItem(tx);
   });
@@ -586,6 +685,7 @@ const prepareMockPullFixture = async (year: string): Promise<PullApiItem[]> => {
     ...cloudNewerPairs.map((pair) => pair.local),
     ...localNewerPairs.map((pair) => pair.local),
     ...unchangedItems,
+    ...sameRevisionMismatchPairs.map((pair) => pair.local),
     ...localOnlyItems,
   ]);
   await Promise.all([
@@ -598,6 +698,7 @@ const prepareMockPullFixture = async (year: string): Promise<PullApiItem[]> => {
     ...cloudNewerPairs.map((pair) => toPayloadItem(pair.cloud)),
     ...localNewerPairs.map((pair) => toPayloadItem(pair.cloud)),
     ...unchangedItems.map(toPayloadItem),
+    ...sameRevisionMismatchPairs.map((pair) => toPayloadItem(pair.cloud)),
     ...invalidItems,
   ];
 };
@@ -863,7 +964,7 @@ const compareLocalAndCloud = (local: Transaction, cloud: Transaction): 'cloud' |
     return localUpdatedAt > cloudUpdatedAt ? 'local' : 'cloud';
   }
 
-  return 'same';
+  return hasSamePersistedPayload(local, cloud) ? 'same' : 'cloud';
 };
 
 const createPullReportRecord = (
@@ -1090,6 +1191,9 @@ export const pullTransactionsFromCloud = async (year: string): Promise<PullTrans
         lastSyncError: undefined,
       };
       try {
+        if (shouldSimulateMockLocalWriteFailure(config, transactionId)) {
+          throw new Error('Mock local write failure');
+        }
         await db.transactions.put(nextTx);
         entries.push({
           transactionId,
@@ -1126,13 +1230,18 @@ export const pullTransactionsFromCloud = async (year: string): Promise<PullTrans
     if (comparison === 'cloud') {
       const reason = Number(localTx.version || 0) !== Number(cloudTx.version || 0)
         ? 'cloud_newer_version'
-        : 'cloud_newer_updatedAt';
+        : Number(localTx.updatedAt || 0) !== Number(cloudTx.updatedAt || 0)
+          ? 'cloud_newer_updatedAt'
+          : 'content_mismatch';
       const nextTx: Transaction = {
         ...cloudTx,
         syncStatus: 'synced',
         lastSyncError: undefined,
       };
       try {
+        if (shouldSimulateMockLocalWriteFailure(config, transactionId)) {
+          throw new Error('Mock local write failure');
+        }
         await db.transactions.put(nextTx);
         entries.push({
           transactionId,
@@ -1165,6 +1274,9 @@ export const pullTransactionsFromCloud = async (year: string): Promise<PullTrans
       lastSyncError: undefined,
     };
     try {
+      if (shouldSimulateMockLocalWriteFailure(config, transactionId)) {
+        throw new Error('Mock local write failure');
+      }
       await db.transactions.put(pushBackTx);
       pushBackItems.push(pushBackTx);
       entries.push({
@@ -1196,6 +1308,9 @@ export const pullTransactionsFromCloud = async (year: string): Promise<PullTrans
       lastSyncError: undefined,
     };
     try {
+      if (shouldSimulateMockLocalWriteFailure(config, localTx.id)) {
+        throw new Error('Mock local write failure');
+      }
       await db.transactions.put(pushBackTx);
       pushBackItems.push(pushBackTx);
       entries.push({

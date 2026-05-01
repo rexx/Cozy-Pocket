@@ -215,7 +215,7 @@ this.version(1).stores({
 4. 同 `id` 已存在時，執行 upsert conflict 規則：
    - `incoming.version > existing.version`：更新雲端列（`success`）
    - `incoming.version === existing.version` 且 `incoming.updatedAt > existing.updatedAt`：更新雲端列（`success`）
-   - `incoming.version === existing.version` 且 `incoming.updatedAt === existing.updatedAt`：視為重送（`skipped`）
+   - `incoming.version === existing.version` 且 `incoming.updatedAt === existing.updatedAt`：雲端列視為 source of truth，不覆寫雲端；若 payload 相同則為冪等重送（`skipped`），若 payload 不同則保留雲端資料，等待年度雲端同步將本地 cache 收斂回雲端版本。
    - 其餘情況：回傳衝突錯誤（`error`, `message: "Conflict: stale version"`）
 5. 前端依 `results[]` 逐筆更新同步狀態（`success/skipped/error`）。
 6. 若裝置離線，前端不送出 `create` 請求，資料維持在本地 `pending` 狀態，待下次有網路時補送。
@@ -350,12 +350,30 @@ this.version(1).stores({
   - 若 `local.version > cloud.version`：以本地為準（覆寫雲端）。
   - 若 `local.version < cloud.version`：以雲端為準（覆寫本地）。
   - 若 `local.version === cloud.version`：比較 `updatedAt`，較新者為準。
-  - 若 `version` 與 `updatedAt` 皆相同：視為相同版本，不做變更。
+  - 若 `version` 與 `updatedAt` 皆相同，且持久化 payload 相同：視為相同版本，不做變更。
+  - 若 `version` 與 `updatedAt` 皆相同，但持久化 payload 不同：以雲端為準（覆寫本地 cache），原因標記為 `content_mismatch`。
 - 設計說明：
+  - 本機資料只視為 cache；雲端資料是 source of truth。當 revision metadata 無法判斷勝出端時，不應讓本機 cache 覆蓋雲端。
   - 使用者在 App 本地端調整資料時，`version` 必須 +1，`updatedAt` 必須更新為最新時間。
   - 若年度雲端同步判定為本地較新，前端會把該筆列入本次回推清單，使用既有 `create` upsert 讓雲端收斂。
   - 若年度雲端同步判定為雲端較新，前端會直接覆蓋本地。
   - 若指定年份中只有本地有資料、雲端沒有，該筆也會列入回推清單。
+
+#### 年度雲端同步情境表
+
+| 情境 | 處理方式 | 報告分類 | 快照保存 |
+| --- | --- | --- | --- |
+| 雲端有、本地沒有 | 新增到本地 | `insertedFromCloud`（雲端新增本機） | 保存新增後交易 |
+| 本地有、雲端沒有 | 使用 `create` upsert 新增到雲端 | `insertedLocalOnlyToCloud`（本機新增雲端） | 保存本地交易 |
+| 同 `id`，雲端 `version` 較新 | 雲端覆蓋本地 | `updatedFromCloud`（雲端覆蓋本機） | 保存 before/after |
+| 同 `id`，本地 `version` 較新 | 本地回推覆蓋雲端 | `pushedLocalUpdateToCloud`（本機覆蓋雲端） | 保存 before/after |
+| 同 `id`、同 `version`，雲端 `updatedAt` 較新 | 雲端覆蓋本地 | `updatedFromCloud`（雲端覆蓋本機） | 保存 before/after |
+| 同 `id`、同 `version`，本地 `updatedAt` 較新 | 本地回推覆蓋雲端 | `pushedLocalUpdateToCloud`（本機覆蓋雲端） | 保存 before/after |
+| 同 `id`、同 `version`、同 `updatedAt`，payload 也相同 | 不處理 | `unchanged`（未變更） | 只保存 ID，不保存快照 |
+| 同 `id`、同 `version`、同 `updatedAt`，但 payload 不同 | 雲端為 source of truth，覆蓋本地 cache | `updatedFromCloud`（雲端覆蓋本機），reason: `content_mismatch` | 保存 before/after |
+| 雲端資料格式不合法 | 不寫入本地，記錄錯誤 | `failed`（失敗） | 盡可能保存可用資訊 |
+| 本地寫入失敗 | 不完成該筆 merge，記錄錯誤 | `failed`（失敗） | 保存 before/after（若可取得） |
+| 回推雲端失敗 | 該筆回推失敗，保留本地同步錯誤 | `failed`（失敗） | 保存 before/after（若可取得） |
 
 ### 7.7.1 同步報告
 - 每次手動年度雲端同步都會在本地保存一筆完整報告，包含：

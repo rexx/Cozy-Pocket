@@ -55,6 +55,7 @@ export type PullReportEntryReason =
   | 'local_newer_version'
   | 'local_newer_updatedAt'
   | 'identical'
+  | 'content_mismatch'
   | 'invalid_cloud_item'
   | 'local_write_failed'
   | 'push_back_failed';

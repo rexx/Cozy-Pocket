@@ -14,6 +14,7 @@
 ## 前端已完成
 
 - `services/cloudSyncService.ts` 已實作按年份讀取雲端資料的前端流程與 mock API，並處理雲端新增本機、雲端覆蓋本機、本機覆蓋雲端、本機新增雲端、未變更與失敗等分類。
+- 雲端/本地各種同步情境與處理方式已整理於 `docs/cloud-sync-specification.md` 的「年度雲端同步情境表」。
 - `components/settings/SyncSection.tsx`、`components/SettingsPage.tsx` 與 `App.tsx` 已串接年度雲端同步入口、年份選擇、同步完成後自動開啟報告頁，以及報告刪除。
 - `components/PullReportsPage.tsx` 已提供同步紀錄與報告詳細 UI；比較型項目會顯示 before/after transaction item，單邊資料只顯示該筆 transaction item，未變更只保存與顯示 ID。
 - `db.ts` 與 `types.ts` 已加入同步報告本地保存所需的 IndexedDB store 與型別。
@@ -23,6 +24,7 @@
 
 - 已執行 `npm run build` 並通過。
 - 已使用 mock API 手動檢視多筆雲端新增、雲端覆蓋、本機覆蓋、本機新增、未變更與失敗案例的報告 UI。
+- mock API fixture 已覆蓋年度雲端同步情境表中的主要路徑：雲端-only、本地-only、version 較新、updatedAt 較新、同 revision payload mismatch、未變更、雲端格式錯誤、本地寫入失敗與回推失敗。
 
 ## 後端待驗證
 

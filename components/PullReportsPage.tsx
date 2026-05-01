@@ -47,6 +47,7 @@ const REASON_LABELS: Record<PullReportEntry['reason'], string> = {
   local_newer_version: '本機 version 較新',
   local_newer_updatedAt: '本機 updatedAt 較新',
   identical: '版本與時間完全相同',
+  content_mismatch: '同版內容不同，雲端為準',
   invalid_cloud_item: '雲端資料格式不合法',
   local_write_failed: '本地寫入失敗',
   push_back_failed: '回推雲端失敗',
@@ -82,7 +83,7 @@ const entryMatchesCategory = (entry: PullReportEntry, category: ReportCategory) 
       entry.action === 'unchanged' ||
       entry.action === 'pushedLocalUpdateToCloud' ||
       (entry.action === 'pushedBackToCloud' && entry.reason !== 'local_only') ||
-      (entry.action === 'failed' && (entry.reason === 'invalid_cloud_item' || Boolean(entry.before)))
+      (entry.action === 'failed' && (entry.reason === 'invalid_cloud_item' || Boolean(entry.before) || Boolean(entry.after)))
     );
   }
 
