@@ -1,70 +1,34 @@
 # 待辦事項
 
-## 整體建議順序
-
-1. ✅ 已支援商家更名，既有交易紀錄、搜尋、統計與同步資料會一致反映新名稱。
-2. ✅ `SettingsPage` 已拆成單頁區段元件：偏好設定、同步設定、Tag 管理、匯入匯出與危險操作區，並完成視覺一致化。
-3. ✅ `SyncStatusPage` 已支援預設隱藏已成功項目的篩選，讓使用者聚焦尚未處理或失敗的資料。
-4. ✅ `SyncStatusPage` 的項目已可直接點入既有編輯 modal，方便從同步清單修正失敗或待同步資料。
-5. ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。
-6. ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
-7. ✅ 首頁已支援週／月切換模式，並會記住使用者最後一次選擇，讓近期交易與整月分布都能快速查看。
-8. ✅ `AddTransactionModal` 的表單驗證已改為 modal 內嵌錯誤提示，並保留低調欄位標示。
-9. ✅ 需要確認的危險操作已改用 `swal2` app 內對話框，交易新增／修改／刪除成功則試用 `swal2` auto-dismiss toast。
-10. ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
-11. ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
-12. ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（紀錄：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
-13. ✅ 年度雲端同步前端已完成：入口、年份選擇、mock API、本地同步報告與報告 UI 已可測試。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
-14. 🟡 年度雲端同步後端待驗證：新版 GAS `action: "get"` 尚需部署，並以真實 Google Sheets 端到端驗證。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
-15. ✅ 交易列表已支援支付方式文字／圖示顯示偏好，預設保留文字並可在偏好設定切換。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
-16. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
-17. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。（計劃：[category-stats.md](docs/todo-references/category-stats.md)）
-18. 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。（計劃：[merchant-stats.md](docs/todo-references/merchant-stats.md)）
-19. 🟡 評估是否將 `SettingsPage` 內更多 section 進一步升級為獨立 page，讓偏好設定、同步設定、Tag 管理、匯入匯出與危險操作可各自擁有更完整的資訊架構。（計劃：[settings-section-pages.md](docs/todo-references/settings-section-pages.md)）
-20. 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
-
 ## 通知與互動體驗
 
-- ✅ `AddTransactionModal` 中阻擋式的 `alert()` 驗證已改為 modal 內嵌錯誤提示。
-- ✅ `AddTransactionModal` 刪除確認、設定頁匯入／重置／插入範例資料確認已改用 `swal2` app 內對話框。
-- ✅ 交易新增、修改、刪除成功已試用 `swal2` auto-dismiss toast。
 - 🔴 當同步部分失敗時，從頁內狀態訊息提供可直接前往同步狀態頁的操作按鈕。（計劃：[sync-failure-status-link.md](docs/todo-references/sync-failure-status-link.md)）
 - 🟡 抽出共用的通知文案與摘要組裝 helper，避免 toast 與頁內狀態訊息逐漸分歧。（計劃：[notification-message-helper.md](docs/todo-references/notification-message-helper.md)）
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。（計劃：[settings-status-types.md](docs/todo-references/settings-status-types.md)）
 - 🟡 改善全域 toast 元件，讓它能更穩定地承接稍長摘要，例如支援兩行換行或依訊息長度調整顯示時間。（計劃：[toast-resilience.md](docs/todo-references/toast-resilience.md)）
-- 🟢 補上通知行為的 UI 測試，至少涵蓋以下情境：（計劃：[notification-ui-tests.md](docs/todo-references/notification-ui-tests.md)）
-  - 匯入成功時不應重複顯示成功訊息。
-  - 同步部分失敗時應顯示短 toast 與詳細頁內狀態。
-  - Tag 更名應遵守與匯入、同步設定相同的 toast / status 分工。
-
-### 建議順序
-1. 同步部分失敗時提供可直接前往同步狀態頁的操作按鈕
-2. 抽出共用通知文案與摘要組裝 helper
-3. status type 精緻化
-4. toast 元件優化
-5. UI 測試補齊
+- 🟢 補上通知行為的 UI 測試。（計劃：[notification-ui-tests.md](docs/todo-references/notification-ui-tests.md)）
+- ✅ `AddTransactionModal` 中阻擋式的 `alert()` 驗證已改為 modal 內嵌錯誤提示，並保留低調欄位標示。
+- ✅ `AddTransactionModal` 刪除確認、設定頁匯入／重置／插入範例資料確認已改用 `swal2` app 內對話框。
+- ✅ 交易新增、修改、刪除成功已試用 `swal2` auto-dismiss toast。
 
 ## 導航與頁面架構
 
-- ✅ 同步狀態頁已支援返回來源感知：從 `SettingsPage` 進入時返回設定頁，從首頁進入時返回首頁。
-- ✅ 同步狀態頁的交易項目已可直接開啟既有編輯 modal，方便就地修正待同步或失敗資料。
-- ✅ `SettingsPage` 已拆成單頁區段元件，下一步可視需要抽共用 page-shell 或 section state helper。
-- ✅ 商家管理已從 `SettingsPage` 內嵌區塊升級為獨立頁面，避免長商家清單直接撐開設定頁。
-- 🟡 評估是否將 `SettingsPage` 內的 section 升級成獨立 page，避免單頁設定在功能繼續擴張後再次膨脹。（計劃：[settings-section-pages.md](docs/todo-references/settings-section-pages.md)）
+- 🟡 評估是否將 `SettingsPage` 內更多 section 進一步升級為獨立 page，讓偏好設定、同步設定、Tag 管理、匯入匯出與危險操作可各自擁有更完整的資訊架構。（計劃：[settings-section-pages.md](docs/todo-references/settings-section-pages.md)）
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
-
-### 建議順序
-1. 評估 `SettingsPage` section page 化
-2. `SyncStatusPage` 互動升級
-3. 共用 page-shell 整理
+- ✅ 同步狀態頁已支援返回來源感知：從 `SettingsPage` 進入時返回設定頁，從首頁進入時返回首頁。
+- ✅ `SyncStatusPage` 已支援預設隱藏已成功項目的篩選，讓使用者聚焦尚未處理或失敗的資料。
+- ✅ 同步狀態頁的交易項目已可直接開啟既有編輯 modal，方便就地修正待同步或失敗資料。
+- ✅ `SettingsPage` 已拆成單頁區段元件：偏好設定、同步設定、Tag 管理、匯入匯出與危險操作區，並完成視覺一致化。
+- ✅ 商家管理已從 `SettingsPage` 內嵌區塊升級為獨立頁面，避免長商家清單直接撐開設定頁。
 
 ## 首頁與日曆體驗
 
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
-- ✅ 首頁已支援週／月切換模式：週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。
+- ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。（紀錄：[home-week-calendar.md](docs/todo-references/home-week-calendar.md)）
+- ✅ 首頁已支援週／月切換模式，並會記住使用者最後一次選擇；週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。
 - ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
-- ✅ 交易項目的支付方式已支援文字／圖示顯示偏好，預設保留文字，圖示模式使用與新增／編輯 modal 一致的圖示。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
+- ✅ 交易項目的支付方式已支援文字／圖示顯示偏好，預設保留文字並可在偏好設定切換，圖示模式使用與新增／編輯 modal 一致的圖示。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
 
 ## 設定頁體驗
 
@@ -72,10 +36,10 @@
 
 ## 商家與資料維護
 
-- ✅ 已支援商家更名，並確認既有交易紀錄、搜尋、統計與同步資料都能一致反映新名稱。
 - 🟡 補齊商家名稱調整的驗證與回饋，避免產生重複商家或名稱變更後的 UI 狀態不一致。（計劃：[merchant-rename-validation.md](docs/todo-references/merchant-rename-validation.md)）
 - 🟡 評估是否將商家管理改為進頁後直接查 IndexedDB，而不是依賴 App 全量載入的 `transactions` state。（計劃：[merchant-management-indexeddb-source.md](docs/todo-references/merchant-management-indexeddb-source.md)）
 - 🟡 若商家數量持續成長，可加入商家搜尋、分頁或虛擬列表，降低管理頁渲染成本。（計劃：[merchant-management-search-pagination.md](docs/todo-references/merchant-management-search-pagination.md)）
+- ✅ 已支援商家更名，並確認既有交易紀錄、搜尋、統計與同步資料都能一致反映新名稱。
 
 ## 統計與分析
 
@@ -85,8 +49,8 @@
 
 ## 匯入與外部資料
 
-- ✅ 年度雲端同步前端已完成：入口、年份選擇、mock API、本地同步報告與報告 UI 已可測試。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
 - 🟡 年度雲端同步後端待驗證：新版 GAS `action: "get"` 尚需部署，並以真實 Google Sheets 端到端驗證。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
+- ✅ 年度雲端同步前端已完成：入口、年份選擇、mock API、本地同步報告與報告 UI 已可測試。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
 
 ## AI 功能
 
@@ -94,45 +58,12 @@
 
 ## Bundle / Chunk 優化待辦
 
-- 🔴 將非首頁 page 改為 `React.lazy`
-  - 目標：降低初始主 bundle，避免 `App.tsx` 一開始就靜態吃進所有頁面。
-  - 優先對象：`SettingsPage`、`SyncStatusPage`、`SearchPage`、`MonthlyStatsPage`、`MerchantManagementPage`、`AddTransactionModal`。
-  - 驗證：重新比較 build 後的 `index-*.js` raw / gzip 大小，確認主 chunk 明顯下降且頁面切換正常。
-- 🟡 將 `sweetalert2` 改為動態載入
-  - 目標：把 `dialogService` 從主 bundle 移出，只在實際開啟 confirm dialog 時載入。
-  - 做法：將 `dialogService` 內的 `sweetalert2` 改為 `import('sweetalert2')`。
-  - 驗證：確認 `sweetalert2` 不再進主 `index-*` chunk，且 `AddTransactionModal`、`SettingsPage` 的 confirm 行為不變。
-- 🟡 持續拆薄 `App.tsx`
-  - 目標：降低 page orchestration 與 shared state 集中在單一檔案的耦合，讓 page-level lazy load 更自然。
-  - 方向：把 page loader、transaction modal orchestration、shared data hooks 逐步拆出。
-  - 驗證：`App.tsx` 行數與靜態 import 數量下降，且 routing / modal 流程維持穩定。
-- 🟡 建立 bundle size baseline 與驗收門檻
-  - 目標：避免只憑感覺判斷 bundle 優化是否有效。
-  - 方向：每次優化前後記錄主 `index-*.js` raw / gzip、總 PWA precache 大小，以及主要 chunk 列表。
-  - 驗證：TODO 或 PR 描述中能清楚列出優化前後數字，並說明變化是否符合預期。
-- 🟡 評估 PWA precache 對 lazy chunk 的實際影響
-  - 目標：釐清 lazy load 對首屏下載與 service worker 安裝快取總量的不同影響。
-  - 方向：檢查 Workbox precache 清單，確認新拆出的 lazy chunk 是否仍被預快取。
-  - 驗證：分別記錄 initial load chunk 與 precache total，避免只看主 bundle 下降。
-- 🟡 為 lazy-loaded page / dialog 補上 fallback 或 prefetch 策略
-  - 目標：避免初次開啟非首頁 page、交易 modal 或 confirm dialog 時出現可感知延遲。
-  - 方向：為 `React.lazy` 頁面設計符合現有視覺的 `Suspense` fallback，並評估在 idle 或使用者接近操作時預載高頻功能。
-  - 驗證：第一次進入設定頁、統計頁、交易 modal 與刪除確認時不會出現空白或明顯卡頓。
-
-### 暫時不建議
-
-- 🟢 不優先拆 `HomePage` / `Calendar` 成 lazy chunk
-  - 原因：屬於首屏必要內容，通常對 initial load 幫助有限。
-- 🟢 不優先把 `lucide-react` 再切得更碎
-  - 原因：目前已從 wildcard import 改成明確 icon map，後續收益有限。
-- 🟢 不改走 CDN external 依賴
-  - 原因：對目前的 Vite + PWA 架構不划算，會增加部署、快取與離線相容性複雜度。
-
-### 建議順序
-
-1. 非首頁頁面全面改為 `React.lazy`
-2. `sweetalert2` 改為動態載入
-3. 建立 bundle size baseline 與驗收門檻
-4. 評估 PWA precache 對 lazy chunk 的實際影響
-5. 為 lazy-loaded page / dialog 補上 fallback 或 prefetch 策略
-6. 持續拆薄 `App.tsx`
+- 🔴 將非首頁 page 改為 `React.lazy`。（計劃：[lazy-load-non-home-pages.md](docs/todo-references/lazy-load-non-home-pages.md)）
+- 🟡 將 `sweetalert2` 改為動態載入。（計劃：[dynamic-sweetalert2.md](docs/todo-references/dynamic-sweetalert2.md)）
+- 🟡 持續拆薄 `App.tsx`。（計劃：[app-tsx-decomposition.md](docs/todo-references/app-tsx-decomposition.md)）
+- 🟡 建立 bundle size baseline 與驗收門檻。（計劃：[bundle-size-baseline.md](docs/todo-references/bundle-size-baseline.md)）
+- 🟡 評估 PWA precache 對 lazy chunk 的實際影響。（計劃：[pwa-precache-lazy-chunks.md](docs/todo-references/pwa-precache-lazy-chunks.md)）
+- 🟡 為 lazy-loaded page / dialog 補上 fallback 或 prefetch 策略。（計劃：[lazy-load-fallback-prefetch.md](docs/todo-references/lazy-load-fallback-prefetch.md)）
+- 🟢 不優先拆 `HomePage` / `Calendar` 成 lazy chunk。（紀錄：[home-calendar-lazy-chunk-deprioritized.md](docs/todo-references/home-calendar-lazy-chunk-deprioritized.md)）
+- 🟢 不優先把 `lucide-react` 再切得更碎。（紀錄：[lucide-react-further-splitting.md](docs/todo-references/lucide-react-further-splitting.md)）
+- 🟢 不改走 CDN external 依賴。（紀錄：[cdn-external-dependencies.md](docs/todo-references/cdn-external-dependencies.md)）
