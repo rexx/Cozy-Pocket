@@ -14,13 +14,14 @@
 10. ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
 11. ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
 12. ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（紀錄：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
-13. 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
-14. ✅ 交易列表已支援支付方式文字／圖示顯示偏好，預設保留文字並可在偏好設定切換。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
-15. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
-16. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。（計劃：[category-stats.md](docs/todo-references/category-stats.md)）
-17. 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。（計劃：[merchant-stats.md](docs/todo-references/merchant-stats.md)）
-18. 🟡 評估是否將 `SettingsPage` 內更多 section 進一步升級為獨立 page，讓偏好設定、同步設定、Tag 管理、匯入匯出與危險操作可各自擁有更完整的資訊架構。（計劃：[settings-section-pages.md](docs/todo-references/settings-section-pages.md)）
-19. 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
+13. ✅ 年度雲端同步前端已完成：入口、年份選擇、mock API、本地同步報告與報告 UI 已可測試。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
+14. 🟡 年度雲端同步後端待驗證：新版 GAS `action: "get"` 尚需部署，並以真實 Google Sheets 端到端驗證。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
+15. ✅ 交易列表已支援支付方式文字／圖示顯示偏好，預設保留文字並可在偏好設定切換。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
+16. 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
+17. 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。（計劃：[category-stats.md](docs/todo-references/category-stats.md)）
+18. 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。（計劃：[merchant-stats.md](docs/todo-references/merchant-stats.md)）
+19. 🟡 評估是否將 `SettingsPage` 內更多 section 進一步升級為獨立 page，讓偏好設定、同步設定、Tag 管理、匯入匯出與危險操作可各自擁有更完整的資訊架構。（計劃：[settings-section-pages.md](docs/todo-references/settings-section-pages.md)）
+20. 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
 
 ## 通知與互動體驗
 
@@ -84,7 +85,8 @@
 
 ## 匯入與外部資料
 
-- 🔴 提供可手動從 cloud 拉資料回本機的功能，作為現有同步流程之外的明確操作入口。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
+- ✅ 年度雲端同步前端已完成：入口、年份選擇、mock API、本地同步報告與報告 UI 已可測試。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
+- 🟡 年度雲端同步後端待驗證：新版 GAS `action: "get"` 尚需部署，並以真實 Google Sheets 端到端驗證。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
 
 ## AI 功能
 

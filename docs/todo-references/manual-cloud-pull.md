@@ -1,33 +1,38 @@
-# 手動 Cloud Pull 實作計劃
+# 手動年度雲端同步前端實作與後端驗證紀錄
 
-本項目實作時會使用新的 git worktree 進行開發，不直接修改目前 repo 根目錄；建議 worktree 路徑為 `worktrees/manual-cloud-pull`，完成後再由該分支提交與合併。
+本項目已使用獨立 git worktree 開發，未直接修改 repo 根目錄；實作分支為 `feature-manual-cloud-pull-reporting`。
 
 ## 摘要
 
-- 在現有自動同步之外，提供明確的「從 cloud 拉回本機」操作入口。
-- 功能應放在設定/同步相關區域，讓使用者能主動處理本機資料缺漏或換裝置後回復資料。
-- Pull 結果需清楚回報新增、更新、略過與失敗筆數。
+- 在現有自動補送同步之外，新增「年度雲端同步」手動入口。
+- 使用者可選擇單一年份執行同步；前端流程會先讀取該年份雲端資料，再依 `version` 與 `updatedAt` 做雙向合併。
+- 每次同步都會在本地保存完整同步報告，可回看分類統計、ID 清單、before/after 快照與失敗原因，並可手動刪除報告。
+- 開發測試可使用 `mock://cloud-sync`，不需要先部署 Google Apps Script。
+- 前端入口、mock API 與本地報告 UI 已完成。
+- 後端 GAS `get` API 已提供範例程式，但尚未部署與端到端測試，因此後端驗證不算完成。
 
-## 關鍵變更
+## 前端已完成
 
-- 擴充 `services/cloudSyncService.ts`，新增讀取雲端資料的函式，例如 `pullCloudTransactions`。
-- 依 `docs/cloud-sync-specification.md` 與 `docs/google-apps-script-phase1.js` 檢查目前 GAS 是否已有 pull/read action；若沒有，先同步更新 GAS 規格與 script。
-- 在 `components/settings/SyncSection.tsx` 新增手動 pull 按鈕，並由 `SettingsPage`/`App.tsx` 提供 handler。
-- Pull 回來的資料以 `id`、`updatedAt`、`version` 做合併；本機較新的 pending/error 資料不可被舊雲端資料覆蓋。
+- `services/cloudSyncService.ts` 已實作按年份讀取雲端資料的前端流程與 mock API，並處理雲端新增本機、雲端覆蓋本機、本機覆蓋雲端、本機新增雲端、未變更與失敗等分類。
+- `components/settings/SyncSection.tsx`、`components/SettingsPage.tsx` 與 `App.tsx` 已串接年度雲端同步入口、年份選擇、同步完成後自動開啟報告頁，以及報告刪除。
+- `components/PullReportsPage.tsx` 已提供同步紀錄與報告詳細 UI；比較型項目會顯示 before/after transaction item，單邊資料只顯示該筆 transaction item，未變更只保存與顯示 ID。
+- `db.ts` 與 `types.ts` 已加入同步報告本地保存所需的 IndexedDB store 與型別。
+- `README.md` 與 `docs/cloud-sync-specification.md` 已更新為年度雲端同步語意。
 
-## 介面與型別
+## 已驗證
 
-- 新增 cloud pull 的回傳型別，至少包含 `created`、`updated`、`skipped`、`failed` 與錯誤摘要。
-- 視需要擴充同步 API response 型別，保持 create/pending sync 既有行為不變。
+- 已執行 `npm run build` 並通過。
+- 已使用 mock API 手動檢視多筆雲端新增、雲端覆蓋、本機覆蓋、本機新增、未變更與失敗案例的報告 UI。
 
-## 測試計劃
+## 後端待驗證
 
-- 執行 `npm run build`。
-- 手動驗證未設定 sync config、離線、token 錯誤、cloud 空資料與成功拉回資料的狀態訊息。
-- 手動建立本機較新資料與雲端較舊資料，確認 pull 不會覆蓋本機較新版本。
-- 驗證 pull 後首頁、搜尋、統計與同步狀態頁都反映最新本機資料。
+- `docs/google-apps-script-phase1.js` 已補上 `action: "get"` 範例，但尚未部署到實際 GAS Web App。
+- 尚未部署新版 Google Apps Script。
+- 尚未以真實 Google Sheets 資料測試 `action: "get"` 的年份讀取 response。
+- 尚未端到端驗證真實 API 下的雲端新增本機、雲端覆蓋本機、本機覆蓋雲端、本機新增雲端與失敗報告分類。
 
-## 假設
+## 後續可評估
 
-- Cloud 端仍以 Google Apps Script 作為同步 API。
-- 本項目不處理雙向衝突解決 UI，只採用明確的版本/時間戳合併規則。
+- 優先部署 GAS 並用真實 Google Sheets 資料跑一次年度雲端同步端到端測試。
+- 若未來要把內部 `PullReport` 命名改成 `YearSyncReport`，需要同步處理 IndexedDB store 遷移，避免破壞使用者既有本地報告。
+- 若要支援真正多裝置同時編輯，可評估欄位級 merge 或衝突確認 UI；目前採整筆交易以 `version` / `updatedAt` 決定勝出端。
