@@ -58,7 +58,7 @@ mock cloud 會保存在瀏覽器 `localStorage`，支援 `create` upsert 與按�
 *   **日期處理**：date-fns
 *   **確認與交易成功提示**：sweetalert2
 *   **圖示庫**：Lucide React
-*   **人工智慧**：@google/genai (Gemini 3 Flash)
+*   **人工智慧**：@google/genai (Gemini 3.1 Flash Lite)
 *   **PWA**：Vite PWA Plugin + Service Worker precache
 
 ---
@@ -105,6 +105,7 @@ this.version(1).stores({
 
 ### 6.2 AI 解析
 *   整合 Gemini API，支援將自然語言輸入（如「午餐 120 現金」）結構化為帳務紀錄。
+*   AI 交易解析目前使用 `gemini-3.1-flash-lite-preview`，並將 Gemini 3 thinking level 設為 `minimal`，以符合 free tier 日常記帳用量與低延遲需求。
 *   Gemini API key 由使用者在「資料與設定」頁輸入並儲存在本機 IndexedDB，不使用 build-time env。
 *   尚未設定 Gemini API key 時，新增交易頁會隱藏 AI 快速填寫入口。
 *   AI 填入的欄位會以 cyan 邊框標示；手動修改該欄位後會移除標示。

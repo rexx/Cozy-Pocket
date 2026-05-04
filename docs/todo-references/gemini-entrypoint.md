@@ -5,12 +5,16 @@
 ## 摘要
 
 - 將已存在的 Gemini 解析能力接到可用入口，補齊設定、錯誤提示與使用者回饋。
+- AI 交易解析使用 `gemini-3.1-flash-lite-preview`，並將 Gemini 3 thinking level 設為 `minimal`，避免 free tier 的 Gemini 3 Flash 每日請求額度太低並降低延遲。
 - Gemini API key 採設定頁輸入並儲存在本機 IndexedDB，不使用 build-time env。
 - 目標是讓使用者能知道 AI 是否可用、不可用原因，以及解析成功後哪些欄位被填入。
 
 ## 關鍵變更
 
 - 調整 Gemini API key 來源為設定頁儲存的 `geminiApiKey`，移除前端 `process.env` shim。
+- 將交易解析模型設定為 `gemini-3.1-flash-lite-preview`，保留 Flash 系列的結構化解析能力並提高 free tier 可用次數。
+- 將 Gemini 3 `thinkingLevel` 設為 `minimal`；此任務是短文字分類與欄位抽取，不需要高 reasoning depth。
+- 開發環境會在瀏覽器 console 記錄 Gemini `usageMetadata`，用來檢查 prompt、thinking、cache、output 與 total token 分布；production 不輸出此診斷資訊。
 - 在設定頁新增 AI 設定狀態；儲存空字串時清除 API key。
 - 強化 `services/geminiService.ts` 的錯誤分類，離線、缺 key、模型錯誤、JSON 解析失敗需回傳可讀訊息。
 - 在 `AddTransactionModal` 中保留 lazy import；未設定 API key 時隱藏 AI 區塊，解析成功後提供輕量回饋，解析失敗時顯示內嵌錯誤。
@@ -28,6 +32,7 @@
 - 手動驗證未設定 key 時新增交易不顯示 AI 區塊，以及離線、空輸入、正常解析與解析失敗。
 - 手動驗證解析結果可填入支援但未啟用幣別，且不會填入非法類別、子類別、支付方式或幣別。
 - 手動驗證 AI 填入欄位只有邊框上色，且手動修改後會移除上色。
+- 在開發環境送出一筆真實 Gemini 解析，確認 console 顯示 `Gemini transaction parse usage` 且沒有輸出 API key 或原始交易文字。
 - 檢查 Gemini 相關程式仍維持 lazy-loaded，避免初始 bundle 明顯膨脹。
 
 ## 假設

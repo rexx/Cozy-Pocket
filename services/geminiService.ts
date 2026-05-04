@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES } from '../constants';
 import { isOffline } from './networkService';
 
@@ -15,6 +15,8 @@ export interface ParsedTransactionResult {
 }
 
 const PAYMENT_METHOD_VALUES = ['現金', '信用卡', '電子支付', '轉帳'] as const;
+const GEMINI_TRANSACTION_MODEL = 'gemini-3.1-flash-lite-preview';
+const GEMINI_THINKING_LEVEL = ThinkingLevel.MINIMAL;
 const CATEGORY_ID_VALUES = [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].map((category) => category.id);
 const SUB_CATEGORY_ID_VALUES = EXPENSE_CATEGORIES.flatMap((category) => (
   category.subcategories?.map((subCategory) => subCategory.id) || []
@@ -40,6 +42,27 @@ const buildCategoryReference = () => {
 };
 
 const CATEGORY_REFERENCE = buildCategoryReference();
+
+const logUsageMetadata = (usageMetadata: unknown) => {
+  if (!import.meta.env.DEV || !usageMetadata || typeof usageMetadata !== 'object') return;
+  const usage = usageMetadata as {
+    cachedContentTokenCount?: number;
+    candidatesTokenCount?: number;
+    promptTokenCount?: number;
+    thoughtsTokenCount?: number;
+    totalTokenCount?: number;
+  };
+
+  console.info('Gemini transaction parse usage', {
+    model: GEMINI_TRANSACTION_MODEL,
+    thinkingLevel: GEMINI_THINKING_LEVEL,
+    promptTokenCount: usage.promptTokenCount,
+    cachedContentTokenCount: usage.cachedContentTokenCount,
+    thoughtsTokenCount: usage.thoughtsTokenCount,
+    candidatesTokenCount: usage.candidatesTokenCount,
+    totalTokenCount: usage.totalTokenCount,
+  });
+};
 
 const transactionSchema = {
   type: Type.OBJECT,
@@ -147,9 +170,12 @@ export async function parseTransactionWithAI(text: string, apiKey: string): Prom
   try {
     const ai = new GoogleGenAI({ apiKey: trimmedApiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: GEMINI_TRANSACTION_MODEL,
       contents: `Parse this record into structured transaction data: "${trimmedText}"`,
       config: {
+        thinkingConfig: {
+          thinkingLevel: GEMINI_THINKING_LEVEL,
+        },
         responseMimeType: 'application/json',
         responseSchema: transactionSchema,
         systemInstruction: [
@@ -164,6 +190,8 @@ export async function parseTransactionWithAI(text: string, apiKey: string): Prom
         ].join('\n'),
       },
     });
+
+    logUsageMetadata(response.usageMetadata);
 
     const textResponse = response.text?.trim();
     if (!textResponse) {
