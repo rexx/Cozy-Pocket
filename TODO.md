@@ -54,7 +54,7 @@
 
 ## AI 功能
 
-- 🟡 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（計劃：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
+- ✅ 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（紀錄：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
 
 ## Bundle / Chunk 優化待辦
 

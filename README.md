@@ -21,7 +21,7 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
     *   **必須使用預設匯入**：`import Dexie from 'dexie';`
     *   **嚴禁使用具名匯入**：不可使用 `import { Dexie } from 'dexie';`，以避免 TypeScript 在處理子類別繼承（Subclassing）時無法識別 `this.version()` 等核心方法。
 *   **Google GenAI**：
-    *   遵循官方最新 SDK 規範，使用 `new GoogleGenAI({ apiKey: process.env.API_KEY })` 初始化。
+    *   前端瀏覽器環境需明確傳入 API key；目前由設定頁儲存 `geminiApiKey` 後，再以 `new GoogleGenAI({ apiKey })` 初始化。
 
 ---
 
@@ -105,6 +105,11 @@ this.version(1).stores({
 
 ### 6.2 AI 解析
 *   整合 Gemini API，支援將自然語言輸入（如「午餐 120 現金」）結構化為帳務紀錄。
+*   Gemini API key 由使用者在「資料與設定」頁輸入並儲存在本機 IndexedDB，不使用 build-time env。
+*   尚未設定 Gemini API key 時，新增交易頁會隱藏 AI 快速填寫入口。
+*   AI 填入的欄位會以 cyan 邊框標示；手動修改該欄位後會移除標示。
+*   AI 可套用支援但未啟用的幣別到單筆交易，但不會自動修改偏好設定中的啟用幣別清單。
+*   AI prompt 與 response schema 會列出並限制可用類別、子類別、支付方式與幣別；AI 回傳的非法類別、子類別、支付方式或幣別不會覆蓋表單欄位，會改以 inline 提示提醒使用者手動確認。
 *   若裝置目前離線，AI 解析會直接顯示不可用提示，不會阻塞記帳流程。
 
 ### 6.3 精確排序 (Precise Sorting)
@@ -238,8 +243,9 @@ this.version(1).stores({
 
 ### 6.12 設定頁區段化
 *   `SettingsPage` 目前維持單一頁面，不使用 tabs 或子路由。
-*   畫面已拆成五個主要區段元件：`PreferencesSection`、`SyncSection`、`TagManagementSection`、`ImportExportSection`、`DangerZoneSection`，另保留商家管理入口卡片。
+*   畫面已拆成六個主要區段元件：`PreferencesSection`、`AiSection`、`SyncSection`、`TagManagementSection`、`ImportExportSection`、`DangerZoneSection`，另保留商家管理入口卡片。
 *   `PreferencesSection` 會先顯示交易列表支付方式顯示模式，支援文字／圖示切換；未設定時預設為文字。
+*   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   頁面層仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發、Tag 更名與 status 訊息。
 *   各區段元件只負責 UI 與事件轉發，不直接操作資料庫或同步服務。
 *   匯入與匯出已整併在同一個 section 中；插入範例資料與清除本機資料則集中在危險操作區。

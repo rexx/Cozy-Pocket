@@ -9,12 +9,13 @@ import { SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from
 import PageHeader from './PageHeader';
 import { TagRenamePreview, TagUsageSummary, normalizeTag } from '../services/tagService';
 import PreferencesSection from './settings/PreferencesSection';
+import AiSection from './settings/AiSection';
 import SyncSection from './settings/SyncSection';
 import TagManagementSection from './settings/TagManagementSection';
 import ImportExportSection from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
 import { confirmAction } from '../services/dialogService';
-import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY } from '../preferences';
+import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
 interface SettingsPageProps {
   onClose: () => void;
@@ -65,6 +66,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
   const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
+  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState('');
+  const [hasGeminiApiKey, setHasGeminiApiKey] = useState(false);
   const [syncApiUrl, setSyncApiUrl] = useState('');
   const [syncToken, setSyncToken] = useState('');
   const [selectedImportFileName, setSelectedImportFileName] = useState('');
@@ -92,12 +95,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     Promise.all([
       db.settings.get('defaultCurrency'),
       db.settings.get('enabledCurrencies'),
+      db.settings.get(GEMINI_API_KEY_SETTING_KEY),
       db.settings.get('syncApiUrl'),
       db.settings.get('syncToken')
-    ]).then(([currencySetting, enabledCurrenciesSetting, apiUrlSetting, tokenSetting]) => {
+    ]).then(([currencySetting, enabledCurrenciesSetting, geminiApiKeySetting, apiUrlSetting, tokenSetting]) => {
       const nextEnabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
+      const savedGeminiApiKey = getGeminiApiKey(geminiApiKeySetting?.value);
       setEnabledCurrencies(nextEnabledCurrencies);
       setDefaultCurrency(getPreferredCurrency(currencySetting?.value, nextEnabledCurrencies));
+      setGeminiApiKeyInput(savedGeminiApiKey);
+      setHasGeminiApiKey(savedGeminiApiKey.length > 0);
       if (apiUrlSetting?.value) setSyncApiUrl(apiUrlSetting.value);
       if (tokenSetting?.value) setSyncToken(tokenSetting.value);
     });
@@ -198,6 +205,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     onPaymentMethodDisplayModeChange(mode);
     await db.settings.put({ key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: mode });
     onDataChange();
+  };
+
+  const saveGeminiApiKey = async () => {
+    const trimmedApiKey = geminiApiKeyInput.trim();
+    try {
+      if (trimmedApiKey) {
+        await db.settings.put({ key: GEMINI_API_KEY_SETTING_KEY, value: trimmedApiKey });
+      } else {
+        await db.settings.delete(GEMINI_API_KEY_SETTING_KEY);
+      }
+      setGeminiApiKeyInput(trimmedApiKey);
+      setHasGeminiApiKey(trimmedApiKey.length > 0);
+      const message = trimmedApiKey ? 'AI 設定已儲存' : 'AI 設定已清除';
+      setStatus({ type: 'success', message });
+      onNotify(message);
+      onDataChange();
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `AI 設定儲存失敗: ${err.message}` });
+    }
   };
 
   const saveSyncConfig = async () => {
@@ -675,6 +701,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
               onDefaultCurrencyChange={handleDefaultCurrencyChange}
               onEnabledCurrencyToggle={(currency) => void handleEnabledCurrencyToggle(currency)}
               onPaymentMethodDisplayModeChange={(mode) => void handlePaymentMethodDisplayModeChange(mode)}
+            />
+            <AiSection
+              geminiApiKeyInput={geminiApiKeyInput}
+              hasGeminiApiKey={hasGeminiApiKey}
+              isOffline={isOffline}
+              onGeminiApiKeyInputChange={(value) => {
+                setGeminiApiKeyInput(value);
+                setStatus({ type: 'idle', message: '' });
+              }}
+              onSaveGeminiApiKey={() => void saveGeminiApiKey()}
             />
             <SyncSection
               syncApiUrl={syncApiUrl}

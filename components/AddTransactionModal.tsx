@@ -4,10 +4,10 @@ import {
   X, Check, Trash2, Copy, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
   Store, Tag,
-  Sparkles, Loader2, Globe, AlertCircle
+  Sparkles, Globe, AlertCircle, SendHorizontal
 } from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
-import { SuggestionItem, SuggestionIndex, Transaction, TransactionType } from '../types';
+import { PaymentMethod, SuggestionItem, SuggestionIndex, Transaction, TransactionType } from '../types';
 import { format, isValid } from 'date-fns';
 import { db } from '../db';
 import { isOffline } from '../services/networkService';
@@ -16,6 +16,7 @@ import { categoryIconMap } from './categoryIcons';
 import PageHeader from './PageHeader';
 import { confirmAction } from '../services/dialogService';
 import { getPaymentMethodIconOrFallback } from './paymentMethodIcons';
+import { GEMINI_API_KEY_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
 const IconMap = categoryIconMap;
 
@@ -24,6 +25,24 @@ interface ValidationErrors {
   category?: string;
   subCategory?: string;
 }
+
+type AiFilledField = 'amount' | 'currency' | 'category' | 'paymentMethod' | 'merchant' | 'name' | 'note';
+type AiFeedback = {
+  type: 'success' | 'warning';
+  message: string;
+};
+
+const PAYMENT_METHODS: PaymentMethod[] = ['現金', '信用卡', '電子支付', '轉帳'];
+const AI_BORDER_CLASS_NAME = 'border-cyan-300/60';
+const AI_FIELD_LABELS: Record<AiFilledField, string> = {
+  amount: '金額',
+  currency: '幣別',
+  category: '類別',
+  paymentMethod: '支付方式',
+  merchant: '商家',
+  name: '名稱',
+  note: '備註',
+};
 
 interface AddTransactionModalProps {
   onClose: () => void;
@@ -93,11 +112,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     sourceTransaction?.tags ? sourceTransaction.tags.split(/\s+/).filter(t => t.length > 0) : []
   );
   const [tagInput, setTagInput] = useState('');
+  const [geminiApiKey, setGeminiApiKey] = useState('');
   const [aiInput, setAiInput] = useState('');
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [aiFeedback, setAiFeedback] = useState<AiFeedback | null>(null);
+  const [aiFilledFields, setAiFilledFields] = useState<Set<AiFilledField>>(() => new Set<AiFilledField>());
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const hasApiKey = !!process.env.API_KEY;
+  const hasApiKey = geminiApiKey.length > 0;
   const suggestionLimit = 6;
 
   useEffect(() => {
@@ -121,6 +143,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setTagInput('');
     setAiInput('');
     setAiError('');
+    setAiFeedback(null);
+    setAiFilledFields(new Set<AiFilledField>());
     setValidationErrors({});
   }, [sourceTransaction]);
 
@@ -128,11 +152,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     let isMounted = true;
     Promise.all([
       db.settings.get('defaultCurrency'),
-      db.settings.get('enabledCurrencies')
-    ]).then(([defaultCurrencySetting, enabledCurrenciesSetting]) => {
+      db.settings.get('enabledCurrencies'),
+      db.settings.get(GEMINI_API_KEY_SETTING_KEY)
+    ]).then(([defaultCurrencySetting, enabledCurrenciesSetting, geminiApiKeySetting]) => {
       if (!isMounted) return;
       const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
       setAvailableCurrencies(enabledCurrencies);
+      setGeminiApiKey(getGeminiApiKey(geminiApiKeySetting?.value));
       if (!sourceTransaction) {
         setCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
       }
@@ -148,11 +174,45 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   }, [isEditing]);
 
+  const clearAiField = (field: AiFilledField) => {
+    setAiFilledFields((prev) => {
+      if (!prev.has(field)) return prev;
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+  };
+
+  const getAiBorderClass = (fields: AiFilledField | AiFilledField[], fallback = 'border-white/5') => {
+    const candidates = Array.isArray(fields) ? fields : [fields];
+    return candidates.some((field) => aiFilledFields.has(field)) ? AI_BORDER_CLASS_NAME : fallback;
+  };
+
+  const isSupportedCurrency = (value: string) => (
+    SUPPORTED_CURRENCIES.includes(value as typeof SUPPORTED_CURRENCIES[number])
+  );
+
+  const getCategoryByType = (type: TransactionType, id: string) => (
+    (type === '支出' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).find((category) => category.id === id)
+  );
+
+  const buildAiFeedbackMessage = (filledFields: Set<AiFilledField>, warnings: string[]) => {
+    const labels = Array.from(filledFields).map((field) => AI_FIELD_LABELS[field]);
+    const baseMessage = labels.length > 0
+      ? `AI 已填入：${labels.join('、')}`
+      : 'AI 已解析，但沒有可直接套用的欄位';
+
+    return warnings.length > 0
+      ? `${baseMessage}\n${warnings.join('\n')}`
+      : baseMessage;
+  };
+
   const handleTabChange = (tab: TransactionType) => {
     setActiveTab(tab);
     setIsSubView(false);
     setIsCategoryCollapsed(false);
     setValidationErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
+    clearAiField('category');
     if (!isEditing) {
       setCategoryId(undefined);
       setSubCategoryId(undefined);
@@ -162,6 +222,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const handleMainCategoryClick = (id: string) => {
     setCategoryId(id);
     setValidationErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
+    clearAiField('category');
     if (activeTab === '支出') {
       setSubCategoryId(undefined);
       setIsSubView(true);
@@ -177,6 +238,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setSubCategoryId(id);
     setIsSubView(false);
     setIsCategoryCollapsed(true);
+    clearAiField('category');
     setValidationErrors((prev) => ({ ...prev, subCategory: undefined }));
   };
 
@@ -194,53 +256,139 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     const cyclingCurrencies = availableCurrencies.length > 0 ? availableCurrencies : [...SUPPORTED_CURRENCIES];
     const currentIndex = cyclingCurrencies.indexOf(currency);
     setCurrency(cyclingCurrencies[(currentIndex + 1 + cyclingCurrencies.length) % cyclingCurrencies.length]);
+    clearAiField('currency');
   };
 
   const handleAiSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aiInput.trim() || isAiProcessing) return;
+    if (!hasApiKey) {
+      setAiFeedback(null);
+      setAiError('請先到資料與設定儲存 Gemini API key');
+      return;
+    }
+    if (isOffline()) {
+      setAiFeedback(null);
+      setAiError('目前離線，AI 解析需要網路連線');
+      return;
+    }
 
     setIsAiProcessing(true);
     setAiError('');
+    setAiFeedback(null);
     try {
       const { parseTransactionWithAI } = await import('../services/geminiService');
-      const result = await parseTransactionWithAI(aiInput);
+      const result = await parseTransactionWithAI(aiInput, geminiApiKey);
       if (result) {
-        const nextType = (result.type as TransactionType) || activeTab;
-        if (result.type) setActiveTab(nextType);
+        const nextFilledFields = new Set<AiFilledField>();
+        const warnings: string[] = [];
+        const nextType = result.type === '支出' || result.type === '收入' ? result.type : activeTab;
+        const didChangeType = nextType !== activeTab;
+
+        if (result.type && result.type !== nextType) {
+          warnings.push('AI 回傳的交易類型無法辨識，已保留目前類型');
+        }
+        if (didChangeType) {
+          setActiveTab(nextType);
+          setIsSubView(false);
+          setIsCategoryCollapsed(false);
+          setValidationErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
+        }
+
         const normalizedCurrency = result.currency?.toUpperCase();
-        if (normalizedCurrency && availableCurrencies.includes(normalizedCurrency)) {
-          setCurrency(normalizedCurrency);
-        }
-        if (result.amount !== undefined && result.amount !== null) {
-          setAmount(Math.abs(result.amount).toString());
-        }
-        if (result.categoryId) {
-          setCategoryId(result.categoryId);
-          if (nextType === '支出') {
-            if (result.subCategoryId) {
-              setIsSubView(false);
-              setIsCategoryCollapsed(true);
-            } else {
-              setSubCategoryId(undefined);
-              setIsSubView(true);
-              setIsCategoryCollapsed(false);
+        if (normalizedCurrency) {
+          if (isSupportedCurrency(normalizedCurrency)) {
+            setCurrency(normalizedCurrency);
+            nextFilledFields.add('currency');
+            if (!availableCurrencies.includes(normalizedCurrency)) {
+              warnings.push(`${normalizedCurrency} 尚未在偏好設定啟用，但已套用到本筆交易`);
             }
           } else {
-            setSubCategoryId(undefined);
-            setIsSubView(false);
-            setIsCategoryCollapsed(true);
+            warnings.push(`AI 回傳的幣別 ${normalizedCurrency} 不支援，已保留目前幣別`);
           }
         }
-        if (result.subCategoryId) setSubCategoryId(result.subCategoryId);
-        setName(result.name || result.merchant || "");
-        setMerchant(result.merchant || "");
-        setNote(result.note || "");
-        setPaymentMethod(result.paymentMethod || "現金");
+
+        if (result.amount !== undefined && result.amount !== null) {
+          if (Number.isFinite(result.amount)) {
+            setAmount(Math.abs(result.amount).toString());
+            nextFilledFields.add('amount');
+            setValidationErrors((prev) => ({ ...prev, amount: undefined }));
+          } else {
+            warnings.push('AI 回傳的金額無法使用，已保留目前金額');
+          }
+        }
+
+        let didApplyCategory = false;
+        if (result.categoryId) {
+          const matchedCategory = getCategoryByType(nextType, result.categoryId);
+          if (matchedCategory) {
+            didApplyCategory = true;
+            setCategoryId(matchedCategory.id);
+            nextFilledFields.add('category');
+            setValidationErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
+            if (nextType === '支出') {
+              const matchedSubCategory = matchedCategory.subcategories?.find((item) => item.id === result.subCategoryId);
+              if (result.subCategoryId && !matchedSubCategory) {
+                warnings.push(`AI 回傳的子類別 ${result.subCategoryId} 不屬於 ${matchedCategory.name}，請手動選擇`);
+              }
+              if (matchedSubCategory) {
+                setSubCategoryId(matchedSubCategory.id);
+                setIsSubView(false);
+                setIsCategoryCollapsed(true);
+              } else {
+                setSubCategoryId(undefined);
+                setIsSubView(true);
+                setIsCategoryCollapsed(false);
+              }
+            } else {
+              setSubCategoryId(undefined);
+              setIsSubView(false);
+              setIsCategoryCollapsed(true);
+            }
+          } else {
+            warnings.push(`AI 回傳的類別 ${result.categoryId} 不在可用類別中，已保留目前類別`);
+          }
+        }
+
+        if (didChangeType && !didApplyCategory) {
+          setCategoryId(undefined);
+          setSubCategoryId(undefined);
+          setIsSubView(false);
+          setIsCategoryCollapsed(false);
+        }
+
+        if (result.paymentMethod) {
+          if ((PAYMENT_METHODS as string[]).includes(result.paymentMethod)) {
+            setPaymentMethod(result.paymentMethod);
+            nextFilledFields.add('paymentMethod');
+          } else {
+            warnings.push(`AI 回傳的支付方式 ${result.paymentMethod} 不支援，已保留目前支付方式`);
+          }
+        }
+
+        if (result.merchant) {
+          setMerchant(result.merchant);
+          nextFilledFields.add('merchant');
+        }
+        if (result.name) {
+          setName(result.name);
+          nextFilledFields.add('name');
+        }
+        if (result.note) {
+          setNote(result.note);
+          nextFilledFields.add('note');
+        }
+
+        setAiFilledFields(nextFilledFields);
+        setAiFeedback({
+          type: warnings.length > 0 ? 'warning' : 'success',
+          message: buildAiFeedbackMessage(nextFilledFields, warnings),
+        });
         setAiInput('');
       }
     } catch (err: any) {
       console.error("AI Error:", err);
+      setAiFilledFields(new Set<AiFilledField>());
       setAiError(err?.message || 'AI 解析失敗，請稍後再試');
     } finally {
       setIsAiProcessing(false);
@@ -363,9 +511,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   };
 
   const togglePaymentMethod = () => {
-    const methods = ['現金', '信用卡', '電子支付', '轉帳'];
-    const currentIndex = methods.indexOf(paymentMethod);
-    setPaymentMethod(methods[(currentIndex + 1) % methods.length]);
+    const currentIndex = PAYMENT_METHODS.indexOf(paymentMethod as PaymentMethod);
+    setPaymentMethod(PAYMENT_METHODS[(currentIndex + 1) % PAYMENT_METHODS.length]);
+    clearAiField('paymentMethod');
   };
 
   const PaymentIcon = getPaymentMethodIconOrFallback(paymentMethod);
@@ -376,6 +524,21 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const collapsedCategoryIcon = activeTab === '支出' && currentSubCategory
     ? currentSubCategory.icon
     : currentMainCat?.icon;
+  const categoryHasValidationError = !!(validationErrors.category || validationErrors.subCategory);
+  const categoryContainerClassName = [
+    isCategoryCollapsed ? 'mb-3' : 'px-2 mb-6 min-h-[180px]',
+    categoryHasValidationError
+      ? 'rounded-3xl border border-red-400/20 p-3'
+      : aiFilledFields.has('category') && !isCategoryCollapsed
+        ? `rounded-3xl border ${AI_BORDER_CLASS_NAME} p-3`
+        : '',
+  ].filter(Boolean).join(' ');
+  const collapsedCategoryBorderClassName = categoryHasValidationError
+    ? 'border-red-400/20'
+    : getAiBorderClass('category', 'border-white/10');
+  const amountCurrencyBorderClassName = validationErrors.amount
+    ? 'border-red-400/40'
+    : getAiBorderClass(['amount', 'currency']);
 
   const getTextMatchRank = (value: string, rawQuery: string) => {
     const query = rawQuery.trim().toLowerCase();
@@ -513,12 +676,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
         {hasApiKey && !isEditing && (
-          <div className="px-2 mb-2">
+          <div className="px-2 mb-5">
             <form onSubmit={handleAiSubmit} className="relative group">
               <div className="absolute inset-0 bg-cyan-500/5 rounded-2xl blur-lg group-focus-within:bg-cyan-500/10 transition-all"></div>
-              <div className="relative flex items-center bg-[#252538]/60 border border-white/5 rounded-2xl px-4 py-3 focus-within:border-cyan-500/30 transition-all backdrop-blur-md">
+              <div className="relative flex h-12 items-center bg-[#252538]/60 border border-white/5 rounded-2xl px-4 focus-within:border-cyan-500/30 transition-all backdrop-blur-md">
                 <div className="flex-shrink-0 mr-3 text-cyan-400">
-                  {isAiProcessing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="animate-pulse" />}
+                  <Sparkles size={16} className={isAiProcessing ? 'animate-pulse' : undefined} />
                 </div>
                 <input 
                   type="text"
@@ -528,12 +691,18 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   onChange={(e) => {
                     setAiInput(e.target.value);
                     if (aiError) setAiError('');
+                    if (aiFeedback) setAiFeedback(null);
                   }}
                   disabled={isAiProcessing || isOffline()}
                 />
-                {aiInput && !isAiProcessing && (
-                  <button type="submit" className="ml-2 text-[10px] font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/20">
-                    解析
+                {aiInput && !isAiProcessing && !isOffline() && (
+                  <button
+                    type="submit"
+                    aria-label="解析 AI 快速填寫"
+                    title="解析 AI 快速填寫"
+                    className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center text-cyan-300 transition-all active:scale-95"
+                  >
+                    <SendHorizontal size={15} strokeWidth={2.5} />
                   </button>
                 )}
               </div>
@@ -548,15 +717,20 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 {aiError}
               </p>
             )}
+            {!isOffline() && !aiError && aiFeedback && (
+              <p className={`mt-2 px-1 text-[11px] font-bold whitespace-pre-line ${aiFeedback.type === 'success' ? 'text-cyan-200' : 'text-amber-200'}`}>
+                {aiFeedback.message}
+              </p>
+            )}
           </div>
         )}
 
-        <div className={`${isCategoryCollapsed ? 'mb-3' : 'px-2 mb-6 min-h-[180px]'} ${validationErrors.category || validationErrors.subCategory ? 'rounded-3xl border border-red-400/20 p-3' : ''}`}>
+        <div className={categoryContainerClassName}>
           {isCategoryCollapsed && currentMainCat ? (
             <button
               type="button"
               onClick={handleExpandCategoryPicker}
-              className={`w-full rounded-3xl border bg-[#252538] px-3 py-3 shadow-lg transition-all active:scale-[0.99] ${validationErrors.category || validationErrors.subCategory ? 'border-red-400/20' : 'border-white/10'}`}
+              className={`w-full rounded-3xl border bg-[#252538] px-3 py-3 shadow-lg transition-all active:scale-[0.99] ${collapsedCategoryBorderClassName}`}
             >
               <div className="flex items-center gap-4">
                 <div
@@ -618,11 +792,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={togglePaymentMethod} className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 active:bg-[#2a2a3e] shadow-lg min-w-0">
+          <button onClick={togglePaymentMethod} className={`bg-[#252538] rounded-2xl h-14 px-4 flex items-center border active:bg-[#2a2a3e] shadow-lg min-w-0 ${getAiBorderClass('paymentMethod')}`}>
             <PaymentIcon size={16} className="text-gray-500" />
             <span className="text-white truncate ml-2 text-right flex-1 text-sm font-bold">{paymentMethod}</span>
           </button>
-          <div className={`flex items-center bg-[#252538] rounded-2xl h-14 px-3 border shadow-lg min-w-0 overflow-hidden ${validationErrors.amount ? 'border-red-400/40' : 'border-white/5'}`}>
+          <div className={`flex items-center bg-[#252538] rounded-2xl h-14 px-3 border shadow-lg min-w-0 overflow-hidden ${amountCurrencyBorderClassName}`}>
             <button onClick={toggleCurrency} className="flex items-center gap-1.5 pr-3 mr-3 border-r border-white/10 shrink-0 active:scale-95 transition-transform">
               <Globe size={14} className="text-gray-500" />
               <span className="text-[11px] text-gray-300 font-black tracking-widest">{currency}</span>
@@ -636,6 +810,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               value={amount}
               onChange={(e) => {
                 setAmount(e.target.value);
+                clearAiField('amount');
                 if (validationErrors.amount) {
                   setValidationErrors((prev) => ({ ...prev, amount: undefined }));
                 }
@@ -647,18 +822,48 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
+            <div className={`bg-[#252538] rounded-2xl h-14 px-4 flex items-center border shadow-lg overflow-hidden ${getAiBorderClass('merchant')}`}>
               <Store size={16} className="text-gray-500" />
-              <input type="text" value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="商家" className="bg-transparent text-white text-right focus:outline-none w-full font-bold placeholder-gray-700 text-sm ml-2" />
+              <input
+                type="text"
+                value={merchant}
+                onChange={(e) => {
+                  setMerchant(e.target.value);
+                  clearAiField('merchant');
+                }}
+                placeholder="商家"
+                className="bg-transparent text-white text-right focus:outline-none w-full font-bold placeholder-gray-700 text-sm ml-2"
+              />
             </div>
-            <SuggestionChips items={merchantSuggestions} onSelect={setMerchant} />
+            <SuggestionChips
+              items={merchantSuggestions}
+              onSelect={(value) => {
+                setMerchant(value);
+                clearAiField('merchant');
+              }}
+            />
           </div>
           <div>
-            <div className="bg-[#252538] rounded-2xl h-14 px-4 flex items-center border border-white/5 shadow-lg overflow-hidden">
+            <div className={`bg-[#252538] rounded-2xl h-14 px-4 flex items-center border shadow-lg overflow-hidden ${getAiBorderClass('name')}`}>
               <Tag size={16} className="text-gray-500" />
-              <input type="text" placeholder="名稱" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2" />
+              <input
+                type="text"
+                placeholder="名稱"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  clearAiField('name');
+                }}
+                className="w-full bg-transparent text-right text-sm font-bold focus:outline-none placeholder-gray-600 text-white ml-2"
+              />
             </div>
-            <SuggestionChips items={nameSuggestions} onSelect={setName} />
+            <SuggestionChips
+              items={nameSuggestions}
+              onSelect={(value) => {
+                setName(value);
+                clearAiField('name');
+              }}
+            />
           </div>
         </div>
 
@@ -703,12 +908,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           />
         </div>
 
-        <div className="bg-[#252538] rounded-2xl px-4 py-2 min-h-[156px] border border-white/5 shadow-lg transition-all focus-within:border-white/20">
+        <div className={`bg-[#252538] rounded-2xl px-4 py-2 min-h-[156px] border shadow-lg transition-all focus-within:border-white/20 ${getAiBorderClass('note')}`}>
           <textarea
             rows={4}
             placeholder="輸入備註..."
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => {
+              setNote(e.target.value);
+              clearAiField('note');
+            }}
             className="w-full h-full min-h-[140px] bg-transparent resize-none text-sm focus:outline-none placeholder-gray-700 text-white font-light leading-relaxed"
           />
         </div>
