@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle2, Eye, PencilLine } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Eye, PencilLine, Search, X } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { MerchantRenamePreview, MerchantUsageSummary } from '../../services/merchantService';
 import TransactionItem from '../TransactionItem';
@@ -9,7 +9,10 @@ import SettingsSection, {
   sectionInputClassName,
   sectionLabelClassName,
   sectionPanelClassName,
+  sectionSecondaryButtonClassName,
 } from './SettingsSection';
+
+const MERCHANT_PAGE_SIZE = 200;
 
 interface MerchantManagementSectionProps {
   merchantSummaries: MerchantUsageSummary[];
@@ -44,6 +47,40 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   onRenameMerchant,
   onMerchantTransactionClick,
 }) => {
+  const [merchantSearchQuery, setMerchantSearchQuery] = useState('');
+  const [visibleMerchantCount, setVisibleMerchantCount] = useState(MERCHANT_PAGE_SIZE);
+
+  const filteredMerchantSummaries = useMemo(() => {
+    const query = merchantSearchQuery.trim().toLocaleLowerCase();
+    if (!query) return merchantSummaries;
+
+    return merchantSummaries.filter(({ merchant }) => (
+      merchant.toLocaleLowerCase().includes(query)
+    ));
+  }, [merchantSearchQuery, merchantSummaries]);
+
+  const visibleMerchantSummaries = useMemo(() => (
+    filteredMerchantSummaries.slice(0, visibleMerchantCount)
+  ), [filteredMerchantSummaries, visibleMerchantCount]);
+
+  const selectedMerchantSummary = selectedMerchantToRename
+    ? filteredMerchantSummaries.find(({ merchant }) => merchant === selectedMerchantToRename)
+    : undefined;
+  const selectedMerchantInFilteredResults = Boolean(selectedMerchantSummary);
+  const selectedMerchantIsVisible = selectedMerchantToRename
+    ? visibleMerchantSummaries.some(({ merchant }) => merchant === selectedMerchantToRename)
+    : false;
+  const hasMoreMerchants = visibleMerchantSummaries.length < filteredMerchantSummaries.length;
+
+  const handleMerchantSearchQueryChange = (value: string) => {
+    setMerchantSearchQuery(value);
+    setVisibleMerchantCount(MERCHANT_PAGE_SIZE);
+  };
+
+  useEffect(() => {
+    setVisibleMerchantCount(MERCHANT_PAGE_SIZE);
+  }, [merchantSummaries]);
+
   return (
     <SettingsSection>
       {merchantSummaries.length === 0 ? (
@@ -51,23 +88,85 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
       ) : (
         <>
           <div className={sectionPanelClassName}>
-            <p className={`${sectionLabelClassName} mb-3`}>Select Merchant</p>
-            <div className="flex flex-wrap gap-2">
-              {merchantSummaries.map(({ merchant, count }) => (
-                <button
-                  key={merchant}
-                  type="button"
-                  onClick={() => onSelectMerchantToRename(merchant)}
-                  className={`rounded-full border px-3 py-2 text-xs font-black transition-colors ${
-                    selectedMerchantToRename === merchant
-                      ? 'border-amber-400/25 bg-amber-500/12 text-amber-100'
-                      : 'border-white/10 bg-[#0f1321] text-slate-300 hover:text-white'
-                  }`}
-                >
-                  {merchant} · {count} 筆
-                </button>
-              ))}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <p className={sectionLabelClassName}>Select Merchant</p>
+                <p className="mt-1 text-xs font-bold text-slate-400">
+                  顯示 {visibleMerchantSummaries.length} / {filteredMerchantSummaries.length} 個商家，共 {merchantSummaries.length} 個
+                </p>
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={merchantSearchQuery}
+                  onChange={(e) => handleMerchantSearchQueryChange(e.target.value)}
+                  placeholder="搜尋商家"
+                  className={`${sectionInputClassName} pl-10 pr-10`}
+                />
+                {merchantSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => handleMerchantSearchQueryChange('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-white"
+                    aria-label="清除商家搜尋"
+                    title="清除商家搜尋"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
             </div>
+
+            {filteredMerchantSummaries.length > 0 ? (
+              <>
+                <div className="mt-4 flex max-h-[50vh] flex-wrap gap-2 overflow-y-auto overscroll-contain pr-1 no-scrollbar">
+                  {selectedMerchantSummary && !selectedMerchantIsVisible && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectMerchantToRename(selectedMerchantSummary.merchant)}
+                      className="min-w-0 max-w-full break-words rounded-2xl border border-amber-400/25 bg-amber-500/12 px-3 py-2 text-left text-xs font-black leading-snug text-amber-100 transition-colors"
+                    >
+                      {selectedMerchantSummary.merchant} · {selectedMerchantSummary.count} 筆 · 已選取
+                    </button>
+                  )}
+                  {visibleMerchantSummaries.map(({ merchant, count }) => (
+                    <button
+                      key={merchant}
+                      type="button"
+                      onClick={() => onSelectMerchantToRename(merchant)}
+                      className={`min-w-0 max-w-full break-words rounded-2xl border px-3 py-2 text-left text-xs font-black leading-snug transition-colors ${
+                        selectedMerchantToRename === merchant
+                          ? 'border-amber-400/25 bg-amber-500/12 text-amber-100'
+                          : 'border-white/10 bg-[#0f1321] text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {merchant} · {count} 筆
+                    </button>
+                  ))}
+                </div>
+
+                {hasMoreMerchants && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleMerchantCount((current) => current + MERCHANT_PAGE_SIZE)}
+                    className={`${sectionSecondaryButtonClassName} mt-4 w-full sm:w-auto`}
+                  >
+                    載入更多商家
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-[#0f1321] px-4 py-6 text-center text-sm text-slate-400">
+                找不到符合「{merchantSearchQuery.trim()}」的商家。
+              </div>
+            )}
+
+            {merchantSearchQuery.trim() && selectedMerchantToRename && !selectedMerchantInFilteredResults && (
+              <p className="mt-3 text-xs font-bold text-amber-200">
+                目前選取的商家不在搜尋結果中；清空搜尋可回到完整清單。
+              </p>
+            )}
           </div>
 
           {selectedMerchantToRename ? (
@@ -134,7 +233,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                     {selectedMerchantToRename} · {merchantTransactions.length} 筆
                   </span>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0f1321]">
+                <div className="max-h-[50vh] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#0f1321] no-scrollbar">
                   {isMerchantTransactionsLoading ? (
                     <div className="px-4 py-6 text-center text-sm text-slate-400">載入中...</div>
                   ) : merchantTransactions.length > 0 ? (
