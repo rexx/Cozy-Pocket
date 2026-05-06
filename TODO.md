@@ -25,14 +25,14 @@
 ## 首頁與日曆體驗
 
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
-- ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。（紀錄：[home-week-calendar.md](docs/todo-references/home-week-calendar.md)）
+- ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。（紀錄：[home-week-calendar.md](docs/completed-references/home-week-calendar.md)）
 - ✅ 首頁已支援週／月切換模式，並會記住使用者最後一次選擇；週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。
-- ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/todo-references/today-button-glow-clipping.md)）
-- ✅ 交易項目的支付方式已支援文字／圖示顯示偏好，預設保留文字並可在偏好設定切換，圖示模式使用與新增／編輯 modal 一致的圖示。（計劃：[payment-method-icons.md](docs/todo-references/payment-method-icons.md)）
+- ✅ 今天按鈕已移除光暈效果，避免上方出現被截斷的視覺問題。（紀錄：[today-button-glow-clipping.md](docs/completed-references/today-button-glow-clipping.md)）
+- ✅ 交易項目的支付方式已支援文字／圖示顯示偏好，預設保留文字並可在偏好設定切換，圖示模式使用與新增／編輯 modal 一致的圖示。（紀錄：[payment-method-icons.md](docs/completed-references/payment-method-icons.md)）
 
 ## 設定頁體驗
 
-- ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；紀錄：[settings-header-color.md](docs/todo-references/settings-header-color.md)）
+- ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；紀錄：[settings-header-color.md](docs/completed-references/settings-header-color.md)）
 
 ## 商家與資料維護
 
@@ -55,8 +55,8 @@
 ## AI 功能
 
 - 🟡 將新增交易的 AI 快速填寫改為與「支出」／「收入」並列的 tab 選項，只有切到 AI tab 時才顯示 AI 輸入區。
-- ✅ 等待 Gemini API 回應時已新增更明確的 SVG 外框流動動畫，讓使用者知道 AI 正在解析中。（紀錄：[gemini-loading-animation.md](docs/todo-references/gemini-loading-animation.md)）
-- ✅ 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（紀錄：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
+- ✅ 等待 Gemini API 回應時已新增更明確的 SVG 外框流動動畫，讓使用者知道 AI 正在解析中。（紀錄：[gemini-loading-animation.md](docs/completed-references/gemini-loading-animation.md)）
+- ✅ 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（紀錄：[gemini-entrypoint.md](docs/completed-references/gemini-entrypoint.md)）
 
 ## Bundle / Chunk 優化待辦
 
