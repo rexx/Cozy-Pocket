@@ -31,9 +31,104 @@ type AiFeedback = {
   type: 'success' | 'warning';
   message: string;
 };
+type AiBorderGradientAxis = 'x' | 'y';
+type AiBorderGradientConfig = {
+  id: string;
+  clipId: string;
+  axis: AiBorderGradientAxis;
+  x1: string;
+  y1: string;
+  x2: string;
+  y2: string;
+  from1: string;
+  from2: string;
+  to1: string;
+  to2: string;
+  clipX: string;
+  clipY: string;
+  clipWidth: string;
+  clipHeight: string;
+};
 
 const PAYMENT_METHODS: PaymentMethod[] = ['現金', '信用卡', '電子支付', '轉帳'];
 const AI_BORDER_CLASS_NAME = 'border-cyan-300/60';
+const AI_BORDER_GRADIENT_STOPS = [
+  { offset: '0', color: 'rgb(34 211 238 / 0.18)' },
+  { offset: '0.25', color: 'rgb(168 85 247 / 0.58)' },
+  { offset: '0.5', color: 'rgb(125 249 255 / 1)' },
+  { offset: '0.75', color: 'rgb(168 85 247 / 0.58)' },
+  { offset: '1', color: 'rgb(34 211 238 / 0.18)' },
+];
+const AI_BORDER_GRADIENTS: AiBorderGradientConfig[] = [
+  {
+    id: 'ai-input-jira-gradient-top',
+    clipId: 'ai-input-jira-clip-top',
+    axis: 'x',
+    x1: '0%',
+    y1: '0',
+    x2: '400%',
+    y2: '0',
+    from1: '0%',
+    from2: '400%',
+    to1: '400%',
+    to2: '800%',
+    clipX: '0',
+    clipY: '0',
+    clipWidth: '100%',
+    clipHeight: '18',
+  },
+  {
+    id: 'ai-input-jira-gradient-right',
+    clipId: 'ai-input-jira-clip-right',
+    axis: 'y',
+    x1: '0',
+    y1: '-100%',
+    x2: '0',
+    y2: '300%',
+    from1: '-100%',
+    from2: '300%',
+    to1: '300%',
+    to2: '700%',
+    clipX: 'calc(100% - 18px)',
+    clipY: '0',
+    clipWidth: '18',
+    clipHeight: '100%',
+  },
+  {
+    id: 'ai-input-jira-gradient-bottom',
+    clipId: 'ai-input-jira-clip-bottom',
+    axis: 'x',
+    x1: '300%',
+    y1: '0',
+    x2: '700%',
+    y2: '0',
+    from1: '300%',
+    from2: '700%',
+    to1: '-100%',
+    to2: '300%',
+    clipX: '0',
+    clipY: 'calc(100% - 18px)',
+    clipWidth: '100%',
+    clipHeight: '18',
+  },
+  {
+    id: 'ai-input-jira-gradient-left',
+    clipId: 'ai-input-jira-clip-left',
+    axis: 'y',
+    x1: '0',
+    y1: '0%',
+    x2: '0',
+    y2: '400%',
+    from1: '0%',
+    from2: '400%',
+    to1: '-400%',
+    to2: '0%',
+    clipX: '0',
+    clipY: '0',
+    clipWidth: '18',
+    clipHeight: '100%',
+  },
+];
 const AI_FIELD_LABELS: Record<AiFilledField, string> = {
   amount: '金額',
   currency: '幣別',
@@ -539,6 +634,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const amountCurrencyBorderClassName = validationErrors.amount
     ? 'border-red-400/40'
     : getAiBorderClass(['amount', 'currency']);
+  const isAiAnimationVisible = isAiProcessing;
 
   const getTextMatchRank = (value: string, rawQuery: string) => {
     const query = rawQuery.trim().toLowerCase();
@@ -677,16 +773,40 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         )}
         {hasApiKey && !isEditing && (
           <div className="px-2 mb-5 pt-1 pb-3">
-            <form onSubmit={handleAiSubmit} className="relative group h-12 rounded-2xl" aria-busy={isAiProcessing}>
-              <div className={`relative flex h-12 items-center rounded-2xl px-4 backdrop-blur-md transition-all ${isAiProcessing ? 'ai-input-pulse-glow bg-[#252538]' : 'bg-[#252538]/60'}`}>
+            <form onSubmit={handleAiSubmit} className="relative group h-12 rounded-2xl" aria-busy={isAiAnimationVisible}>
+              <div className={`relative flex h-12 items-center rounded-2xl px-4 backdrop-blur-md transition-all ${isAiAnimationVisible ? 'ai-input-pulse-glow bg-[#252538]' : 'bg-[#252538]/60'}`}>
                 <svg className="ai-input-svg-border" aria-hidden="true">
+                  <defs>
+                    {isAiAnimationVisible && (
+                      <>
+                        {AI_BORDER_GRADIENTS.map(({ id, axis, x1, y1, x2, y2, from1, from2, to1, to2 }) => (
+                          <linearGradient key={id} id={id} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2} spreadMethod="reflect">
+                            <animate attributeName={axis === 'x' ? 'x1' : 'y1'} from={from1} to={to1} repeatCount="indefinite" dur="3s" />
+                            <animate attributeName={axis === 'x' ? 'x2' : 'y2'} from={from2} to={to2} repeatCount="indefinite" dur="3s" />
+                            {AI_BORDER_GRADIENT_STOPS.map(({ offset, color }) => (
+                              <stop key={offset} offset={offset} stopColor={color} />
+                            ))}
+                          </linearGradient>
+                        ))}
+                        {AI_BORDER_GRADIENTS.map(({ clipId, clipX, clipY, clipWidth, clipHeight }) => (
+                          <clipPath key={clipId} id={clipId}>
+                            <rect x={clipX} y={clipY} width={clipWidth} height={clipHeight} />
+                          </clipPath>
+                        ))}
+                      </>
+                    )}
+                  </defs>
                   <rect className="ai-input-svg-border-base" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="16" ry="16" pathLength="100" />
-                  {isAiProcessing && (
-                    <rect className="ai-input-svg-border-flow" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="16" ry="16" pathLength="100" />
+                  {isAiAnimationVisible && (
+                    <>
+                      {AI_BORDER_GRADIENTS.map(({ id, clipId }) => (
+                        <rect key={id} className="ai-input-svg-border-flow" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="16" ry="16" pathLength="100" stroke={`url(#${id})`} clipPath={`url(#${clipId})`} />
+                      ))}
+                    </>
                   )}
                 </svg>
                 <div className="flex-shrink-0 mr-3 text-cyan-400">
-                  <Sparkles size={16} className={isAiProcessing ? 'animate-pulse' : undefined} />
+                  <Sparkles size={16} className={isAiAnimationVisible ? 'animate-pulse' : undefined} />
                 </div>
                 <input 
                   type="text"

@@ -62,7 +62,7 @@ textarea {
 }
 
 .ai-input-pulse-glow {
-  box-shadow: 0 0 18px rgb(34 211 238 / 0.14);
+  box-shadow: 0 0 14px rgb(34 211 238 / 0.11);
 }
 
 .ai-input-svg-border {
@@ -94,25 +94,13 @@ textarea {
 }
 
 .ai-input-svg-border-flow {
-  stroke: rgb(103 232 249 / 0.68);
   stroke-width: 1;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 3px rgb(34 211 238 / 0.42));
-  stroke-dasharray: 20 80;
-  animation: ai-input-svg-flow 3s linear infinite;
-}
-
-@keyframes ai-input-svg-flow {
-  from {
-    stroke-dashoffset: 100;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+  filter: drop-shadow(0 0 4px rgb(34 211 238 / 0.42));
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ai-input-svg-border-flow {
-    animation: none;
+  .ai-input-svg-border animate {
+    display: none;
   }
 }

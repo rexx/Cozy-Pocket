@@ -9,14 +9,14 @@
 ## 實作內容
 
 - 在 `AddTransactionModal` 的 AI 快速填寫輸入框加入 SVG 外框 overlay。
-- 靜態外框與解析中亮線都由 SVG `rect` 繪製，共用相同 geometry，避免 CSS border 與動畫路徑不一致。
-- 解析中亮線使用 `stroke-dasharray` 與 `stroke-dashoffset` 沿輸入框外框移動。
+- 靜態外框與解析中漸層外框都由 SVG `rect` 繪製，共用相同 geometry，避免 CSS border 與動畫路徑不一致。
+- 解析中外框使用四組 SVG `linearGradient` 搭配 `animate`，分別處理上、右、下、左四邊，呈現接近 Jira 的沿邊線流動效果。
 - 目前動畫參數：
   - 靜態外框 `stroke-width: 1`
-  - 動畫亮線 `stroke-width: 1`
-  - 動畫亮線長度約為整體周長 20%
-  - 動畫速度約 3 秒一圈
-  - 動畫線顏色接近靜態 cyan 外框，只略亮一點
+  - 動畫外框 `stroke-width: 1`
+  - SVG 漸層速度約 3 秒一輪
+  - 外框顏色使用 cyan 與 purple 漸層
+  - 外層 glow 使用固定弱光暈，不做呼吸動畫
 - `Sparkles` icon 在解析中保留輕微 pulse，作為第二層低調回饋。
 - 補上 `prefers-reduced-motion: reduce` 降級，使用者偏好減少動態時停用外框流動動畫。
 
