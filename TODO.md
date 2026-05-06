@@ -54,6 +54,8 @@
 
 ## AI 功能
 
+- 🟡 將新增交易的 AI 快速填寫改為與「支出」／「收入」並列的 tab 選項，只有切到 AI tab 時才顯示 AI 輸入區。
+- ✅ 等待 Gemini API 回應時已新增更明確的 SVG 外框流動動畫，讓使用者知道 AI 正在解析中。（紀錄：[gemini-loading-animation.md](docs/todo-references/gemini-loading-animation.md)）
 - ✅ 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（紀錄：[gemini-entrypoint.md](docs/todo-references/gemini-entrypoint.md)）
 
 ## Bundle / Chunk 優化待辦

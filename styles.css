@@ -60,3 +60,59 @@ textarea {
 .animate-slide-up {
   animation: slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.ai-input-pulse-glow {
+  box-shadow: 0 0 18px rgb(34 211 238 / 0.14);
+}
+
+.ai-input-svg-border {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ai-input-svg-border-base,
+.ai-input-svg-border-flow {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.ai-input-svg-border-base {
+  stroke: rgb(255 255 255 / 0.08);
+  stroke-width: 1;
+}
+
+.group:focus-within .ai-input-svg-border-base {
+  stroke: rgb(103 232 249 / 0.35);
+}
+
+.ai-input-pulse-glow .ai-input-svg-border-base {
+  stroke: rgb(103 232 249 / 0.42);
+}
+
+.ai-input-svg-border-flow {
+  stroke: rgb(103 232 249 / 0.68);
+  stroke-width: 1;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px rgb(34 211 238 / 0.42));
+  stroke-dasharray: 20 80;
+  animation: ai-input-svg-flow 3s linear infinite;
+}
+
+@keyframes ai-input-svg-flow {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-input-svg-border-flow {
+    animation: none;
+  }
+}

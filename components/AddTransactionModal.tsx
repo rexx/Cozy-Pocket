@@ -676,10 +676,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
         {hasApiKey && !isEditing && (
-          <div className="px-2 mb-5">
-            <form onSubmit={handleAiSubmit} className="relative group">
-              <div className="absolute inset-0 bg-cyan-500/5 rounded-2xl blur-lg group-focus-within:bg-cyan-500/10 transition-all"></div>
-              <div className="relative flex h-12 items-center bg-[#252538]/60 border border-white/5 rounded-2xl px-4 focus-within:border-cyan-500/30 transition-all backdrop-blur-md">
+          <div className="px-2 mb-5 pt-1 pb-3">
+            <form onSubmit={handleAiSubmit} className="relative group h-12 rounded-2xl" aria-busy={isAiProcessing}>
+              <div className={`relative flex h-12 items-center rounded-2xl px-4 backdrop-blur-md transition-all ${isAiProcessing ? 'ai-input-pulse-glow bg-[#252538]' : 'bg-[#252538]/60'}`}>
+                <svg className="ai-input-svg-border" aria-hidden="true">
+                  <rect className="ai-input-svg-border-base" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="16" ry="16" pathLength="100" />
+                  {isAiProcessing && (
+                    <rect className="ai-input-svg-border-flow" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="16" ry="16" pathLength="100" />
+                  )}
+                </svg>
                 <div className="flex-shrink-0 mr-3 text-cyan-400">
                   <Sparkles size={16} className={isAiProcessing ? 'animate-pulse' : undefined} />
                 </div>

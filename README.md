@@ -108,6 +108,7 @@ this.version(1).stores({
 *   AI 交易解析目前使用 `gemini-3.1-flash-lite-preview`，並將 Gemini 3 thinking level 設為 `minimal`，以符合 free tier 日常記帳用量與低延遲需求。
 *   Gemini API key 由使用者在「資料與設定」頁輸入並儲存在本機 IndexedDB，不使用 build-time env。
 *   尚未設定 Gemini API key 時，新增交易頁會隱藏 AI 快速填寫入口。
+*   等待 Gemini API 回應時，AI 快速填寫輸入框會顯示 SVG 外框流動動畫，成功或失敗後停止。
 *   AI 填入的欄位會以 cyan 邊框標示；手動修改該欄位後會移除標示。
 *   AI 可套用支援但未啟用的幣別到單筆交易，但不會自動修改偏好設定中的啟用幣別清單。
 *   AI prompt 與 response schema 會列出並限制可用類別、子類別、支付方式與幣別；AI 回傳的非法類別、子類別、支付方式或幣別不會覆蓋表單欄位，會改以 inline 提示提醒使用者手動確認。
