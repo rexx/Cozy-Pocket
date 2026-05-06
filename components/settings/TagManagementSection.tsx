@@ -1,5 +1,5 @@
 import React from 'react';
-import { PencilLine, Tags } from 'lucide-react';
+import { CheckCircle2, Eye, PencilLine } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { TagRenamePreview, TagUsageSummary } from '../../services/tagService';
 import TransactionItem from '../TransactionItem';
@@ -45,12 +45,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
   onTagTransactionClick,
 }) => {
   return (
-    <SettingsSection
-      title="Tag 管理"
-      description="整理 tag 名稱，並查看相關交易。"
-      icon={Tags}
-      accentClassName="border-cyan-400/20 bg-cyan-500/12 text-cyan-200"
-    >
+    <SettingsSection>
       {tagSummaries.length === 0 ? (
         <div className={`${sectionPanelClassName} text-sm text-slate-400`}>目前還沒有可管理的 tag。</div>
       ) : (
@@ -118,6 +113,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
                   disabled={!renamedTagInput.trim() || isTagPreviewLoading || isTagRenameSubmitting}
                   className={sectionCyanButtonClassName}
                 >
+                  <Eye size={16} />
                   {isTagPreviewLoading ? '預覽中...' : '預覽影響筆數'}
                 </button>
                 <button
@@ -126,6 +122,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
                   disabled={!tagRenamePreview || tagRenamePreview.affectedCount === 0 || isTagPreviewLoading || isTagRenameSubmitting}
                   className={sectionEmeraldButtonClassName}
                 >
+                  <CheckCircle2 size={16} />
                   {isTagRenameSubmitting ? '更名中...' : '確認更名'}
                 </button>
               </div>

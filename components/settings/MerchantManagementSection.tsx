@@ -1,5 +1,5 @@
 import React from 'react';
-import { PencilLine, Store } from 'lucide-react';
+import { CheckCircle2, Eye, PencilLine } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { MerchantRenamePreview, MerchantUsageSummary } from '../../services/merchantService';
 import TransactionItem from '../TransactionItem';
@@ -45,12 +45,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   onMerchantTransactionClick,
 }) => {
   return (
-    <SettingsSection
-      title="商家管理"
-      description="整理商家名稱，並查看相關交易。"
-      icon={Store}
-      accentClassName="border-amber-400/20 bg-amber-500/12 text-amber-200"
-    >
+    <SettingsSection>
       {merchantSummaries.length === 0 ? (
         <div className={`${sectionPanelClassName} text-sm text-slate-400`}>目前還沒有可管理的商家。</div>
       ) : (
@@ -118,6 +113,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                   disabled={!renamedMerchantInput.trim() || isMerchantPreviewLoading || isMerchantRenameSubmitting}
                   className={sectionCyanButtonClassName}
                 >
+                  <Eye size={16} />
                   {isMerchantPreviewLoading ? '預覽中...' : '預覽影響筆數'}
                 </button>
                 <button
@@ -126,6 +122,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                   disabled={!merchantRenamePreview || merchantRenamePreview.affectedCount === 0 || isMerchantPreviewLoading || isMerchantRenameSubmitting}
                   className={sectionEmeraldButtonClassName}
                 >
+                  <CheckCircle2 size={16} />
                   {isMerchantRenameSubmitting ? '更名中...' : '確認更名'}
                 </button>
               </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpDown, Database, Download, Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { Transaction } from '../../types';
 import SettingsSection, {
   sectionLabelClassName,
@@ -36,40 +36,25 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
   onImportFromPreview,
 }) => {
   return (
-    <SettingsSection
-      title="匯入匯出"
-      description="匯出備份，或從 CSV 匯入資料。"
-      icon={ArrowUpDown}
-      accentClassName="border-amber-400/20 bg-amber-500/12 text-amber-200"
-    >
+    <SettingsSection>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <div className={`${sectionPanelClassName} flex h-full flex-col`}>
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-500/12 text-cyan-200">
-              <Upload size={18} />
-            </div>
-            <div>
-              <p className={sectionLabelClassName}>Export Backup</p>
-              <p className="text-sm text-slate-300">將目前所有記帳紀錄匯出為 CSV。</p>
-            </div>
+          <div className="mb-4 space-y-1">
+            <p className={sectionLabelClassName}>Export Backup</p>
+            <p className="text-sm text-slate-300">將目前所有記帳紀錄匯出為 CSV。</p>
           </div>
           <div className="mt-auto">
             <button type="button" onClick={onExportToCsv} className={`${sectionSecondaryButtonClassName} w-full`}>
               <Download size={16} />
-              立即匯出 CSV
+              匯出 CSV
             </button>
           </div>
         </div>
 
         <div className={`${sectionPanelClassName} flex h-full flex-col space-y-4`}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-500/12 text-amber-200">
-              <Download size={18} />
-            </div>
-            <div>
-              <p className={sectionLabelClassName}>Import From CSV</p>
-              <p className="text-sm text-slate-300">選擇備份檔，先看預覽再決定如何匯入。</p>
-            </div>
+          <div className="space-y-1">
+            <p className={sectionLabelClassName}>Import From CSV</p>
+            <p className="text-sm text-slate-300">選擇備份檔，先看預覽再決定如何匯入。</p>
           </div>
 
           <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={onImportFileChange} />
@@ -78,8 +63,8 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className={`${sectionSecondaryButtonClassName} w-full justify-center`}
           >
-            <Database size={16} />
-            {selectedImportFileName || '選擇 CSV 檔案'}
+            <Upload size={16} />
+            {selectedImportFileName || '匯入 CSV'}
           </button>
 
           {isParsingImportFile && (
@@ -110,6 +95,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
                 onClick={() => onImportFromPreview('append')}
                 className={sectionSecondaryButtonClassName}
               >
+                <Upload size={16} />
                 附加匯入
               </button>
               <button
@@ -117,6 +103,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
                 onClick={() => onImportFromPreview('overwrite')}
                 className={sectionSecondaryButtonClassName}
               >
+                <Upload size={16} />
                 覆寫匯入
               </button>
             </div>

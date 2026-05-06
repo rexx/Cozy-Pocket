@@ -1,6 +1,19 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { ArrowLeft, AlertTriangle, CheckCircle2, Store } from 'lucide-react';
+import {
+  AlertOctagon,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowUpDown,
+  CheckCircle2,
+  ChevronRight,
+  CloudUpload,
+  Globe,
+  Sparkles,
+  Store,
+  Tags,
+  type LucideIcon,
+} from 'lucide-react';
 import { PaymentMethodDisplayMode, PullReport, Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
@@ -14,11 +27,17 @@ import SyncSection from './settings/SyncSection';
 import TagManagementSection from './settings/TagManagementSection';
 import ImportExportSection from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
+import { MERCHANT_MANAGEMENT_COPY, SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
 import { confirmAction } from '../services/dialogService';
 import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
+export type SettingsSectionPage = keyof typeof SETTINGS_SECTION_COPY;
+
 interface SettingsPageProps {
+  section?: SettingsSectionPage | null;
   onClose: () => void;
+  onCloseSection: () => void;
+  onOpenSection: (section: SettingsSectionPage) => void;
   onDataChange: () => void;
   onInsertExamples: () => Promise<number>;
   onTriggerSync: (label: string) => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
@@ -32,6 +51,7 @@ interface SettingsPageProps {
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onPaymentMethodDisplayModeChange: (mode: PaymentMethodDisplayMode) => void;
   tagSummaries: TagUsageSummary[];
+  merchantCount: number;
   onPreviewTagRename: (oldTag: string, newTag: string) => Promise<TagRenamePreview>;
   onRenameTag: (oldTag: string, newTag: string) => Promise<TagRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
   onGetTagTransactions: (tag: string) => Promise<Transaction[]>;
@@ -42,8 +62,30 @@ const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCateg
 const MOCK_SYNC_API_URL = 'mock://cloud-sync';
 const MOCK_SYNC_TOKEN = 'mock-token';
 
+const SECTION_GLOW_COLORS: Record<SettingsSectionPage | 'overview', string> = {
+  overview: 'rgba(34,211,238,0.1)',
+  preferences: 'rgba(34,211,238,0.1)',
+  ai: 'rgba(34,211,238,0.1)',
+  sync: 'rgba(99,102,241,0.12)',
+  tags: 'rgba(34,211,238,0.1)',
+  'import-export': 'rgba(245,158,11,0.12)',
+  danger: 'rgba(239,68,68,0.12)',
+};
+
+interface SettingsOverviewItem {
+  section: SettingsSectionPage;
+  title: string;
+  description: string;
+  meta: string;
+  icon: LucideIcon;
+  accentClassName: string;
+}
+
 const SettingsPage: React.FC<SettingsPageProps> = ({
+  section = null,
   onClose,
+  onCloseSection,
+  onOpenSection,
   onDataChange,
   onInsertExamples,
   onTriggerSync,
@@ -57,6 +99,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   paymentMethodDisplayMode,
   onPaymentMethodDisplayModeChange,
   tagSummaries,
+  merchantCount,
   onPreviewTagRename,
   onRenameTag,
   onGetTagTransactions,
@@ -681,51 +724,173 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
-  return (
-    <div className="flex h-full w-full flex-col bg-[#1a1c2c] select-none overflow-hidden text-slate-200">
-      <div className="flex-none">
-        <PageHeader
-          title="資料與設定"
-          leftAction={<ArrowLeft size={26} />}
-          onLeftAction={onClose}
-        />
+  const pageTitle = section ? SETTINGS_SECTION_COPY[section].title : '資料與設定';
+  const pageBackgroundStyle: React.CSSProperties = {
+    background: `radial-gradient(circle at top, ${SECTION_GLOW_COLORS[section || 'overview']}, transparent 28%), linear-gradient(180deg, #1f2235 0%, #171a29 48%, #121520 100%)`,
+  };
+  const overviewItems: SettingsOverviewItem[] = [
+    {
+      section: 'preferences',
+      title: SETTINGS_SECTION_COPY.preferences.title,
+      description: SETTINGS_SECTION_COPY.preferences.description,
+      meta: `${defaultCurrency} · ${enabledCurrencies.length} 個可用幣別`,
+      icon: Globe,
+      accentClassName: 'border-cyan-400/20 bg-cyan-500/12 text-cyan-200',
+    },
+    {
+      section: 'ai',
+      title: SETTINGS_SECTION_COPY.ai.title,
+      description: SETTINGS_SECTION_COPY.ai.description,
+      meta: hasGeminiApiKey ? 'API key 已設定' : '尚未設定 API key',
+      icon: Sparkles,
+      accentClassName: 'border-cyan-400/20 bg-cyan-500/12 text-cyan-200',
+    },
+    {
+      section: 'sync',
+      title: SETTINGS_SECTION_COPY.sync.title,
+      description: SETTINGS_SECTION_COPY.sync.description,
+      meta: isOffline ? '目前離線' : '可執行同步',
+      icon: CloudUpload,
+      accentClassName: 'border-indigo-400/20 bg-indigo-500/12 text-indigo-200',
+    },
+    {
+      section: 'tags',
+      title: SETTINGS_SECTION_COPY.tags.title,
+      description: SETTINGS_SECTION_COPY.tags.description,
+      meta: `${tagSummaries.length} 個 tag`,
+      icon: Tags,
+      accentClassName: 'border-cyan-400/20 bg-cyan-500/12 text-cyan-200',
+    },
+    {
+      section: 'import-export',
+      title: SETTINGS_SECTION_COPY['import-export'].title,
+      description: SETTINGS_SECTION_COPY['import-export'].description,
+      meta: selectedImportFileName || 'CSV 備份與匯入',
+      icon: ArrowUpDown,
+      accentClassName: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
+    },
+    {
+      section: 'danger',
+      title: SETTINGS_SECTION_COPY.danger.title,
+      description: SETTINGS_SECTION_COPY.danger.description,
+      meta: '重置 / 範例資料',
+      icon: AlertOctagon,
+      accentClassName: 'border-red-400/20 bg-red-500/12 text-red-200',
+    },
+  ];
+
+  const renderStatusMessage = () => {
+    if (status.type === 'idle') return null;
+
+    return (
+      <div className={`flex items-center gap-3 rounded-2xl border p-4 animate-slide-up ${status.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-red-500/20 bg-red-500/10 text-red-300'}`}>
+        {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+        <span className="text-sm font-bold whitespace-pre-line">{status.message}</span>
       </div>
+    );
+  };
 
-      <div className="flex-1 overflow-y-auto px-4 pt-6 sm:px-6 sm:pt-8 no-scrollbar bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.1),_transparent_28%),linear-gradient(180deg,_#1f2235_0%,_#171a29_48%,_#121520_100%)]">
-        <div className="mx-auto max-w-6xl space-y-6 pb-10">
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <PreferencesSection
-              defaultCurrency={defaultCurrency}
-              enabledCurrencies={enabledCurrencies}
-              paymentMethodDisplayMode={paymentMethodDisplayMode}
-              onDefaultCurrencyChange={handleDefaultCurrencyChange}
-              onEnabledCurrencyToggle={(currency) => void handleEnabledCurrencyToggle(currency)}
-              onPaymentMethodDisplayModeChange={(mode) => void handlePaymentMethodDisplayModeChange(mode)}
-            />
-            <AiSection
-              geminiApiKeyInput={geminiApiKeyInput}
-              hasGeminiApiKey={hasGeminiApiKey}
-              isOffline={isOffline}
-              onGeminiApiKeyInputChange={(value) => {
-                setGeminiApiKeyInput(value);
-                setStatus({ type: 'idle', message: '' });
-              }}
-              onSaveGeminiApiKey={() => void saveGeminiApiKey()}
-            />
-            <SyncSection
-              syncApiUrl={syncApiUrl}
-              syncToken={syncToken}
-              setSyncApiUrl={setSyncApiUrl}
-              setSyncToken={setSyncToken}
-              onSaveSyncConfig={() => void saveSyncConfig()}
-              onOpenSyncProgress={onOpenSyncProgress}
-              onOpenPullDialog={openPullDialog}
-              onOpenPullReports={onOpenPullReports}
-              onUseMockSyncConfig={useMockSyncConfig}
-              isOffline={isOffline}
-            />
-          </div>
+  const renderOverview = () => (
+    <>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {overviewItems.map((item) => {
+          const Icon = item.icon;
 
+          return (
+            <React.Fragment key={item.section}>
+              <button
+                type="button"
+                onClick={() => onOpenSection(item.section)}
+                className="group flex min-h-[9.5rem] items-stretch gap-4 rounded-[28px] border border-white/8 bg-white/[0.045] p-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-sm transition-colors hover:bg-white/[0.065] active:scale-[0.99] sm:p-6"
+              >
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${item.accentClassName}`}>
+                  <Icon size={20} />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-black tracking-[0.02em] text-white">{item.title}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-400">{item.description}</p>
+                    </div>
+                    <ChevronRight size={20} className="mt-0.5 shrink-0 text-slate-500 transition-colors group-hover:text-white" />
+                  </div>
+                  <p className="mt-auto pt-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{item.meta}</p>
+                </div>
+              </button>
+
+              {item.section === 'tags' && (
+                <button
+                  type="button"
+                  onClick={onOpenMerchantManagement}
+                  className="group flex min-h-[9.5rem] items-stretch gap-4 rounded-[28px] border border-white/8 bg-white/[0.045] p-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-sm transition-colors hover:bg-white/[0.065] active:scale-[0.99] sm:p-6"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-500/12 text-amber-200">
+                    <Store size={20} />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-black tracking-[0.02em] text-white">{MERCHANT_MANAGEMENT_COPY.title}</h3>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                          {MERCHANT_MANAGEMENT_COPY.description}
+                        </p>
+                      </div>
+                      <ChevronRight size={20} className="mt-0.5 shrink-0 text-slate-500 transition-colors group-hover:text-white" />
+                    </div>
+                    <p className="mt-auto pt-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{merchantCount} 個商家</p>
+                  </div>
+                </button>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </>
+  );
+
+  const renderSection = () => {
+    switch (section) {
+      case 'preferences':
+        return (
+          <PreferencesSection
+            defaultCurrency={defaultCurrency}
+            enabledCurrencies={enabledCurrencies}
+            paymentMethodDisplayMode={paymentMethodDisplayMode}
+            onDefaultCurrencyChange={handleDefaultCurrencyChange}
+            onEnabledCurrencyToggle={(currency) => void handleEnabledCurrencyToggle(currency)}
+            onPaymentMethodDisplayModeChange={(mode) => void handlePaymentMethodDisplayModeChange(mode)}
+          />
+        );
+      case 'ai':
+        return (
+          <AiSection
+            geminiApiKeyInput={geminiApiKeyInput}
+            hasGeminiApiKey={hasGeminiApiKey}
+            isOffline={isOffline}
+            onGeminiApiKeyInputChange={(value) => {
+              setGeminiApiKeyInput(value);
+              setStatus({ type: 'idle', message: '' });
+            }}
+            onSaveGeminiApiKey={() => void saveGeminiApiKey()}
+          />
+        );
+      case 'sync':
+        return (
+          <SyncSection
+            syncApiUrl={syncApiUrl}
+            syncToken={syncToken}
+            setSyncApiUrl={setSyncApiUrl}
+            setSyncToken={setSyncToken}
+            onSaveSyncConfig={() => void saveSyncConfig()}
+            onOpenSyncProgress={onOpenSyncProgress}
+            onOpenPullDialog={openPullDialog}
+            onOpenPullReports={onOpenPullReports}
+            onUseMockSyncConfig={useMockSyncConfig}
+            isOffline={isOffline}
+          />
+        );
+      case 'tags':
+        return (
           <TagManagementSection
             tagSummaries={tagSummaries}
             selectedTagToRename={selectedTagToRename}
@@ -745,30 +910,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onRenameTag={() => void handleRenameTag()}
             onTagTransactionClick={onTagTransactionClick}
           />
-
-          <section className="rounded-[28px] border border-white/8 bg-white/[0.045] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-sm sm:p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-500/12 text-amber-200">
-                  <Store size={20} />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-base font-black tracking-[0.02em] text-white">商家管理</h2>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                    整理商家名稱，並查看相關交易。
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={onOpenMerchantManagement}
-                className="inline-flex shrink-0 items-center justify-center rounded-2xl border border-amber-400/25 bg-amber-500/15 px-4 py-3 text-sm font-black text-amber-200 transition-all hover:bg-amber-500/20 active:scale-[0.98]"
-              >
-                前往管理
-              </button>
-            </div>
-          </section>
-
+        );
+      case 'import-export':
+        return (
           <ImportExportSection
             fileInputRef={fileInputRef}
             selectedImportFileName={selectedImportFileName}
@@ -778,27 +922,44 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onImportFileChange={(e) => void handleImportFileChange(e)}
             onImportFromPreview={(mode) => void importFromPreview(mode)}
           />
-
+        );
+      case 'danger':
+        return (
           <DangerZoneSection
             onResetLocalData={() => void resetLocalData()}
             onInsertExamples={() => void insertExamples()}
           />
+        );
+      default:
+        return renderOverview();
+    }
+  };
 
-          {status.type !== 'idle' && (
-            <div className={`flex items-center gap-3 rounded-2xl border p-4 animate-slide-up ${status.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-red-500/20 bg-red-500/10 text-red-300'}`}>
-              {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-              <span className="text-sm font-bold whitespace-pre-line">{status.message}</span>
-            </div>
-          )}
+  return (
+    <div className="flex h-full w-full flex-col bg-[#1a1c2c] select-none overflow-hidden text-slate-200">
+      <div className="flex-none">
+        <PageHeader
+          title={pageTitle}
+          leftAction={<ArrowLeft size={26} />}
+          onLeftAction={section ? onCloseSection : onClose}
+        />
+      </div>
 
-          <div className="pt-6 text-center opacity-30">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-500">Privacy First</p>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-              所有資料皆儲存在您的瀏覽器本地資料庫中。
-              <br />
-              匯出功能可讓您輕鬆遷移資料。
+      <div
+        className="flex-1 overflow-y-auto px-4 pt-6 sm:px-6 sm:pt-8 no-scrollbar"
+        style={pageBackgroundStyle}
+      >
+        <div className="mx-auto max-w-6xl space-y-6 pb-10">
+          {section && (
+            <p className="mx-auto max-w-3xl text-center text-sm font-semibold leading-relaxed text-slate-400">
+              {SETTINGS_SECTION_COPY[section].description}
             </p>
-          </div>
+          )}
+          {renderSection()}
+          {renderStatusMessage()}
+          <p className="pt-6 text-center text-[10px] font-bold uppercase tracking-[0.4em] text-gray-700 opacity-15">
+            Cozy Pocket • Minimalism
+          </p>
         </div>
       </div>
 

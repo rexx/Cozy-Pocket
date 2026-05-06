@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyRound, Sparkles } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import SettingsSection, {
   sectionCyanButtonClassName,
   sectionInputClassName,
@@ -23,12 +23,7 @@ const AiSection: React.FC<AiSectionProps> = ({
   onSaveGeminiApiKey,
 }) => {
   return (
-    <SettingsSection
-      title="AI 設定"
-      description="設定 Gemini API key，讓新增交易可使用 AI 快速填寫。"
-      icon={Sparkles}
-      accentClassName="border-cyan-400/20 bg-cyan-500/12 text-cyan-200"
-    >
+    <SettingsSection>
       <div className={sectionPanelClassName}>
         <div className="space-y-4">
           <div className="space-y-2">

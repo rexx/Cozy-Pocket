@@ -4,7 +4,7 @@ import { format, isSameDay, isWithinInterval, endOfDay, addDays } from 'date-fns
 import { AlertCircle, X } from 'lucide-react';
 import TransactionItem from './components/TransactionItem';
 import AddTransactionModal from './components/AddTransactionModal';
-import SettingsPage from './components/SettingsPage';
+import SettingsPage, { type SettingsSectionPage } from './components/SettingsPage';
 import SyncStatusPage from './components/SyncStatusPage';
 import SearchPage from './components/SearchPage';
 import HomePage from './components/HomePage';
@@ -23,12 +23,43 @@ import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 import { showAutoDismissToast } from './services/dialogService';
 import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getPaymentMethodDisplayMode } from './preferences';
 
-type AppView = 'home' | 'search' | 'stats' | 'settings' | 'sync' | 'merchant-management' | 'pull-reports';
+type AppView =
+  | 'home'
+  | 'search'
+  | 'stats'
+  | 'settings'
+  | 'settings-preferences'
+  | 'settings-ai'
+  | 'settings-sync'
+  | 'settings-tags'
+  | 'settings-import-export'
+  | 'settings-danger'
+  | 'sync'
+  | 'merchant-management'
+  | 'pull-reports';
 
 interface AppHistoryState {
   view: AppView;
   syncReturnView?: 'home' | 'settings';
 }
+
+const SETTINGS_SECTION_VIEW_MAP: Record<SettingsSectionPage, AppView> = {
+  preferences: 'settings-preferences',
+  ai: 'settings-ai',
+  sync: 'settings-sync',
+  tags: 'settings-tags',
+  'import-export': 'settings-import-export',
+  danger: 'settings-danger',
+};
+
+const SETTINGS_VIEW_SECTION_MAP: Partial<Record<AppView, SettingsSectionPage>> = {
+  'settings-preferences': 'preferences',
+  'settings-ai': 'ai',
+  'settings-sync': 'sync',
+  'settings-tags': 'tags',
+  'settings-import-export': 'import-export',
+  'settings-danger': 'danger',
+};
 
 const HOME_CALENDAR_VIEW_MODE_STORAGE_KEY = 'home-calendar-view-mode';
 
@@ -467,6 +498,14 @@ const App: React.FC = () => {
 
   const suggestionIndex = useMemo<SuggestionIndex>(() => buildSuggestionIndex(transactions), [transactions]);
   const tagUsageSummaries = useMemo(() => getTagUsageSummaries(transactions), [transactions]);
+  const merchantCount = useMemo(() => {
+    const merchants = new Set<string>();
+    for (const tx of transactions) {
+      const merchant = normalizeMerchantName(tx.merchant || '');
+      if (merchant) merchants.add(merchant);
+    }
+    return merchants.size;
+  }, [transactions]);
   const pullYearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const years = new Set<string>([
@@ -854,6 +893,7 @@ const App: React.FC = () => {
   const syncProgressPercent = syncProgressUI.total > 0
     ? Math.round((syncProgressUI.processed / syncProgressUI.total) * 100)
     : 0;
+  const settingsSection = SETTINGS_VIEW_SECTION_MAP[activeView] ?? null;
 
   if (activeView === 'stats') {
     return (
@@ -886,13 +926,16 @@ const App: React.FC = () => {
     );
   }
 
-  if (activeView === 'settings') {
+  if (activeView === 'settings' || settingsSection) {
     return (
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
         <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
         <SettingsPage
+          section={settingsSection}
           onClose={() => navigateBack('home')}
+          onCloseSection={() => navigateBack('settings')}
+          onOpenSection={(section) => setActiveView(SETTINGS_SECTION_VIEW_MAP[section])}
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
           onTriggerSync={triggerPendingSync}
@@ -906,6 +949,7 @@ const App: React.FC = () => {
           paymentMethodDisplayMode={paymentMethodDisplayMode}
           onPaymentMethodDisplayModeChange={setPaymentMethodDisplayMode}
           tagSummaries={tagUsageSummaries}
+          merchantCount={merchantCount}
           onPreviewTagRename={previewTagRename}
           onRenameTag={renameTag}
           onGetTagTransactions={getTagTransactions}

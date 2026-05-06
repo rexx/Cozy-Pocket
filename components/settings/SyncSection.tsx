@@ -1,5 +1,5 @@
 import React from 'react';
-import { CloudDownload, CloudUpload, Database, History } from 'lucide-react';
+import { CloudDownload, CloudUpload, Database, History, Save } from 'lucide-react';
 import SettingsSection, {
   sectionCyanButtonClassName,
   sectionInputClassName,
@@ -34,12 +34,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
   isOffline,
 }) => {
   return (
-    <SettingsSection
-      title="同步設定"
-      description="設定雲端同步，並查看同步狀態。"
-      icon={CloudUpload}
-      accentClassName="border-indigo-400/20 bg-indigo-500/12 text-indigo-200"
-    >
+    <SettingsSection>
       <div className={sectionPanelClassName}>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -64,6 +59,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button type="button" onClick={onSaveSyncConfig} className={sectionCyanButtonClassName}>
+              <Save size={16} />
               儲存同步設定
             </button>
             <button type="button" onClick={onOpenSyncProgress} className={sectionSecondaryButtonClassName}>
