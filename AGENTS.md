@@ -1,5 +1,165 @@
 # AGENTS.md
 
+The single source of truth for any agent (Claude Code, Codex, Cursor, Aider…) or human working on Cozy Pocket. Project context first, then operational rules.
+
+---
+
+## What this is
+
+Cozy Pocket is a **personal-use** React 19 PWA for tracking expenses. Single-developer, vibe-coded with AI as design partner. Frontend + Google Apps Script backend live in this repo. Cloud storage = Google Sheets.
+
+Deployment: GitHub Pages at `https://rexx.github.io/Cozy-Pocket/`.
+
+**Primary runtime: iPhone in standalone mode** (Add to Home Screen → PWA). Browser mode is not the target.
+
+## Tech stack
+
+- React 19 / TypeScript (strict) / Vite 6
+- Tailwind v4 via `@tailwindcss/vite` (no config file)
+- Dexie 4 (IndexedDB wrapper) — DB name `CozyPocketDB`, schema v2
+- date-fns 4 / lucide-react / sweetalert2
+- vite-plugin-pwa with `registerType: 'autoUpdate'`, `StaleWhileRevalidate`
+- `@google/genai` for Gemini AI parsing (model `gemini-3.1-flash-lite-preview`, `thinking=MINIMAL`)
+
+## Architecture at a glance
+
+**Local-first.** All writes hit Dexie before anything else. Sync is best-effort layered on top.
+
+```
+User action → React state + Dexie write → background sync to GAS → Google Sheets
+                                       ↘ (if offline / fail) → leave pending → retry on app boot or manual
+```
+
+**Key modules**:
+- `App.tsx` — view routing, shared state, CRUD handlers, sync orchestration (currently fat — see "Known debt")
+- `db.ts` — Dexie schema (3 tables: `transactions`, `settings`, `pullReports`)
+- `services/cloudSyncService.ts` — sync engine + mock backend (see "Known debt")
+- `services/geminiService.ts` — AI parsing
+- `services/networkService.ts` — online/offline detection
+- `components/*Page.tsx` — full pages
+- `components/*Modal.tsx` — overlays (only `AddTransactionModal` currently)
+- `components/settings/*Section.tsx` — settings subpages
+
+**Pages (6)**: 首頁 / 搜尋 / 統計 / 資料與設定 / 商家管理 / 同步狀態
+**Overlays (1)**: 新增／編輯交易
+
+## Sync model
+
+- **Best-effort by design.** No exponential backoff, no aggressive retry. Failed syncs stay `pending`, retried on app boot or via 同步狀態 page (manual). User restarting the app is the expected recovery path — **do not add retry-storm logic**.
+- **Conflict resolution**: `version` > `updatedAt` > content match. Two-way merge produces a `PullReport` saved locally for audit.
+- **Sync triggers** (see README §9 for the full list): create / update / CSV import / save credentials / sample data insert / app boot pending sweep / manual button.
+- **`syncStatus` is local-only** (`pending` / `syncing` / `synced` / `error`) — never sent in the upload payload.
+- **Offline-aware**: writes always succeed locally; sync is skipped (not failed) when `networkService` reports offline.
+- **Payload shape** must stay compatible with the deployed Google Apps Script (`docs/google-apps-script-phase1.js`).
+
+## Mock cloud backend
+
+`mock://cloud-sync` URL scheme is implemented **inline in `cloudSyncService.ts`** (~400 lines), backed by `localStorage`. It exists for two purposes:
+1. Frontend UI testing without deploying GAS
+2. Stand-in while the real GAS endpoint is in flux
+
+**Status: short-term scaffolding.** Could/should be split out of `cloudSyncService.ts` eventually, but low priority. **When editing sync logic, keep the mock path working** — it's the developer's UI testing harness.
+
+## Data model essentials
+
+- Transaction `id` is generated from `Date.now()` (millisecond string).
+- `timestamp` is **epoch seconds** (not ms) with seconds always `00` to enable precise minute-level ordering. `readableDateTime` is the human-readable mirror.
+- `tags` stored as **single space-separated string**, not array. Token-based exact match (no substring matching).
+- `merchant` stored on each transaction, not in a separate table. Rename = batch update of all matching transactions.
+
+## iPhone PWA — load-bearing rules
+
+The app is used in standalone PWA mode on iPhone. Layout is the most fragile area; the developer has hit multiple Safari/standalone quirks. Before changing layout-affecting code:
+
+1. Read `docs/pwa-layout-gotchas.md`
+2. `git log` on layout-related files / `docs/pwa-layout-gotchas.md` for prior incident fixes
+3. **Do NOT** add `viewport-fit=cover` or `env(safe-area-inset-*)` — this has been deliberately rejected
+4. Header background must stay `#1a1c2c` (matches PWA chrome) for visual continuity in standalone mode
+5. Don't optimize for desktop browser appearance at the cost of standalone mode
+
+Other PWA notes:
+- `vite.config.ts` `base` is hardcoded to `/Cozy-Pocket/`. The PWA manifest scope/start_url match. Forking and redeploying requires updating both.
+- Service worker uses `autoUpdate` — users get new code on next app open without prompt.
+
+## Known debt (intentional, not bugs)
+
+These three files are oversized and the developer knows it. **Refactor opportunistically when touching them; do not force-break them as part of unrelated work.**
+
+| File | Lines | Status |
+|---|---|---|
+| `App.tsx` | ~1150 | Contains CRUD + sync orchestration + merchant/tag rename. New full pages should NOT add to it — extract `*Page.tsx` instead. Decomposition tracked in `docs/todo-references/app-tsx-decomposition.md`. |
+| `AddTransactionModal.tsx` | ~1065 | Form state + AI parsing + validation in one file. |
+| `cloudSyncService.ts` | ~1369 | Sync engine + mock backend in same file. Mock split is tracked debt. |
+
+**Planned moves** (in `docs/todo-references/`):
+- `merchant-management-settings-subpage.md` — 商家管理 will become a settings subpage (currently a top-level page)
+- See full `docs/todo-references/` list for other planned changes
+
+---
+
+## Operational rules
+
+### Where new code goes
+
+- **New full page** → `components/<Name>Page.tsx`. Do NOT add it as JSX inside `App.tsx`.
+- **New overlay / modal** → `components/<Name>Modal.tsx`.
+- **New settings subpage** → `components/settings/<Name>Section.tsx` + register the view key in `App.tsx` (e.g. `settings-foo`).
+- **New service** → `services/<name>Service.ts`. Service modules own data flow; UI components only call them, do not bypass them.
+- `App.tsx` is already too big — when adding shared state or handlers, extract a custom hook or service rather than piling onto `App.tsx`.
+
+### What NOT to touch without strong reason
+
+- **Dexie schema migrations** in `db.ts` — changing existing version stores corrupts users' local data. New version + additive migration only.
+- **`viewport-fit=cover` / `env(safe-area-inset-*)`** — deliberately rejected for iPhone standalone PWA layout. Don't reintroduce.
+- **Hardcoded base path `/Cozy-Pocket/`** in `vite.config.ts`, manifest, and HTML — changing it breaks the GitHub Pages deployment.
+- **Sync payload shape** in `cloudSyncService.ts` — must stay compatible with the deployed Google Apps Script. `syncStatus` and `lastSyncError` are local-only and must NOT be uploaded.
+- **`mock://cloud-sync` code path** — keep working when editing sync logic.
+
+### Coding style
+
+- **Code, comments, log strings: English / ASCII only.** UI-facing strings can be Chinese.
+- **Dexie import**: `import Dexie from 'dexie'` — never named import. Named import breaks subclass typing of `this.version()`. Non-negotiable.
+- **Lucide icons**: explicit per-icon imports only. No wildcards (`vite.config.ts` manualChunks depends on this).
+- **Gemini API key**: read from Dexie `settings` table at runtime. Never expect a build-time env var. There is no `.env` file by design.
+- **TypeScript strict** — no `as any`, no `// @ts-ignore` without a written justification.
+
+### Quality gates
+
+- **Sole automated check: `tsc --strict`** (runs as part of `npm run build`)
+- No tests (none. Zero. This is fine for the project's scope.)
+- No ESLint / Prettier / Biome
+- CI = build only (`.github/workflows/deploy.yml`), no test step
+
+When making data-correctness changes (CSV import/export, sync merge, AI parsing), prefer:
+- Small, reviewable diffs over batched refactors
+- Manual exercise of mock sync (`mock://cloud-sync`) for sync changes
+- Clear inline assertions where behavior is subtle
+
+### Documentation discipline
+
+Two folders track design notes (in addition to inline comments):
+- `docs/completed-references/` — for features already shipped
+- `docs/todo-references/` — for planned / in-flight work
+
+When you finish work that has a `todo-references/<name>.md` plan, move that file to `completed-references/` rather than deleting it.
+
+### Operational reset
+
+User-facing reset: 資料與設定 → 危險操作 → 「清除本機資料並重置」 (`localStorage.clear()` + delete `CozyPocketDB` + reload).
+
+### Where to find more
+
+- `README.md` §6 — extensive feature-level behavior spec, the source of truth for product behavior
+- `docs/cloud-sync-specification.md` — full sync algorithm
+- `docs/pwa-offline-implementation.md` — PWA / offline implementation notes
+- `docs/pwa-layout-gotchas.md` — iOS Safari standalone layout traps
+- `docs/google-apps-script-phase1.js` — backend implementation
+- `docs/completed-references/` — design notes for shipped features
+- `docs/todo-references/` — design notes for planned/in-flight work
+- `TODO.md` — current todo list
+
+---
+
 ## Commit Message Guidelines
 
 - Commit messages should be more descriptive than a short one-line summary.
