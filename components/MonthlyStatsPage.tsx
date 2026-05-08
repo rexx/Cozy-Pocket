@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addMonths, addYears, format } from 'date-fns';
-import { ArrowDownUp, ArrowLeft, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
-import { formatCurrencyAmount } from '../constants';
+import { ArrowDownUp, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Filter, MoreHorizontal } from 'lucide-react';
+import { CATEGORIES, formatCurrencyAmount } from '../constants';
 import { PaymentMethod, PaymentMethodDisplayMode, Transaction, TransactionType } from '../types';
-import { filterTransactionsByTag, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
+import { CategoryStatsItem, filterTransactionsByTag, getCategoryStats, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
+import { categoryIconMap } from './categoryIcons';
 
 type StatsPeriodMode = 'month' | 'year';
 type StatsSortMode = 'latest' | 'amount-desc';
@@ -18,6 +19,43 @@ interface MonthlyStatsPageProps {
   onBack: () => void;
   onTransactionClick: (transaction: Transaction) => void;
 }
+
+interface CategoryStatsByCurrency {
+  income: CategoryStatsItem[];
+  expense: CategoryStatsItem[];
+}
+
+const CATEGORY_BY_ID = new Map(CATEGORIES.map((category) => [category.id, category]));
+const UNKNOWN_CATEGORY_COLOR = '#64748b';
+
+const getCategoryName = (categoryId: string) => (
+  CATEGORY_BY_ID.get(categoryId)?.name || '未分類'
+);
+
+const getCategoryColor = (categoryId: string) => (
+  CATEGORY_BY_ID.get(categoryId)?.color || UNKNOWN_CATEGORY_COLOR
+);
+
+const getCategoryIconName = (categoryId: string) => (
+  String(CATEGORY_BY_ID.get(categoryId)?.icon || 'MoreHorizontal')
+);
+
+const getSubCategoryName = (categoryId: string, subCategoryId: string) => {
+  if (!subCategoryId) return '未選子類別';
+
+  const subCategory = CATEGORY_BY_ID
+    .get(categoryId)
+    ?.subcategories
+    ?.find((item) => item.id === subCategoryId);
+
+  return subCategory?.name || '未知子類別';
+};
+
+const compareCategoryStatsItems = (a: CategoryStatsItem, b: CategoryStatsItem) => {
+  if (b.total !== a.total) return b.total - a.total;
+  if (b.count !== a.count) return b.count - a.count;
+  return getCategoryName(a.categoryId).localeCompare(getCategoryName(b.categoryId), 'zh-Hant');
+};
 
 const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   transactions,
@@ -34,6 +72,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [sortMode, setSortMode] = useState<StatsSortMode>('latest');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
+  const [expandedCategoryKey, setExpandedCategoryKey] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedDate(initialDate);
@@ -75,6 +114,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 
   useEffect(() => {
     setExpandedSectionKey(null);
+    setExpandedCategoryKey(null);
   }, [selectedDate, selectedTag, selectedPaymentMethod, periodMode]);
 
   const filteredTransactions = useMemo(
@@ -88,6 +128,34 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     () => getStatsByCurrency(filteredTransactions),
     [filteredTransactions]
   );
+
+  const categoryStats = useMemo(
+    () => getCategoryStats(filteredTransactions),
+    [filteredTransactions]
+  );
+
+  const categoryStatsByCurrency = useMemo(() => {
+    const grouped = categoryStats.reduce((acc, item) => {
+      if (!acc[item.currency]) {
+        acc[item.currency] = { income: [], expense: [] };
+      }
+
+      if (item.type === '收入') {
+        acc[item.currency].income.push(item);
+      } else {
+        acc[item.currency].expense.push(item);
+      }
+
+      return acc;
+    }, {} as Record<string, CategoryStatsByCurrency>);
+
+    Object.values(grouped).forEach((item) => {
+      item.income.sort(compareCategoryStatsItems);
+      item.expense.sort(compareCategoryStatsItems);
+    });
+
+    return grouped;
+  }, [categoryStats]);
 
   const currencies = Object.keys(statsByCurrency);
 
@@ -105,6 +173,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   });
   const monthNavButtonClassName = 'pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#24273c]/80 text-gray-300 shadow-lg transition-all hover:text-white active:scale-90';
   const getSectionKey = (currency: string, type: TransactionType) => `${currency}:${type}`;
+  const getCategoryKey = (item: CategoryStatsItem) => `${item.currency}:${item.type}:${item.categoryId}`;
   const periodLabel = periodMode === 'month'
     ? format(selectedDate, 'yyyy 年 MM 月')
     : format(selectedDate, 'yyyy 年');
@@ -122,6 +191,163 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   };
   const toggleSortMode = () => {
     setSortMode((prev) => (prev === 'latest' ? 'amount-desc' : 'latest'));
+  };
+  const renderCategoryStatsGroup = (
+    type: TransactionType,
+    items: CategoryStatsItem[],
+    typeTotal: number,
+    currency: string
+  ) => {
+    const isIncome = type === '收入';
+    const groupCount = items.reduce((sum, item) => sum + item.count, 0);
+    const emptyMessage = isIncome ? '沒有收入類別資料' : '沒有支出類別資料';
+
+    return (
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isIncome ? 'text-rose-300/70' : 'text-emerald-300/70'}`}>
+            {type}類別
+          </p>
+          <p className="shrink-0 text-[10px] font-black text-gray-500">
+            {groupCount} 筆
+          </p>
+        </div>
+
+        {items.length > 0 ? (
+          <div className="space-y-2">
+            {items.map((item) => {
+              const categoryKey = getCategoryKey(item);
+              const categoryName = getCategoryName(item.categoryId);
+              const categoryColor = getCategoryColor(item.categoryId);
+              const IconComp = categoryIconMap[getCategoryIconName(item.categoryId)] || MoreHorizontal;
+              const isExpanded = expandedCategoryKey === categoryKey;
+              const percentage = typeTotal > 0
+                ? Math.round((item.total / typeTotal) * 100)
+                : 0;
+              const sortedItemTransactions = sortTransactions(item.transactions);
+
+              return (
+                <div key={categoryKey}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpandedSectionKey(null);
+                      setExpandedCategoryKey((prev) => (prev === categoryKey ? null : categoryKey));
+                    }}
+                    className={`w-full rounded-2xl border p-3 text-left transition-all active:scale-[0.99] ${
+                      isExpanded
+                        ? 'border-cyan-300/25 bg-cyan-500/10'
+                        : 'border-white/8 bg-white/[0.035] hover:border-white/15 hover:bg-white/[0.055]'
+                    }`}
+                    aria-expanded={isExpanded}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg"
+                        style={{ backgroundColor: categoryColor }}
+                      >
+                        <IconComp size={20} color="white" strokeWidth={2.5} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="truncate text-sm font-black text-gray-100">{categoryName}</p>
+                          <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black ${
+                            isIncome
+                              ? 'border-rose-400/20 bg-rose-500/10 text-rose-200'
+                              : 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200'
+                          }`}>
+                            {type}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] font-bold text-gray-500">
+                          {item.count} 筆 · {percentage}%
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className="text-right">
+                          <p className={`text-sm font-black tabular-nums ${isIncome ? 'text-rose-300' : 'text-emerald-300'}`}>
+                            {isIncome ? '+' : '-'}{formatStatAmount(item.total, currency)}
+                          </p>
+                          <p className="mt-1 text-[9px] font-black text-gray-600">
+                            {formatStatAmount(typeTotal, currency)}
+                          </p>
+                        </div>
+                        <ChevronDown
+                          size={16}
+                          className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          strokeWidth={2.4}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, percentage)}%`,
+                          backgroundColor: categoryColor,
+                        }}
+                      />
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-2 space-y-3">
+                      {item.subcategories.length > 0 && (
+                        <div className="space-y-2">
+                          {item.subcategories.map((subItem) => (
+                            <div
+                              key={`${categoryKey}:${subItem.subCategoryId || 'none'}`}
+                              className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.045] px-4 py-3"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-black text-gray-100">
+                                  {getSubCategoryName(item.categoryId, subItem.subCategoryId)}
+                                </p>
+                                <p className="mt-1 text-xs font-bold text-gray-500">
+                                  {subItem.count} 筆
+                                </p>
+                              </div>
+                              <p className="shrink-0 text-sm font-black tabular-nums text-gray-200">
+                                {formatStatAmount(subItem.total, currency)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
+                        {sortedItemTransactions.length > 0 ? (
+                          sortedItemTransactions.map((transaction) => (
+                            <TransactionItem
+                              key={transaction.id}
+                              transaction={transaction}
+                              onClick={onTransactionClick}
+                              paymentMethodDisplayMode={paymentMethodDisplayMode}
+                              showDateTime
+                            />
+                          ))
+                        ) : (
+                          <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
+                            沒有符合條件的交易項目
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.025] px-4 py-5 text-center text-xs font-bold text-gray-500">
+            {emptyMessage}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -287,6 +513,8 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                   filteredTransactions.filter((tx) => tx.currency === currency && tx.type === '支出')
                 );
                 const activeSectionKey = expandedSectionKey;
+                const currencyCategoryStats = categoryStatsByCurrency[currency] || { income: [], expense: [] };
+                const categoryCount = currencyCategoryStats.income.length + currencyCategoryStats.expense.length;
 
                 return (
                   <section
@@ -306,7 +534,10 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                     <div className="grid grid-cols-1 gap-3">
                       <button
                         type="button"
-                        onClick={() => setExpandedSectionKey((prev) => prev === getSectionKey(currency, '收入') ? null : getSectionKey(currency, '收入'))}
+                        onClick={() => {
+                          setExpandedCategoryKey(null);
+                          setExpandedSectionKey((prev) => prev === getSectionKey(currency, '收入') ? null : getSectionKey(currency, '收入'));
+                        }}
                         className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
                           activeSectionKey === getSectionKey(currency, '收入')
                             ? 'border-rose-300/30 bg-rose-500/15'
@@ -321,7 +552,10 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => setExpandedSectionKey((prev) => prev === getSectionKey(currency, '支出') ? null : getSectionKey(currency, '支出'))}
+                        onClick={() => {
+                          setExpandedCategoryKey(null);
+                          setExpandedSectionKey((prev) => prev === getSectionKey(currency, '支出') ? null : getSectionKey(currency, '支出'));
+                        }}
                         className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
                           activeSectionKey === getSectionKey(currency, '支出')
                             ? 'border-emerald-300/30 bg-emerald-500/15'
@@ -374,6 +608,23 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                         )}
                       </div>
                     )}
+
+                    <div className="mt-5 border-t border-white/8 pt-5">
+                      <div className="mb-4 flex items-end justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">分析</p>
+                          <h3 className="mt-1 truncate text-lg font-black text-white">依類別彙整</h3>
+                        </div>
+                        <div className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black text-gray-400">
+                          {categoryCount} 類別
+                        </div>
+                      </div>
+
+                      <div className="space-y-5">
+                        {renderCategoryStatsGroup('支出', currencyCategoryStats.expense, stats.expense, currency)}
+                        {renderCategoryStatsGroup('收入', currencyCategoryStats.income, stats.income, currency)}
+                      </div>
+                    </div>
                   </section>
                 );
               })}

@@ -47,7 +47,7 @@
 
 ## 統計與分析
 
-- 🟡 新增依類別彙整的統計頁或統計區塊，提供金額與筆數等基礎分析。（計劃：[category-stats.md](docs/todo-references/category-stats.md)）
+- ✅ 統計頁已加入依類別彙整區塊，支援金額、筆數、子類別摘要與交易展開。（紀錄：[category-stats.md](docs/completed-references/category-stats.md)）
 - 🟡 新增依商家彙整的統計頁或統計區塊，方便查看常去商家與消費分布。（計劃：[merchant-stats.md](docs/todo-references/merchant-stats.md)）
 - ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
 
