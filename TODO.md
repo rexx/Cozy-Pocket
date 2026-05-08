@@ -15,6 +15,7 @@
 
 - 🟡 將 `MerchantManagementPage` 改為 `SettingsPage` 的正式設定子頁，讓商家管理與 Tag 管理、同步設定等入口走同一套設定子頁 routing；先列入 TODO，待 merchant 相關變更穩定後再實作，避免衝突。（計劃：[merchant-management-settings-subpage.md](docs/todo-references/merchant-management-settings-subpage.md)）
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
+- 🟡 交易編輯頁面底部顯示同步狀態，同步失敗者可直接觸發重新上傳。（計劃：[transaction-edit-sync-status-retry.md](docs/todo-references/transaction-edit-sync-status-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
 - ✅ `SettingsPage` 已升級為設定入口清單，偏好設定、AI 設定、同步設定、Tag 管理、匯入匯出與危險操作已各自進入設定子頁。（紀錄：[settings-section-pages.md](docs/completed-references/settings-section-pages.md)）
 - ✅ 同步狀態頁已支援返回來源感知：從 `SettingsPage` 進入時返回設定頁，從首頁進入時返回首頁。
@@ -33,6 +34,7 @@
 
 ## 設定頁體驗
 
+- 🟡 新增刪除範例資料按鈕，讓 demo 或測試後可移除由範例資料入口建立的交易。（計劃：[delete-sample-data-button.md](docs/todo-references/delete-sample-data-button.md)）
 - ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；紀錄：[settings-header-color.md](docs/completed-references/settings-header-color.md)）
 
 ## 商家與資料維護
