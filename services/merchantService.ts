@@ -8,23 +8,39 @@ export interface MerchantUsageSummary {
 export interface MerchantRenamePreview {
   oldMerchant: string;
   newMerchant: string;
+  normalizedInput: string;
   affectedCount: number;
+  willMerge: boolean;
+  mergeTargetMerchant?: string;
   conflictsWithExistingMerchant: boolean;
 }
 
-export const normalizeMerchantName = (merchant: string) => merchant.trim();
+export const normalizeMerchantName = (merchant: string) => merchant.trim().replace(/\s+/g, ' ');
+
+const getMerchantComparisonKey = (merchant: string) => normalizeMerchantName(merchant).toLocaleLowerCase();
 
 export const getMerchantUsageSummaries = (transactions: Transaction[]): MerchantUsageSummary[] => {
-  const merchantCountMap = new Map<string, number>();
+  const merchantCountMap = new Map<string, MerchantUsageSummary>();
 
   transactions.forEach((tx) => {
     const merchant = normalizeMerchantName(tx.merchant || '');
     if (!merchant) return;
-    merchantCountMap.set(merchant, (merchantCountMap.get(merchant) || 0) + 1);
+
+    const merchantKey = getMerchantComparisonKey(merchant);
+    const existing = merchantCountMap.get(merchantKey);
+
+    if (existing) {
+      merchantCountMap.set(merchantKey, {
+        merchant: existing.merchant,
+        count: existing.count + 1,
+      });
+      return;
+    }
+
+    merchantCountMap.set(merchantKey, { merchant, count: 1 });
   });
 
-  return Array.from(merchantCountMap.entries())
-    .map(([merchant, count]) => ({ merchant, count }))
+  return Array.from(merchantCountMap.values())
     .sort((a, b) => {
       if (b.count !== a.count) return b.count - a.count;
       return a.merchant.localeCompare(b.merchant, 'zh-Hant');
@@ -35,11 +51,11 @@ export const getTransactionsByMerchant = (
   transactions: Transaction[],
   merchant: string
 ) => {
-  const normalizedMerchant = normalizeMerchantName(merchant);
-  if (!normalizedMerchant) return [];
+  const merchantKey = getMerchantComparisonKey(merchant);
+  if (!merchantKey) return [];
 
   return transactions
-    .filter((tx) => normalizeMerchantName(tx.merchant || '') === normalizedMerchant)
+    .filter((tx) => getMerchantComparisonKey(tx.merchant || '') === merchantKey)
     .sort((a, b) => b.timestamp - a.timestamp);
 };
 
@@ -50,6 +66,8 @@ export const buildMerchantRenamePreview = (
 ): MerchantRenamePreview => {
   const normalizedOldMerchant = normalizeMerchantName(oldMerchant);
   const normalizedNewMerchant = normalizeMerchantName(newMerchant);
+  const oldMerchantKey = getMerchantComparisonKey(normalizedOldMerchant);
+  const newMerchantKey = getMerchantComparisonKey(normalizedNewMerchant);
 
   if (!normalizedOldMerchant) {
     throw new Error('請先選擇要更名的商家');
@@ -63,23 +81,36 @@ export const buildMerchantRenamePreview = (
     throw new Error('新商家名稱不可與原名稱相同');
   }
 
-  const existingMerchants = new Set(
-    getMerchantUsageSummaries(transactions).map((item) => item.merchant)
+  const existingMerchantByKey = new Map(
+    getMerchantUsageSummaries(transactions).map((item) => [
+      getMerchantComparisonKey(item.merchant),
+      item.merchant,
+    ])
   );
 
-  if (!existingMerchants.has(normalizedOldMerchant)) {
-    throw new Error('找不到要更名的商家');
+  const existingOldMerchant = existingMerchantByKey.get(oldMerchantKey);
+  if (!existingOldMerchant) {
+    throw new Error(`找不到要更名的商家：${normalizedOldMerchant}`);
   }
 
   const affectedCount = transactions.filter((tx) => (
-    normalizeMerchantName(tx.merchant || '') === normalizedOldMerchant
+    getMerchantComparisonKey(tx.merchant || '') === oldMerchantKey
   )).length;
 
+  const mergeTargetMerchant = existingMerchantByKey.get(newMerchantKey);
+  const willMerge = oldMerchantKey !== newMerchantKey && Boolean(mergeTargetMerchant);
+  const targetMerchant = willMerge && mergeTargetMerchant
+    ? mergeTargetMerchant
+    : normalizedNewMerchant;
+
   return {
-    oldMerchant: normalizedOldMerchant,
-    newMerchant: normalizedNewMerchant,
+    oldMerchant: existingOldMerchant,
+    newMerchant: targetMerchant,
+    normalizedInput: normalizedNewMerchant,
     affectedCount,
-    conflictsWithExistingMerchant: existingMerchants.has(normalizedNewMerchant),
+    willMerge,
+    mergeTargetMerchant,
+    conflictsWithExistingMerchant: willMerge,
   };
 };
 
@@ -91,7 +122,7 @@ export const renameMerchantInTransactions = (
   const preview = buildMerchantRenamePreview(transactions, oldMerchant, newMerchant);
 
   const updatedTransactions = transactions.reduce<Transaction[]>((acc, tx) => {
-    if (normalizeMerchantName(tx.merchant || '') !== preview.oldMerchant) {
+    if (getMerchantComparisonKey(tx.merchant || '') !== getMerchantComparisonKey(preview.oldMerchant)) {
       return acc;
     }
 

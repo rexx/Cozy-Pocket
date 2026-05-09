@@ -82,7 +82,7 @@
 | 頁面 | 類型 | 典型情境 | 建議 |
 | --- | --- | --- | --- |
 | `SettingsPage` | `success` / `error` / `idle` | 同步設定儲存後離線、同步部分失敗、Tag 更名結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤 | 維持頁內 status |
-| `MerchantManagementPage` | `success` / `error` / `idle` | 商家預覽錯誤、商家已存在提醒、商家更名離線或同步失敗、讀取商家項目失敗 | 維持頁內 status |
+| `MerchantManagementPage` | `success` / `error` / `idle` + feedback card tone | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗 | 維持頁內 feedback card |
 | `SyncStatusPage` | persistent list/detail | 待同步 / 同步中 / 失敗 / 已同步統計，單筆 `lastSyncError` 詳情 | 維持頁面呈現 |
 
 頁內 status 不適合全面改成 swal。這些訊息多半需要使用者回看、修正欄位、或理解部分成功狀態，放在頁面內比 dialog 更穩定。
@@ -116,7 +116,7 @@
 
 | 候選流程 | 目前機制 | 為什麼可考慮 swal | 建議優先度 |
 | --- | --- | --- | --- |
-| `MerchantManagementPage` 執行商家更名 | 預覽 + 頁內 status | 會批次更新多筆交易；若新商家已存在，實際上會合併商家 | 中 |
+| `MerchantManagementPage` 執行商家更名 | 預覽 + 頁內 feedback card | 會批次更新多筆交易；若新商家已存在，實際上會合併商家 | 中 |
 | `SettingsPage` 執行 Tag 更名 | 預覽 + 頁內 status | 會批次更新多筆交易；若新 tag 已存在，實際上會合併並去重 | 中 |
 | 匯入 append 且偵測到重複 ID | 已有 swal default dialog | 會覆蓋同 ID 資料，目前使用 default tone | 低，若要更保守可改 `danger` |
 

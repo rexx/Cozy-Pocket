@@ -702,9 +702,9 @@ const App: React.FC = () => {
       const updatedById = new Map(transactionsToPersist.map((tx) => [tx.id, tx]));
       setTransactions((prev) => prev.map((tx) => updatedById.get(tx.id) || tx));
 
-      const normalizedOldMerchant = normalizeMerchantName(oldMerchant);
-      const normalizedNewMerchant = normalizeMerchantName(newMerchant);
-      const renameSummary = `已將 ${normalizedOldMerchant} 更名為 ${normalizedNewMerchant}`;
+      const renameSummary = preview.willMerge
+        ? `已將 ${preview.oldMerchant} 合併到 ${preview.newMerchant}`
+        : `已將 ${preview.oldMerchant} 更名為 ${preview.newMerchant}`;
 
       if (isOffline()) {
         showToast(renameSummary);

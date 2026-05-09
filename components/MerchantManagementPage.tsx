@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../types';
 import { MerchantRenamePreview, getMerchantUsageSummaries, normalizeMerchantName } from '../services/merchantService';
 import PageHeader from './PageHeader';
@@ -9,12 +9,28 @@ interface MerchantManagementPageProps {
   transactions: Transaction[];
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onClose: () => void;
-  onDataChange: () => void;
+  onDataChange: () => void | Promise<void>;
   onPreviewMerchantRename: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview>;
   onRenameMerchant: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
   onGetMerchantTransactions: (merchant: string) => Promise<Transaction[]>;
   onMerchantTransactionClick: (transaction: Transaction) => void;
 }
+
+type MerchantManagementStatus = {
+  type: 'success' | 'error' | 'idle';
+  message: string;
+};
+
+type MerchantRenameResult = MerchantRenamePreview & {
+  skippedOffline: boolean;
+  syncResult?: { total: number; failed: number; skippedOffline: boolean };
+};
+
+const getMerchantRenameActionMessage = (result: MerchantRenamePreview) => (
+  result.willMerge
+    ? `已將 ${result.oldMerchant} 合併到 ${result.newMerchant}`
+    : `已將 ${result.oldMerchant} 更名為 ${result.newMerchant}`
+);
 
 const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
   transactions,
@@ -27,7 +43,7 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
   onMerchantTransactionClick,
 }) => {
   const merchantSummaries = useMemo(() => getMerchantUsageSummaries(transactions), [transactions]);
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle'; message: string }>({ type: 'idle', message: '' });
+  const [status, setStatus] = useState<MerchantManagementStatus>({ type: 'idle', message: '' });
   const [selectedMerchantToRename, setSelectedMerchantToRename] = useState('');
   const [renamedMerchantInput, setRenamedMerchantInput] = useState('');
   const [merchantRenamePreview, setMerchantRenamePreview] = useState<MerchantRenamePreview | null>(null);
@@ -37,16 +53,18 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
   const [isMerchantTransactionsLoading, setIsMerchantTransactionsLoading] = useState(false);
 
   useEffect(() => {
-    if (!selectedMerchantToRename) return;
-    const normalizedSelectedMerchant = normalizeMerchantName(selectedMerchantToRename);
-    const hasSelectedMerchant = merchantSummaries.some(({ merchant }) => merchant === normalizedSelectedMerchant);
+    if (!selectedMerchantToRename || isMerchantRenameSubmitting) return;
+    const selectedMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
+    const hasSelectedMerchant = merchantSummaries.some(({ merchant }) => (
+      normalizeMerchantName(merchant).toLocaleLowerCase() === selectedMerchantKey
+    ));
     if (!hasSelectedMerchant) {
       setSelectedMerchantToRename('');
       setRenamedMerchantInput('');
       setMerchantRenamePreview(null);
       setMerchantTransactions([]);
     }
-  }, [merchantSummaries, selectedMerchantToRename]);
+  }, [isMerchantRenameSubmitting, merchantSummaries, selectedMerchantToRename]);
 
   useEffect(() => {
     if (!selectedMerchantToRename) {
@@ -82,14 +100,18 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
   }, [onGetMerchantTransactions, selectedMerchantToRename]);
 
   const resetMerchantRenameState = (nextSelectedMerchant = '') => {
+    const currentMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
+    const nextMerchantKey = normalizeMerchantName(nextSelectedMerchant).toLocaleLowerCase();
+    const willSwitchMerchant = currentMerchantKey !== nextMerchantKey;
+
     setSelectedMerchantToRename(nextSelectedMerchant);
     setRenamedMerchantInput('');
     setMerchantRenamePreview(null);
     setIsMerchantPreviewLoading(false);
     setIsMerchantRenameSubmitting(false);
-    if (!nextSelectedMerchant) {
+    if (!nextSelectedMerchant || willSwitchMerchant) {
       setMerchantTransactions([]);
-      setIsMerchantTransactionsLoading(false);
+      setIsMerchantTransactionsLoading(Boolean(nextSelectedMerchant));
     }
   };
 
@@ -106,8 +128,6 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
       setMerchantRenamePreview(preview);
       if (preview.affectedCount === 0) {
         setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行更名' });
-      } else if (preview.conflictsWithExistingMerchant) {
-        setStatus({ type: 'success', message: `提醒：${preview.newMerchant} 已存在，執行後會合併到相同商家名稱` });
       }
     } catch (err: any) {
       setMerchantRenamePreview(null);
@@ -126,14 +146,18 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
     try {
       setIsMerchantRenameSubmitting(true);
       setStatus({ type: 'idle', message: '' });
-      const result = await onRenameMerchant(selectedMerchantToRename, renamedMerchantInput);
-      resetMerchantRenameState('');
-      onDataChange();
+      const result: MerchantRenameResult = await onRenameMerchant(
+        merchantRenamePreview.oldMerchant,
+        merchantRenamePreview.newMerchant
+      );
+      await onDataChange();
+      resetMerchantRenameState(result.newMerchant);
+      const actionMessage = getMerchantRenameActionMessage(result);
 
       if (result.skippedOffline) {
         setStatus({
           type: 'success',
-          message: `已將 ${result.oldMerchant} 更名為 ${result.newMerchant}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
+          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
         });
         return;
       }
@@ -141,12 +165,15 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
       if (result.syncResult && result.syncResult.failed > 0) {
         setStatus({
           type: 'error',
-          message: `已將 ${result.oldMerchant} 更名為 ${result.newMerchant}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
         });
         return;
       }
 
-      setStatus({ type: 'idle', message: '' });
+      setStatus({
+        type: 'success',
+        message: `${actionMessage}，共更新 ${result.affectedCount} 筆`,
+      });
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || '商家更名失敗' });
     } finally {
@@ -165,6 +192,7 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
       <div className="flex-1 overflow-y-auto px-4 pt-6 sm:px-6 sm:pt-8 no-scrollbar bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.12),_transparent_28%),linear-gradient(180deg,_#1f2235_0%,_#171a29_48%,_#121520_100%)]">
         <div className="mx-auto max-w-5xl space-y-6 pb-10">
           <MerchantManagementSection
+            status={status}
             merchantSummaries={merchantSummaries}
             selectedMerchantToRename={selectedMerchantToRename}
             renamedMerchantInput={renamedMerchantInput}
@@ -178,18 +206,12 @@ const MerchantManagementPage: React.FC<MerchantManagementPageProps> = ({
             onRenamedMerchantInputChange={(value) => {
               setRenamedMerchantInput(value);
               setMerchantRenamePreview(null);
+              setStatus({ type: 'idle', message: '' });
             }}
             onPreviewMerchantRename={() => void handlePreviewMerchantRename()}
             onRenameMerchant={() => void handleRenameMerchant()}
             onMerchantTransactionClick={onMerchantTransactionClick}
           />
-
-          {status.type !== 'idle' && (
-            <div className={`flex items-center gap-3 rounded-2xl border p-4 animate-slide-up ${status.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-red-500/20 bg-red-500/10 text-red-300'}`}>
-              {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-              <span className="text-sm font-bold whitespace-pre-line">{status.message}</span>
-            </div>
-          )}
         </div>
       </div>
     </div>

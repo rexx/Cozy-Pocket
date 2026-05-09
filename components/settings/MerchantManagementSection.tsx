@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Eye, PencilLine, Search, X } from 'lucide-react';
+import { CheckCircle2, Eye, LoaderCircle, PencilLine, Search, X } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../../types';
-import { MerchantRenamePreview, MerchantUsageSummary } from '../../services/merchantService';
+import { MerchantRenamePreview, MerchantUsageSummary, normalizeMerchantName } from '../../services/merchantService';
 import TransactionItem from '../TransactionItem';
 import SettingsSection, {
   sectionCyanButtonClassName,
@@ -14,7 +14,22 @@ import SettingsSection, {
 
 const MERCHANT_PAGE_SIZE = 200;
 
+type MerchantFeedbackTone = 'error' | 'success' | 'warning';
+
+const merchantFeedbackCardClassName: Record<MerchantFeedbackTone, string> = {
+  error: 'border-red-500/20 bg-red-500/10 text-red-200',
+  success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
+  warning: 'border-amber-400/20 bg-amber-500/10 text-slate-200',
+};
+
+const merchantFeedbackTitleClassName: Record<MerchantFeedbackTone, string> = {
+  error: 'text-red-200',
+  success: 'text-emerald-200',
+  warning: 'text-amber-300',
+};
+
 interface MerchantManagementSectionProps {
+  status: { type: 'success' | 'error' | 'idle'; message: string };
   merchantSummaries: MerchantUsageSummary[];
   selectedMerchantToRename: string;
   renamedMerchantInput: string;
@@ -31,7 +46,21 @@ interface MerchantManagementSectionProps {
   onMerchantTransactionClick: (transaction: Transaction) => void;
 }
 
+const MerchantFeedbackCard: React.FC<{
+  children: React.ReactNode;
+  title?: string;
+  tone: MerchantFeedbackTone;
+}> = ({ children, title, tone }) => (
+  <div className={`rounded-2xl border px-4 py-3 text-xs ${merchantFeedbackCardClassName[tone]}`}>
+    {title && <p className={`font-black ${merchantFeedbackTitleClassName[tone]}`}>{title}</p>}
+    <div className={title ? 'mt-1 space-y-1' : 'space-y-1'}>
+      {children}
+    </div>
+  </div>
+);
+
 const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
+  status,
   merchantSummaries,
   selectedMerchantToRename,
   renamedMerchantInput,
@@ -49,6 +78,9 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
 }) => {
   const [merchantSearchQuery, setMerchantSearchQuery] = useState('');
   const [visibleMerchantCount, setVisibleMerchantCount] = useState(MERCHANT_PAGE_SIZE);
+  const normalizedMerchantInput = normalizeMerchantName(renamedMerchantInput);
+  const isPreviewDisabled = !normalizedMerchantInput || isMerchantPreviewLoading || isMerchantRenameSubmitting;
+  const affectedTransactionCount = merchantRenamePreview?.affectedCount ?? merchantTransactions.length;
 
   const filteredMerchantSummaries = useMemo(() => {
     const query = merchantSearchQuery.trim().toLocaleLowerCase();
@@ -80,6 +112,16 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   useEffect(() => {
     setVisibleMerchantCount(MERCHANT_PAGE_SIZE);
   }, [merchantSummaries]);
+
+  const statusMessage = status.type !== 'idle' ? (
+    <MerchantFeedbackCard tone={status.type}>
+      <p className="text-sm font-bold whitespace-pre-line">{status.message}</p>
+    </MerchantFeedbackCard>
+  ) : null;
+  const renameFeedbackMessage = !merchantRenamePreview && status.type !== 'idle' ? statusMessage : null;
+  const resultStatusMessage = !selectedMerchantToRename && status.type !== 'idle'
+    ? statusMessage
+    : null;
 
   return (
     <SettingsSection>
@@ -169,6 +211,8 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
             )}
           </div>
 
+          {resultStatusMessage}
+
           {selectedMerchantToRename ? (
             <div className={`${sectionPanelClassName} space-y-4`}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -194,43 +238,57 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                 </div>
               </div>
 
-              {merchantRenamePreview && (
-                <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-xs text-slate-200">
-                  <p className="font-black text-amber-300">更名預覽</p>
-                  <p className="mt-1">{merchantRenamePreview.oldMerchant} → {merchantRenamePreview.newMerchant}</p>
-                  <p className="mt-1 text-emerald-300">預計影響：{merchantRenamePreview.affectedCount} 筆交易</p>
-                  {merchantRenamePreview.conflictsWithExistingMerchant && (
-                    <p className="mt-1 text-amber-200">提醒：新商家名稱已存在；確認後會將既有交易合併到同一名稱。</p>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
                   onClick={onPreviewMerchantRename}
-                  disabled={!renamedMerchantInput.trim() || isMerchantPreviewLoading || isMerchantRenameSubmitting}
+                  disabled={isPreviewDisabled}
                   className={sectionCyanButtonClassName}
                 >
                   <Eye size={16} />
                   {isMerchantPreviewLoading ? '預覽中...' : '預覽影響筆數'}
                 </button>
-                <button
-                  type="button"
-                  onClick={onRenameMerchant}
-                  disabled={!merchantRenamePreview || merchantRenamePreview.affectedCount === 0 || isMerchantPreviewLoading || isMerchantRenameSubmitting}
-                  className={sectionEmeraldButtonClassName}
-                >
-                  <CheckCircle2 size={16} />
-                  {isMerchantRenameSubmitting ? '更名中...' : '確認更名'}
-                </button>
               </div>
+
+              {merchantRenamePreview && (
+                <MerchantFeedbackCard title="更名預覽" tone="warning">
+                  <p>{merchantRenamePreview.oldMerchant} → {merchantRenamePreview.newMerchant}</p>
+                  <p className="text-emerald-300">預計影響：{merchantRenamePreview.affectedCount} 筆交易</p>
+                  {merchantRenamePreview.normalizedInput !== renamedMerchantInput.trim() && (
+                    <p className="text-slate-300">輸入會整理為：{merchantRenamePreview.normalizedInput}</p>
+                  )}
+                  {merchantRenamePreview.willMerge && (
+                    <p className="text-amber-200">
+                      提醒：{merchantRenamePreview.newMerchant} 已存在；確認後會合併到既有商家，不會新增重複商家。
+                    </p>
+                  )}
+                </MerchantFeedbackCard>
+              )}
+              {renameFeedbackMessage}
+
+              {merchantRenamePreview && (
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={onRenameMerchant}
+                    disabled={merchantRenamePreview.affectedCount === 0 || isMerchantPreviewLoading || isMerchantRenameSubmitting}
+                    className={sectionEmeraldButtonClassName}
+                  >
+                    {isMerchantRenameSubmitting ? (
+                      <LoaderCircle size={16} className="animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={16} />
+                    )}
+                    {isMerchantRenameSubmitting ? '更名中...' : '確認更名'}
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
-                  <p className={sectionLabelClassName}>Related Transactions</p>
+                  <p className={sectionLabelClassName}>{merchantRenamePreview ? 'Affected Transactions' : 'Related Transactions'}</p>
                   <span className="text-xs font-bold text-slate-400">
-                    {selectedMerchantToRename} · {merchantTransactions.length} 筆
+                    {selectedMerchantToRename} · {affectedTransactionCount} 筆
                   </span>
                 </div>
                 <div className="max-h-[50vh] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#0f1321] no-scrollbar">

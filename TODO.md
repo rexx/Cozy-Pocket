@@ -39,10 +39,10 @@
 
 ## 商家與資料維護
 
-- 🟡 補齊商家名稱調整的驗證與回饋，避免產生重複商家或名稱變更後的 UI 狀態不一致。（計劃：[merchant-rename-validation.md](docs/todo-references/merchant-rename-validation.md)）
 - 🟡 評估是否將商家管理改為進頁後直接查 IndexedDB，而不是依賴 App 全量載入的 `transactions` state。（計劃：[merchant-management-indexeddb-source.md](docs/todo-references/merchant-management-indexeddb-source.md)）
 - 🟡 新增商家詳情頁，從商家管理進入後查看該商家的消費趨勢、常用類別、付款方式分布與最近交易。（計劃：[merchant-detail-page.md](docs/todo-references/merchant-detail-page.md)）
 - ✅ 商家管理已加入商家搜尋與每次 200 筆的「載入更多」，降低大量商家清單的初次渲染成本。（紀錄：[merchant-management-search-pagination.md](docs/completed-references/merchant-management-search-pagination.md)）
+- ✅ 商家名稱調整已補齊正規化驗證、合併提醒、共用 feedback card 與更名後直接選到新商家的 UI 狀態。（紀錄：[merchant-rename-validation.md](docs/completed-references/merchant-rename-validation.md)）
 - ✅ 已支援商家更名，並確認既有交易紀錄、搜尋、統計與同步資料都能一致反映新名稱。
 
 ## 統計與分析
