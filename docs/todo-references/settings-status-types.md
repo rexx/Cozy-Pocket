@@ -11,7 +11,7 @@
 ## 關鍵變更
 
 - 將 status type 擴充為 `idle | success | error | info | warning`。
-- 更新 `SettingsPage` 與 `MerchantManagementPage` 的 status render tone、icon 與 border/background class。
+- 更新 `SettingsPage`（含其各 Section 子頁內已 inline 的 `MerchantFeedbackCard` 等 feedback 卡）的 status render tone、icon 與 border/background class。
 - 將「目前離線，待恢復連線後同步」改為 info 或 warning。
 - 將「執行後會合併 tag/商家」改為 warning，而不是 success。
 

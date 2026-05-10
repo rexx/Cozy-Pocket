@@ -11,13 +11,13 @@
 ## 關鍵變更
 
 - 在 `services/merchantService.ts` 新增 IndexedDB 查詢版本，例如 `getMerchantUsageSummariesFromDb` 與 `getTransactionsByMerchantFromDb`。
-- 將 `MerchantManagementPage` 的資料來源從 props `transactions` 改成進頁 useEffect 載入。
-- 更名成功後由頁面重新載入商家摘要與選取商家的交易列表，再通知 `App` refresh shared state。
+- 將 `MerchantManagementSection`（目前由 `SettingsPage` 在 `settings-merchant` 子頁掛載）的資料來源從 `App.tsx` 全量 `transactions` state 改成進子頁時 useEffect 載入。
+- 更名成功後由 Section 重新載入商家摘要與選取商家的交易列表，再通知 `App` refresh shared state。
 - 保留從商家交易點入編輯 modal 的 callback。
 
 ## 介面與型別
 
-- 可減少 `MerchantManagementPageProps.transactions` 依賴；若其他流程仍需要，可在過渡期保留可選。
+- 可減少 `merchantSummaries` 與相關 callback 對 `App.tsx` 全量 transactions 的依賴；若其他流程仍需要，可在過渡期保留可選。
 - 新增 service 函式應回傳現有 `MerchantUsageSummary` 與 `Transaction[]`。
 
 ## 測試計劃

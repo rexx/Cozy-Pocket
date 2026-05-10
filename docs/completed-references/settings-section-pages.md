@@ -21,7 +21,7 @@
 - `PreferencesSection` 拆成支付方式顯示與幣別選項兩張功能子卡牌，幣別清單預設直接展開。
 - `ImportExportSection` 與 `DangerZoneSection` 移除子卡牌標題區圖示，改由操作按鈕承載 icon；同步、AI、tag 更名與商家更名等主要操作按鈕也維持 icon + label。
 - 設定首頁顯示 tag 數量與商家數量；商家數量只用已載入交易建立唯一商家 `Set`。
-- 商家管理維持既有獨立頁面，設定首頁提供入口卡片；後續子頁化另列 TODO。
+- 商家管理當時維持既有獨立頁面，設定首頁提供入口卡片（後續已由 [`merchant-management-settings-subpage.md`](./merchant-management-settings-subpage.md) 完成子頁化整併）。
 
 ## 介面與型別
 

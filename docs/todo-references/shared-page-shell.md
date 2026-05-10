@@ -6,13 +6,13 @@
 
 - 評估並引入非首頁頁面的共用 page-shell pattern。
 - 目標是讓 layout chrome、背景、header、scroll 容器與 safe-area 處理一致，同時讓 `App.tsx` 專注於 routing 與 shared state。
-- 適用頁面包含設定、同步狀態、搜尋、統計與商家管理。
+- 適用頁面包含設定、同步狀態、搜尋、統計與同步紀錄（商家管理已併入設定子頁，由 `SettingsPage` 共用 shell）。
 
 ## 關鍵變更
 
 - 新增共用 shell 元件，例如 `components/PageShell.tsx`，負責全頁背景、header slot、內容 scroll 區與 spacing。
 - 將 `PageHeader` 納入 shell 組合，避免每個頁面各自處理外層 flex、高度與背景。
-- 逐步改造 `SettingsPage`、`SyncStatusPage`、`MonthlyStatsPage`、`MerchantManagementPage`，每次保持視覺一致。
+- 逐步改造 `SettingsPage`、`SyncStatusPage`、`MonthlyStatsPage`、`PullReportsPage`，每次保持視覺一致。
 - 避免改動首頁 `HomePage`，首頁保留專屬沉浸式 layout。
 
 ## 介面與型別

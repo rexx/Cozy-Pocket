@@ -18,7 +18,7 @@
 | `confirmAction()` swal dialog | `services/dialogService.ts` | 危險操作、不可逆操作、需要繼續 / 取消的明確決策 | 已使用 |
 | `showAutoDismissToast()` swal toast | `services/dialogService.ts` | 目前用於新增 / 修改 / 刪除交易成功的短通知 | 試用中 |
 | 全域 toast | `App.tsx` 的 `SuccessToast` / `showToast()` | 短成功訊息、連線狀態、操作摘要 | 通常不適合 |
-| 頁內 status | `SettingsPage`、`MerchantManagementPage` | 長訊息、部分成功、同步失敗、預覽提醒、表單流程錯誤 | 通常不適合 |
+| 頁內 status | `SettingsPage`（含 `MerchantManagementSection` 的 inline `MerchantFeedbackCard`） | 長訊息、部分成功、同步失敗、預覽提醒、表單流程錯誤 | 通常不適合 |
 | inline validation / inline error | `AddTransactionModal` | 可立即修正的表單錯誤、AI 解析錯誤、離線提示 | 不適合 |
 | 同步狀態頁 | `SyncStatusPage`、`TransactionItem` | 可回看、可追蹤的同步狀態與單筆錯誤詳情 | 不適合 |
 | 全域錯誤面板 | `App.tsx` 的 `ErrorDisplay` / `capturedErrors` | DB、sync、runtime error 等偏除錯資訊 | 不適合 |
@@ -82,7 +82,7 @@
 | 頁面 | 類型 | 典型情境 | 建議 |
 | --- | --- | --- | --- |
 | `SettingsPage` | `success` / `error` / `idle` | 同步設定儲存後離線、同步部分失敗、Tag 更名結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤 | 維持頁內 status |
-| `MerchantManagementPage` | `success` / `error` / `idle` + feedback card tone | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗 | 維持頁內 feedback card |
+| `MerchantManagementSection`（`SettingsPage` 子頁內 inline） | `success` / `error` / `idle` + feedback card tone | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗 | 維持頁內 feedback card |
 | `SyncStatusPage` | persistent list/detail | 待同步 / 同步中 / 失敗 / 已同步統計，單筆 `lastSyncError` 詳情 | 維持頁面呈現 |
 
 頁內 status 不適合全面改成 swal。這些訊息多半需要使用者回看、修正欄位、或理解部分成功狀態，放在頁面內比 dialog 更穩定。
@@ -116,7 +116,7 @@
 
 | 候選流程 | 目前機制 | 為什麼可考慮 swal | 建議優先度 |
 | --- | --- | --- | --- |
-| `MerchantManagementPage` 執行商家更名 | 預覽 + 頁內 feedback card | 會批次更新多筆交易；若新商家已存在，實際上會合併商家 | 中 |
+| `MerchantManagementSection` 執行商家更名 | 預覽 + 頁內 feedback card | 會批次更新多筆交易；若新商家已存在，實際上會合併商家 | 中 |
 | `SettingsPage` 執行 Tag 更名 | 預覽 + 頁內 status | 會批次更新多筆交易；若新 tag 已存在，實際上會合併並去重 | 中 |
 | 匯入 append 且偵測到重複 ID | 已有 swal default dialog | 會覆蓋同 ID 資料，目前使用 default tone | 低，若要更保守可改 `danger` |
 
