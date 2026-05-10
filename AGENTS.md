@@ -40,8 +40,12 @@ User action → React state + Dexie write → background sync to GAS → Google 
 - `components/*Modal.tsx` — overlays (only `AddTransactionModal` currently)
 - `components/settings/*Section.tsx` — settings subpages
 
-**Pages (6)**: 首頁 / 搜尋 / 統計 / 資料與設定 / 商家管理 / 同步狀態
+**Pages (5)**: 首頁 / 搜尋 / 統計 / 資料與設定 / 同步狀態
+**Settings subpages (7)** (under 資料與設定): 偏好設定 / AI 設定 / 同步設定 / Tag 管理 / 商家管理 / 匯入匯出 / 危險操作
+**Other subpages (1)**: 同步紀錄 (`PullReportsPage`, entered from 同步設定)
 **Overlays (1)**: 新增／編輯交易
+
+Full hierarchy and component mapping: README §6.5.
 
 ## Sync model
 
@@ -92,8 +96,7 @@ These three files are oversized and the developer knows it. **Refactor opportuni
 | `cloudSyncService.ts` | ~1369 | Sync engine + mock backend in same file. Mock split is tracked debt. |
 
 **Planned moves** (in `docs/todo-references/`):
-- `merchant-management-settings-subpage.md` — 商家管理 will become a settings subpage (currently a top-level page)
-- See full `docs/todo-references/` list for other planned changes
+- See `docs/todo-references/` for the full list of planned changes
 
 ---
 

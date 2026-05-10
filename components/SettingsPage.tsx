@@ -21,13 +21,15 @@ import { formatReadableDateTime, toEpochSeconds } from '../time';
 import { SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
 import { TagRenamePreview, TagUsageSummary, normalizeTag } from '../services/tagService';
+import { MerchantRenamePreview, MerchantUsageSummary, normalizeMerchantName } from '../services/merchantService';
 import PreferencesSection from './settings/PreferencesSection';
 import AiSection from './settings/AiSection';
 import SyncSection from './settings/SyncSection';
 import TagManagementSection from './settings/TagManagementSection';
+import MerchantManagementSection from './settings/MerchantManagementSection';
 import ImportExportSection from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
-import { MERCHANT_MANAGEMENT_COPY, SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
+import { SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
 import { confirmAction } from '../services/dialogService';
 import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
@@ -43,7 +45,6 @@ interface SettingsPageProps {
   onTriggerSync: (label: string) => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
   onOpenSyncProgress: () => void;
   onOpenPullReports: (reportId?: string) => void;
-  onOpenMerchantManagement: () => void;
   onPullFromCloud: (year: string) => Promise<{ report: PullReport }>;
   pullYearOptions: string[];
   onNotify: (message: string) => void;
@@ -51,11 +52,15 @@ interface SettingsPageProps {
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onPaymentMethodDisplayModeChange: (mode: PaymentMethodDisplayMode) => void;
   tagSummaries: TagUsageSummary[];
-  merchantCount: number;
+  merchantSummaries: MerchantUsageSummary[];
   onPreviewTagRename: (oldTag: string, newTag: string) => Promise<TagRenamePreview>;
   onRenameTag: (oldTag: string, newTag: string) => Promise<TagRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
   onGetTagTransactions: (tag: string) => Promise<Transaction[]>;
   onTagTransactionClick: (transaction: Transaction) => void;
+  onPreviewMerchantRename: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview>;
+  onRenameMerchant: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
+  onGetMerchantTransactions: (merchant: string) => Promise<Transaction[]>;
+  onMerchantTransactionClick: (transaction: Transaction) => void;
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
@@ -68,6 +73,7 @@ const SECTION_GLOW_COLORS: Record<SettingsSectionPage | 'overview', string> = {
   ai: 'rgba(34,211,238,0.1)',
   sync: 'rgba(99,102,241,0.12)',
   tags: 'rgba(34,211,238,0.1)',
+  merchant: 'rgba(245,158,11,0.12)',
   'import-export': 'rgba(245,158,11,0.12)',
   danger: 'rgba(239,68,68,0.12)',
 };
@@ -91,7 +97,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onTriggerSync,
   onOpenSyncProgress,
   onOpenPullReports,
-  onOpenMerchantManagement,
   onPullFromCloud,
   pullYearOptions,
   onNotify,
@@ -99,11 +104,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   paymentMethodDisplayMode,
   onPaymentMethodDisplayModeChange,
   tagSummaries,
-  merchantCount,
+  merchantSummaries,
   onPreviewTagRename,
   onRenameTag,
   onGetTagTransactions,
   onTagTransactionClick,
+  onPreviewMerchantRename,
+  onRenameMerchant,
+  onGetMerchantTransactions,
+  onMerchantTransactionClick,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
@@ -122,6 +131,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [isTagRenameSubmitting, setIsTagRenameSubmitting] = useState(false);
   const [tagTransactions, setTagTransactions] = useState<Transaction[]>([]);
   const [isTagTransactionsLoading, setIsTagTransactionsLoading] = useState(false);
+  const [selectedMerchantToRename, setSelectedMerchantToRename] = useState('');
+  const [renamedMerchantInput, setRenamedMerchantInput] = useState('');
+  const [merchantRenamePreview, setMerchantRenamePreview] = useState<MerchantRenamePreview | null>(null);
+  const [isMerchantPreviewLoading, setIsMerchantPreviewLoading] = useState(false);
+  const [isMerchantRenameSubmitting, setIsMerchantRenameSubmitting] = useState(false);
+  const [merchantTransactions, setMerchantTransactions] = useState<Transaction[]>([]);
+  const [isMerchantTransactionsLoading, setIsMerchantTransactionsLoading] = useState(false);
   const [importPreview, setImportPreview] = useState<{
     transactions: Transaction[];
     totalRows: number;
@@ -210,6 +226,53 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       isMounted = false;
     };
   }, [onGetTagTransactions, selectedTagToRename]);
+
+  useEffect(() => {
+    if (!selectedMerchantToRename || isMerchantRenameSubmitting) return;
+    const selectedMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
+    const hasSelectedMerchant = merchantSummaries.some(({ merchant }) => (
+      normalizeMerchantName(merchant).toLocaleLowerCase() === selectedMerchantKey
+    ));
+    if (!hasSelectedMerchant) {
+      setSelectedMerchantToRename('');
+      setRenamedMerchantInput('');
+      setMerchantRenamePreview(null);
+      setMerchantTransactions([]);
+    }
+  }, [isMerchantRenameSubmitting, merchantSummaries, selectedMerchantToRename]);
+
+  useEffect(() => {
+    if (!selectedMerchantToRename) {
+      setMerchantTransactions([]);
+      setIsMerchantTransactionsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadMerchantTransactions = async () => {
+      try {
+        setIsMerchantTransactionsLoading(true);
+        const results = await onGetMerchantTransactions(selectedMerchantToRename);
+        if (!isMounted) return;
+        setMerchantTransactions(results);
+      } catch (err: any) {
+        if (!isMounted) return;
+        setMerchantTransactions([]);
+        setStatus({ type: 'error', message: err.message || '讀取商家項目失敗' });
+      } finally {
+        if (isMounted) {
+          setIsMerchantTransactionsLoading(false);
+        }
+      }
+    };
+
+    void loadMerchantTransactions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [onGetMerchantTransactions, selectedMerchantToRename]);
 
   const handleDefaultCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVal = e.target.value;
@@ -439,6 +502,90 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       setStatus({ type: 'error', message: err.message || 'Tag 更名失敗' });
     } finally {
       setIsTagRenameSubmitting(false);
+    }
+  };
+
+  const resetMerchantRenameState = (nextSelectedMerchant = '') => {
+    const currentMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
+    const nextMerchantKey = normalizeMerchantName(nextSelectedMerchant).toLocaleLowerCase();
+    const willSwitchMerchant = currentMerchantKey !== nextMerchantKey;
+
+    setSelectedMerchantToRename(nextSelectedMerchant);
+    setRenamedMerchantInput('');
+    setMerchantRenamePreview(null);
+    setIsMerchantPreviewLoading(false);
+    setIsMerchantRenameSubmitting(false);
+    if (!nextSelectedMerchant || willSwitchMerchant) {
+      setMerchantTransactions([]);
+      setIsMerchantTransactionsLoading(Boolean(nextSelectedMerchant));
+    }
+  };
+
+  const handleSelectMerchantToRename = (merchant: string) => {
+    setStatus({ type: 'idle', message: '' });
+    resetMerchantRenameState(merchant);
+  };
+
+  const handlePreviewMerchantRename = async () => {
+    try {
+      setIsMerchantPreviewLoading(true);
+      setStatus({ type: 'idle', message: '' });
+      const preview = await onPreviewMerchantRename(selectedMerchantToRename, renamedMerchantInput);
+      setMerchantRenamePreview(preview);
+      if (preview.affectedCount === 0) {
+        setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行更名' });
+      }
+    } catch (err: any) {
+      setMerchantRenamePreview(null);
+      setStatus({ type: 'error', message: err.message || '商家預覽失敗' });
+    } finally {
+      setIsMerchantPreviewLoading(false);
+    }
+  };
+
+  const handleRenameMerchant = async () => {
+    if (!merchantRenamePreview || merchantRenamePreview.affectedCount === 0) {
+      setStatus({ type: 'error', message: '請先預覽受影響筆數後再執行更名' });
+      return;
+    }
+
+    try {
+      setIsMerchantRenameSubmitting(true);
+      setStatus({ type: 'idle', message: '' });
+      const result = await onRenameMerchant(
+        merchantRenamePreview.oldMerchant,
+        merchantRenamePreview.newMerchant
+      );
+      await onDataChange();
+      resetMerchantRenameState(result.newMerchant);
+      const actionMessage = result.willMerge
+        ? `已將 ${result.oldMerchant} 合併到 ${result.newMerchant}`
+        : `已將 ${result.oldMerchant} 更名為 ${result.newMerchant}`;
+
+      if (result.skippedOffline) {
+        setStatus({
+          type: 'success',
+          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
+        });
+        return;
+      }
+
+      if (result.syncResult && result.syncResult.failed > 0) {
+        setStatus({
+          type: 'error',
+          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+        });
+        return;
+      }
+
+      setStatus({
+        type: 'success',
+        message: `${actionMessage}，共更新 ${result.affectedCount} 筆`,
+      });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || '商家更名失敗' });
+    } finally {
+      setIsMerchantRenameSubmitting(false);
     }
   };
 
@@ -762,6 +909,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       accentClassName: 'border-cyan-400/20 bg-cyan-500/12 text-cyan-200',
     },
     {
+      section: 'merchant',
+      title: SETTINGS_SECTION_COPY.merchant.title,
+      description: SETTINGS_SECTION_COPY.merchant.description,
+      meta: `${merchantSummaries.length} 個商家`,
+      icon: Store,
+      accentClassName: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
+    },
+    {
       section: 'import-export',
       title: SETTINGS_SECTION_COPY['import-export'].title,
       description: SETTINGS_SECTION_COPY['import-export'].description,
@@ -797,51 +952,26 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           const Icon = item.icon;
 
           return (
-            <React.Fragment key={item.section}>
-              <button
-                type="button"
-                onClick={() => onOpenSection(item.section)}
-                className="group flex min-h-[9.5rem] items-stretch gap-4 rounded-[28px] border border-white/8 bg-white/[0.045] p-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-sm transition-colors hover:bg-white/[0.065] active:scale-[0.99] sm:p-6"
-              >
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${item.accentClassName}`}>
-                  <Icon size={20} />
+            <button
+              key={item.section}
+              type="button"
+              onClick={() => onOpenSection(item.section)}
+              className="group flex min-h-[9.5rem] items-stretch gap-4 rounded-[28px] border border-white/8 bg-white/[0.045] p-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-sm transition-colors hover:bg-white/[0.065] active:scale-[0.99] sm:p-6"
+            >
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${item.accentClassName}`}>
+                <Icon size={20} />
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black tracking-[0.02em] text-white">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-400">{item.description}</p>
+                  </div>
+                  <ChevronRight size={20} className="mt-0.5 shrink-0 text-slate-500 transition-colors group-hover:text-white" />
                 </div>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-black tracking-[0.02em] text-white">{item.title}</h3>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-400">{item.description}</p>
-                    </div>
-                    <ChevronRight size={20} className="mt-0.5 shrink-0 text-slate-500 transition-colors group-hover:text-white" />
-                  </div>
-                  <p className="mt-auto pt-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{item.meta}</p>
-                </div>
-              </button>
-
-              {item.section === 'tags' && (
-                <button
-                  type="button"
-                  onClick={onOpenMerchantManagement}
-                  className="group flex min-h-[9.5rem] items-stretch gap-4 rounded-[28px] border border-white/8 bg-white/[0.045] p-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-sm transition-colors hover:bg-white/[0.065] active:scale-[0.99] sm:p-6"
-                >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-500/12 text-amber-200">
-                    <Store size={20} />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <h3 className="text-base font-black tracking-[0.02em] text-white">{MERCHANT_MANAGEMENT_COPY.title}</h3>
-                        <p className="mt-2 text-sm leading-relaxed text-slate-400">
-                          {MERCHANT_MANAGEMENT_COPY.description}
-                        </p>
-                      </div>
-                      <ChevronRight size={20} className="mt-0.5 shrink-0 text-slate-500 transition-colors group-hover:text-white" />
-                    </div>
-                    <p className="mt-auto pt-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{merchantCount} 個商家</p>
-                  </div>
-                </button>
-              )}
-            </React.Fragment>
+                <p className="mt-auto pt-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{item.meta}</p>
+              </div>
+            </button>
           );
         })}
       </div>
@@ -911,6 +1041,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onTagTransactionClick={onTagTransactionClick}
           />
         );
+      case 'merchant':
+        return (
+          <MerchantManagementSection
+            status={status}
+            merchantSummaries={merchantSummaries}
+            selectedMerchantToRename={selectedMerchantToRename}
+            renamedMerchantInput={renamedMerchantInput}
+            merchantRenamePreview={merchantRenamePreview}
+            merchantTransactions={merchantTransactions}
+            paymentMethodDisplayMode={paymentMethodDisplayMode}
+            isMerchantPreviewLoading={isMerchantPreviewLoading}
+            isMerchantRenameSubmitting={isMerchantRenameSubmitting}
+            isMerchantTransactionsLoading={isMerchantTransactionsLoading}
+            onSelectMerchantToRename={handleSelectMerchantToRename}
+            onRenamedMerchantInputChange={(value) => {
+              setRenamedMerchantInput(value);
+              setMerchantRenamePreview(null);
+            }}
+            onPreviewMerchantRename={() => void handlePreviewMerchantRename()}
+            onRenameMerchant={() => void handleRenameMerchant()}
+            onMerchantTransactionClick={onMerchantTransactionClick}
+          />
+        );
       case 'import-export':
         return (
           <ImportExportSection
@@ -956,7 +1109,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             </p>
           )}
           {renderSection()}
-          {renderStatusMessage()}
+          {section !== 'merchant' && renderStatusMessage()}
           <p className="pt-6 text-center text-[10px] font-bold uppercase tracking-[0.4em] text-gray-700 opacity-15">
             Cozy Pocket • Minimalism
           </p>

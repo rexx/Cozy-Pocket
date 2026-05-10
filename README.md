@@ -130,14 +130,14 @@ this.version(1).stores({
 *   若後端有正確回傳結構化錯誤（例如 Google Apps Script 寫入失敗），前端會優先顯示該錯誤訊息；只有在瀏覽器拿不到可讀 response 時，才會退回顯示 `Failed to fetch` 類型的診斷提示。
 
 ### 6.5 頁面規劃
-*   App 目前的**主頁面（active views）**共有六個：`首頁`、`搜尋`、`統計`、`資料與設定`、`商家管理`、`同步狀態`。
+*   App 目前的**主頁面（active views）**共有五個：`首頁`、`搜尋`、`統計`、`資料與設定`、`同步狀態`。
 *   `搜尋` 已改為獨立頁面，從首頁右上角搜尋按鈕進入，左上角返回首頁。
-*   `商家管理` 已改為獨立頁面，從「資料與設定」中的入口卡片進入，返回時會回到「資料與設定」。
+*   `商家管理` 已整併為 `資料與設定` 的設定子頁，與 Tag 管理等其他子頁共用設定首頁卡片、子頁 routing 與返回行為。
 *   `同步狀態` 已改為獨立頁面，可從首頁或資料與設定進入；返回時會依入口回到原本頁面。
 *   `首頁` 負責日期切換、每日交易列表，以及進入其他功能頁的入口。
 *   首頁上半部日曆支援週／月切換：月模式可左右滑動切換月份，週模式可左右滑動切換週次；下半部每日交易列表支援左右滑動切換前後日，與既有左右按鈕行為一致。
 *   `統計` 與 `資料與設定` 都是獨立頁面，不再是首頁上的小型浮層工具。
-*   共用頁面 header 使用與 PWA 外框一致的 `#1a1c2c`，並保留較短的上方留白，讓設定、同步狀態、搜尋、統計、商家管理與交易 modal 在手機 PWA 上維持連續色面。
+*   共用頁面 header 使用與 PWA 外框一致的 `#1a1c2c`，並保留較短的上方留白，讓設定、同步狀態、搜尋、統計與交易 modal 在手機 PWA 上維持連續色面。
 *   目前的**overlay / modal 畫面**包含：`新增／編輯交易`。
 *   overlay 關閉後會回到原本所在的主頁面；例如從搜尋、統計、資料與設定或同步狀態進入編輯，關閉後會回到原本頁面。
 *   新增、複製或編輯交易儲存成功後，首頁選取日期會同步到該筆交易日期；若當下位於其他主頁面，會保留原頁面並在返回首頁時顯示該日期。
@@ -146,8 +146,8 @@ this.version(1).stores({
 *   `首頁`：日期切換、每日交易列表、本月摘要卡，以及前往搜尋／資料與設定／同步狀態的入口；日曆可切換週／月模式，並依模式左右滑動切週或切月，交易列表可左右滑動切日。本月與本日摘要在多幣別時會以一致圖示標示，避免以文字或 emoji 佔用摘要空間；交易列表的支付方式可依偏好顯示為文字或圖示，預設為文字。
 *   `搜尋`：搜尋名稱、商家、備註、tag、類別與幣別，顯示搜尋結果並可直接編輯。
 *   `統計`：提供月份／年份切換、tag 與支付方式篩選、收入／支出明細展開，以及依類別彙整的金額與筆數分析。
-*   `資料與設定`：提供設定入口清單；偏好設定、AI 設定、同步設定、Tag 管理、匯入匯出與危險操作會進入各自設定子頁，商家管理目前仍進入完整獨立頁面。
-*   `商家管理`：提供可搜尋與逐批載入的商家清單、受影響交易預覽與商家更名操作。
+*   `資料與設定`：提供設定入口清單；偏好設定、AI 設定、同步設定、Tag 管理、商家管理、匯入匯出與危險操作會進入各自設定子頁。
+*   `商家管理`（設定子頁）：提供可搜尋與逐批載入的商家清單、受影響交易預覽與商家更名操作。
 *   `同步狀態`：顯示待同步／同步中／已同步／失敗統計、交易清單、預設隱藏已同步項目的篩選、詳細錯誤、手動同步入口，以及可直接點入編輯的交易項目。
 *   `新增／編輯交易`：唯一保留的 overlay，會覆蓋在目前主頁面上，關閉後返回原頁。
 *   `同步狀態` 也會保留返回來源：從首頁進入返回首頁，從資料與設定進入則返回資料與設定。
@@ -158,7 +158,6 @@ this.version(1).stores({
 ├─ 搜尋
 ├─ 統計
 ├─ 資料與設定
-│  └─ 商家管理
 └─ 同步狀態
 
 資料與設定
@@ -168,7 +167,7 @@ this.version(1).stores({
 │  ├─ 同步狀態
 │  └─ 同步紀錄
 ├─ Tag 管理（設定子頁）
-├─ 商家管理（獨立頁）
+├─ 商家管理（設定子頁）
 ├─ 匯入匯出（設定子頁）
 └─ 危險操作（設定子頁）
 
@@ -176,9 +175,8 @@ this.version(1).stores({
 └─ 新增／編輯交易（overlay）
 ```
 
-*   `搜尋`、`統計`、`資料與設定`、`商家管理`、`同步狀態` 都屬於主頁面層級；其中 `商家管理` 從 `資料與設定` 進入。
-*   `資料與設定` 已改為設定入口清單，偏好設定、AI 設定、同步設定、Tag 管理、匯入匯出與危險操作各自進入設定子頁。
-*   `Tag 管理` 是 `資料與設定` 的獨立設定子頁；`商家管理` 則維持完整獨立頁面。
+*   `搜尋`、`統計`、`資料與設定`、`同步狀態` 都屬於主頁面層級。
+*   `資料與設定` 已改為設定入口清單，偏好設定、AI 設定、同步設定、Tag 管理、商家管理、匯入匯出與危險操作各自進入設定子頁。
 *   `新增／編輯交易` 可從多個主頁面進入，但仍維持 overlay 呈現。
 
 #### 6.5.3 頁面元件對應
@@ -186,9 +184,20 @@ this.version(1).stores({
 *   `搜尋`：`components/SearchPage.tsx`
 *   `統計`：`components/MonthlyStatsPage.tsx`
 *   `資料與設定`：`components/SettingsPage.tsx`
-*   `商家管理`：`components/MerchantManagementPage.tsx`
 *   `同步狀態`：`components/SyncStatusPage.tsx`
+*   `同步紀錄`：`components/PullReportsPage.tsx`（從同步設定子頁進入）
 *   `新增／編輯交易` overlay：`components/AddTransactionModal.tsx`
+
+設定子頁內容（由 `SettingsPage` 依 `section` 切換 render）：
+*   `偏好設定`：`components/settings/PreferencesSection.tsx`
+*   `AI 設定`：`components/settings/AiSection.tsx`
+*   `同步設定`：`components/settings/SyncSection.tsx`
+*   `Tag 管理`：`components/settings/TagManagementSection.tsx`
+*   `商家管理`：`components/settings/MerchantManagementSection.tsx`
+*   `匯入匯出`：`components/settings/ImportExportSection.tsx`
+*   `危險操作`：`components/settings/DangerZoneSection.tsx`
+
+`App.tsx` 以 `AppView` 字串對應：主頁面 `home` / `search` / `stats` / `settings` / `sync`、設定子頁 `settings-preferences` / `settings-ai` / `settings-sync` / `settings-tags` / `settings-merchant` / `settings-import-export` / `settings-danger`，以及獨立子頁 `pull-reports`。
 
 #### 6.5.4 元件層級與命名原則
 *   主頁面元件統一使用 `*Page.tsx` 命名，放在 `components/` 目錄下。
@@ -245,8 +254,7 @@ this.version(1).stores({
 
 ### 6.11 商家管理
 *   商家名稱目前仍保存在每筆交易的 `merchant` 欄位中，商家更名會以批次更新交易的方式完成。
-*   「商家管理」已改為獨立頁面，方便集中整理商家名稱與相關交易。
-*   設定頁只保留商家管理入口卡片；進入管理頁後才會整理商家清單與相關交易。
+*   「商家管理」已整併為「資料與設定」內的設定子頁，從設定首頁的商家入口卡片進入，返回時回到設定首頁。
 *   商家清單支援即時搜尋，並預設每次顯示 200 個商家，可用「載入更多」展開後續項目；商家清單與相關交易列表高度最多佔視窗高度一半，超過時在各自列表內捲動。
 *   更名前需先執行預覽，確認受影響交易筆數；確認按鈕只會在有效預覽後顯示。
 *   預覽錯誤、預覽資訊、合併警告與完成結果會顯示在同一個 feedback card 位置，依狀態使用紅色、黃色或綠色樣式；新名稱輸入變更後會清除既有預覽與錯誤。
@@ -258,18 +266,18 @@ this.version(1).stores({
 
 ### 6.12 設定頁區段化
 *   `SettingsPage` 目前作為設定 container，支援設定首頁與設定子頁，不使用 tabs。
-*   設定首頁只保留入口卡片；`PreferencesSection`、`AiSection`、`SyncSection`、`TagManagementSection`、`ImportExportSection`、`DangerZoneSection` 由各自設定子頁呈現。
-*   `App.tsx` 以 `settings-preferences`、`settings-ai`、`settings-sync`、`settings-tags`、`settings-import-export`、`settings-danger` 等 view 管理設定子頁導覽與 history state。
+*   設定首頁只保留入口卡片；`PreferencesSection`、`AiSection`、`SyncSection`、`TagManagementSection`、`MerchantManagementSection`、`ImportExportSection`、`DangerZoneSection` 由各自設定子頁呈現。
+*   `App.tsx` 以 `settings-preferences`、`settings-ai`、`settings-sync`、`settings-tags`、`settings-merchant`、`settings-import-export`、`settings-danger` 等 view 管理設定子頁導覽與 history state。
 *   `SettingsPage` 會依設定子頁顯示置中的頁面副標題，並用與入口圖示一致的背景 glow。設定子頁內容使用玻璃感功能子卡牌，不再額外包一層重複標題的外框卡牌。
 *   設定首頁與設定子頁標題／副標題共用 `components/settings/settingsSectionCopy.ts`，避免入口卡片與子頁文案分歧。
 *   `PreferencesSection` 會分成「Payment Method Display」與「Currency Options」兩張功能子卡牌；支付方式支援文字／圖示切換，幣別清單預設直接展開。
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
-*   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發、Tag 更名與 status 訊息，避免子頁重複實作資料流程。
+*   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發、Tag 與商家更名與 status 訊息，避免子頁重複實作資料流程。
 *   各區段元件只負責 UI 與事件轉發，不直接操作資料庫或同步服務。
 *   匯入與匯出已整併在同一個 section 中；插入範例資料與清除本機資料則集中在危險操作區。
-*   設定首頁會顯示目前 tag 數量與商家數量；商家數量只從已載入交易建立唯一商家 `Set`，不額外讀取 IndexedDB 或排序完整商家清單。
-*   商家管理目前仍維持完整獨立頁面；後續若要與其他設定入口一致，已列入 `merchant-management-settings-subpage.md`。
+*   設定首頁會顯示目前 tag 數量與商家數量；商家數量直接取自已載入交易計算的商家用量摘要（`MerchantUsageSummary`），不額外讀取 IndexedDB。
+*   商家管理已整併為 `SettingsPage` 的正式設定子頁，與 Tag 管理等其他子頁共用設定首頁卡片、子頁 routing 與返回行為。
 
 ---
 

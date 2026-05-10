@@ -15,6 +15,10 @@ export const SETTINGS_SECTION_COPY = {
     title: 'Tag 管理',
     description: '整理 tag 名稱，並查看相關交易。',
   },
+  merchant: {
+    title: '商家管理',
+    description: '整理商家名稱，並查看相關交易。',
+  },
   'import-export': {
     title: '匯入匯出',
     description: '匯出備份，或從 CSV 匯入資料。',
@@ -23,9 +27,4 @@ export const SETTINGS_SECTION_COPY = {
     title: '危險操作',
     description: '重置本機資料，或加入範例資料。',
   },
-} as const;
-
-export const MERCHANT_MANAGEMENT_COPY = {
-  title: '商家管理',
-  description: '整理商家名稱，並查看相關交易。',
 } as const;

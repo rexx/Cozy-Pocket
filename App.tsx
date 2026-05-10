@@ -9,13 +9,12 @@ import SyncStatusPage from './components/SyncStatusPage';
 import SearchPage from './components/SearchPage';
 import HomePage from './components/HomePage';
 import MonthlyStatsPage from './components/MonthlyStatsPage';
-import MerchantManagementPage from './components/MerchantManagementPage';
 import PullReportsPage from './components/PullReportsPage';
 import { CalendarViewMode, PaymentMethodDisplayMode, PullReport, SuggestionIndex, SuggestionItem, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { pullTransactionsFromCloud, SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
-import { buildMerchantRenamePreview, getTransactionsByMerchant, normalizeMerchantName, renameMerchantInTransactions } from './services/merchantService';
+import { buildMerchantRenamePreview, getMerchantUsageSummaries, getTransactionsByMerchant, normalizeMerchantName, renameMerchantInTransactions } from './services/merchantService';
 import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
 import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
@@ -32,10 +31,10 @@ type AppView =
   | 'settings-ai'
   | 'settings-sync'
   | 'settings-tags'
+  | 'settings-merchant'
   | 'settings-import-export'
   | 'settings-danger'
   | 'sync'
-  | 'merchant-management'
   | 'pull-reports';
 
 interface AppHistoryState {
@@ -48,6 +47,7 @@ const SETTINGS_SECTION_VIEW_MAP: Record<SettingsSectionPage, AppView> = {
   ai: 'settings-ai',
   sync: 'settings-sync',
   tags: 'settings-tags',
+  merchant: 'settings-merchant',
   'import-export': 'settings-import-export',
   danger: 'settings-danger',
 };
@@ -57,6 +57,7 @@ const SETTINGS_VIEW_SECTION_MAP: Partial<Record<AppView, SettingsSectionPage>> =
   'settings-ai': 'ai',
   'settings-sync': 'sync',
   'settings-tags': 'tags',
+  'settings-merchant': 'merchant',
   'settings-import-export': 'import-export',
   'settings-danger': 'danger',
 };
@@ -498,14 +499,7 @@ const App: React.FC = () => {
 
   const suggestionIndex = useMemo<SuggestionIndex>(() => buildSuggestionIndex(transactions), [transactions]);
   const tagUsageSummaries = useMemo(() => getTagUsageSummaries(transactions), [transactions]);
-  const merchantCount = useMemo(() => {
-    const merchants = new Set<string>();
-    for (const tx of transactions) {
-      const merchant = normalizeMerchantName(tx.merchant || '');
-      if (merchant) merchants.add(merchant);
-    }
-    return merchants.size;
-  }, [transactions]);
+  const merchantUsageSummaries = useMemo(() => getMerchantUsageSummaries(transactions), [transactions]);
   const pullYearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const years = new Set<string>([
@@ -941,7 +935,6 @@ const App: React.FC = () => {
           onTriggerSync={triggerPendingSync}
           onOpenSyncProgress={() => openSyncStatusFrom('settings')}
           onOpenPullReports={openPullReportsPage}
-          onOpenMerchantManagement={() => setActiveView('merchant-management')}
           onPullFromCloud={pullYearFromCloud}
           pullYearOptions={pullYearOptions}
           onNotify={showToast}
@@ -949,11 +942,15 @@ const App: React.FC = () => {
           paymentMethodDisplayMode={paymentMethodDisplayMode}
           onPaymentMethodDisplayModeChange={setPaymentMethodDisplayMode}
           tagSummaries={tagUsageSummaries}
-          merchantCount={merchantCount}
+          merchantSummaries={merchantUsageSummaries}
           onPreviewTagRename={previewTagRename}
           onRenameTag={renameTag}
           onGetTagTransactions={getTagTransactions}
           onTagTransactionClick={handleEditItem}
+          onPreviewMerchantRename={previewMerchantRename}
+          onRenameMerchant={renameMerchant}
+          onGetMerchantTransactions={getMerchantTransactions}
+          onMerchantTransactionClick={handleEditItem}
         />
         {isModalOpen && (
           <AddTransactionModal
@@ -983,39 +980,6 @@ const App: React.FC = () => {
           focusReportId={focusedPullReportId}
           onClose={() => navigateBack('settings')}
           onDeleteReport={deletePullReport}
-        />
-        {isModalOpen && (
-          <AddTransactionModal
-            key={modalInstanceKey}
-            initialDate={selectedDate}
-            editingTransaction={editingTransaction}
-            prefilledTransaction={prefilledTransaction}
-            onClose={closeTransactionModal}
-            onAdd={addTransaction}
-            onUpdate={updateTransaction}
-            onDelete={deleteTransaction}
-            onDuplicate={handleDuplicateItem}
-            suggestions={suggestionIndex}
-          />
-        )}
-      </div>
-    );
-  }
-
-  if (activeView === 'merchant-management') {
-    return (
-      <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
-        {toastMessage && <SuccessToast message={toastMessage} />}
-        <MerchantManagementPage
-          transactions={transactions}
-          paymentMethodDisplayMode={paymentMethodDisplayMode}
-          onClose={() => navigateBack('settings')}
-          onDataChange={refreshData}
-          onPreviewMerchantRename={previewMerchantRename}
-          onRenameMerchant={renameMerchant}
-          onGetMerchantTransactions={getMerchantTransactions}
-          onMerchantTransactionClick={handleEditItem}
         />
         {isModalOpen && (
           <AddTransactionModal
