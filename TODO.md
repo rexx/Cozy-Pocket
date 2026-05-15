@@ -17,14 +17,14 @@
 - 🟡 把 `TagManagementSection` 與 `MerchantManagementSection` 的更名流程 state 改由 Section 自管，讓兩個設定子頁變自包含，`SettingsPage` 只負責 routing 與 props 透傳。（計劃：[section-owned-rename-state.md](docs/todo-references/section-owned-rename-state.md)）
 - 🟡 把 `SettingsPage` 共用的 `status` state 拆解到各 Section（偏好 / AI / 同步 / 匯入匯出 / 危險操作）自管，並抽出共用 `SettingsFeedbackCard`，移除 container 端 special-case 渲染。（計劃：[section-owned-status-state.md](docs/todo-references/section-owned-status-state.md)）
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
-- 🟡 交易編輯頁面底部顯示同步狀態，同步失敗者可直接觸發重新上傳。（計劃：[transaction-edit-sync-status-retry.md](docs/todo-references/transaction-edit-sync-status-retry.md)）
+- ✅ 交易編輯頁面底部已顯示同步狀態，待同步與同步失敗交易可直接點左側狀態圖示觸發單筆上傳。（紀錄：[transaction-edit-sync-status-retry.md](docs/completed-references/transaction-edit-sync-status-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
 - ✅ `SettingsPage` 已升級為設定入口清單，偏好設定、AI 設定、同步設定、Tag 管理、匯入匯出與危險操作已各自進入設定子頁。（紀錄：[settings-section-pages.md](docs/completed-references/settings-section-pages.md)）
 - ✅ 同步狀態頁已支援返回來源感知：從 `SettingsPage` 進入時返回設定頁，從首頁進入時返回首頁。
 - ✅ `SyncStatusPage` 已支援預設隱藏已成功項目的篩選，讓使用者聚焦尚未處理或失敗的資料。
 - ✅ 同步狀態頁的交易項目已可直接開啟既有編輯 modal，方便就地修正待同步或失敗資料。
 - ✅ `SettingsPage` 已保留設定 section 元件作為各設定子頁的內容元件，並以玻璃感功能子卡牌完成視覺一致化。
-- ✅ 商家管理已從 `SettingsPage` 內嵌區塊升級為獨立頁面，避免長商家清單直接撐開設定頁。
+- ✅ 商家管理曾從 `SettingsPage` 內嵌區塊拆出以解決長清單撐開設定頁的問題，後續已重新整併為正式設定子頁。
 - ✅ 商家管理已重新整併為 `SettingsPage` 的正式設定子頁，與 Tag 管理、同步設定等共用設定首頁卡片、子頁 routing 與返回行為。（紀錄：[merchant-management-settings-subpage.md](docs/completed-references/merchant-management-settings-subpage.md)）
 
 ## 首頁與日曆體驗

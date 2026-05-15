@@ -84,6 +84,7 @@
 | `SettingsPage` | `success` / `error` / `idle` | 同步設定儲存後離線、同步部分失敗、Tag 更名結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤 | 維持頁內 status |
 | `MerchantManagementSection`（`SettingsPage` 子頁內 inline） | `success` / `error` / `idle` + feedback card tone | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗 | 維持頁內 feedback card |
 | `SyncStatusPage` | persistent list/detail | 待同步 / 同步中 / 失敗 / 已同步統計，單筆 `lastSyncError` 詳情 | 維持頁面呈現 |
+| `AddTransactionModal` | persistent item status | 編輯單筆交易時顯示該筆同步狀態，`pending` / `error` 可點左側圖示單筆上傳，`error` 會顯示 `lastSyncError` 摘要 | 維持 modal 內嵌狀態 |
 
 頁內 status 不適合全面改成 swal。這些訊息多半需要使用者回看、修正欄位、或理解部分成功狀態，放在頁面內比 dialog 更穩定。
 
@@ -95,6 +96,7 @@
 | `AddTransactionModal` | 未選類別、已選主類別但未選子類別 | modal 上方內嵌紅色錯誤框，並以低調紅框標示類別區塊；子類別錯誤會展開子類別選擇區 | 維持 inline |
 | `AddTransactionModal` | AI 解析失敗 | AI 輸入框下方紅色文字 | 維持 inline |
 | `AddTransactionModal` | 離線時 AI 不可用 | AI 輸入框下方 amber 提示 | 維持 inline |
+| `AddTransactionModal` | 交易同步狀態 | 編輯模式底部顯示待同步 / 同步中 / 已同步 / 同步失敗；待同步與同步失敗可點左側圖示觸發單筆上傳，離線或同步中時 disabled | 維持 inline |
 | `SyncStatusPage` | 離線時不能同步 | 頁面上方 amber 提示，右上同步按鈕 disabled | 維持 inline |
 | `TransactionItem` | 單筆同步狀態 | 狀態點與 title / aria-label | 維持 inline |
 
@@ -105,7 +107,7 @@
 | 機制 | 來源 | 用途 | 建議 |
 | --- | --- | --- | --- |
 | `ErrorDisplay` | `capturedErrors` | DB load/init/add/update/delete、sync error、runtime error、unhandled rejection | 保留為 debug overlay，不改 swal |
-| `lastSyncError` | `syncPendingTransactions` / `syncCreateItems` 結果 | 單筆同步失敗詳情 | 保留在 `SyncStatusPage` 中可回看 |
+| `lastSyncError` | `syncPendingTransactions` / `syncCreateItems` 結果 | 單筆同步失敗詳情 | 保留在 `SyncStatusPage` 中可回看，並在交易編輯頁的同步失敗區塊顯示摘要 |
 | `syncProgressUI` | `runSyncWithProgress()` | 同步中狀態、首頁同步 icon、同步頁按鈕 disabled | 保留 progress UI，不改 swal |
 
 同步與 debug 訊息不適合 swal，因為錯誤可能很多筆、需要回看、也可能在背景流程產生。若未來要改善，較適合加「前往同步狀態頁」CTA 或整理錯誤摘要，不是改成 blocking dialog。

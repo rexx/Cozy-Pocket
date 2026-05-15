@@ -4,7 +4,9 @@ import {
   X, Check, Trash2, Copy, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
   Store, Tag,
-  Sparkles, Globe, AlertCircle, SendHorizontal
+  Sparkles, Globe, AlertCircle, SendHorizontal,
+  CircleAlert, CircleCheck, Clock3, LoaderCircle,
+  type LucideIcon
 } from 'lucide-react';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import { PaymentMethod, SuggestionItem, SuggestionIndex, Transaction, TransactionType } from '../types';
@@ -145,11 +147,64 @@ interface AddTransactionModalProps {
   onUpdate?: (transaction: Transaction) => Promise<boolean>;
   onDelete?: (id: string) => void;
   onDuplicate?: (transaction: Transaction) => void;
+  onRetrySyncTransaction?: (id: string) => Promise<void>;
   initialDate: Date;
   editingTransaction?: Transaction | null;
   prefilledTransaction?: Omit<Transaction, 'id'> | null;
+  syncInfo?: TransactionSyncInfo | null;
+  isOffline?: boolean;
+  isSyncConfigured?: boolean;
+  isSyncing?: boolean;
   suggestions: SuggestionIndex;
 }
+
+export interface TransactionSyncInfo {
+  id: string;
+  syncStatus?: Transaction['syncStatus'];
+  lastSyncError?: string;
+  exists?: boolean;
+}
+
+type TransactionSyncStatus = NonNullable<Transaction['syncStatus']>;
+
+interface SyncStatusMeta {
+  label: string;
+  description: string;
+  Icon: LucideIcon;
+  panelClassName: string;
+  iconClassName: string;
+}
+
+const SYNC_STATUS_META: Record<TransactionSyncStatus, SyncStatusMeta> = {
+  pending: {
+    label: '待同步',
+    description: '等待背景同步補送。',
+    Icon: Clock3,
+    panelClassName: 'border-amber-400/20 bg-amber-500/10',
+    iconClassName: 'text-amber-200',
+  },
+  syncing: {
+    label: '同步中',
+    description: '正在上傳這筆交易。',
+    Icon: LoaderCircle,
+    panelClassName: 'border-cyan-400/20 bg-cyan-500/10',
+    iconClassName: 'text-cyan-200',
+  },
+  synced: {
+    label: '已同步',
+    description: '這筆交易已完成上傳。',
+    Icon: CircleCheck,
+    panelClassName: 'border-emerald-400/20 bg-emerald-500/10',
+    iconClassName: 'text-emerald-200',
+  },
+  error: {
+    label: '同步失敗',
+    description: '最近一次上傳失敗。',
+    Icon: CircleAlert,
+    panelClassName: 'border-rose-400/25 bg-rose-500/10',
+    iconClassName: 'text-rose-200',
+  },
+};
 
 const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ 
   onClose, 
@@ -157,9 +212,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onUpdate,
   onDelete,
   onDuplicate,
+  onRetrySyncTransaction,
   initialDate, 
   editingTransaction,
   prefilledTransaction,
+  syncInfo,
+  isOffline: isOfflineProp,
+  isSyncConfigured = true,
+  isSyncing = false,
   suggestions
 }) => {
   const isEditing = !!editingTransaction;
@@ -214,8 +274,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [aiFeedback, setAiFeedback] = useState<AiFeedback | null>(null);
   const [aiFilledFields, setAiFilledFields] = useState<Set<AiFilledField>>(() => new Set<AiFilledField>());
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
   const hasApiKey = geminiApiKey.length > 0;
   const suggestionLimit = 6;
+  const isOfflineMode = isOfflineProp ?? isOffline();
 
   useEffect(() => {
     setActiveTab(sourceTransaction?.type || '支出');
@@ -242,6 +304,10 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setAiFilledFields(new Set<AiFilledField>());
     setValidationErrors({});
   }, [sourceTransaction]);
+
+  useEffect(() => {
+    setIsRetryingSync(false);
+  }, [syncInfo?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -605,6 +671,27 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   };
 
+  const handleRetrySync = async () => {
+    if (
+      !syncInfo?.id ||
+      !onRetrySyncTransaction ||
+      syncInfo.exists === false ||
+      isOfflineMode ||
+      !isSyncConfigured ||
+      isSyncing ||
+      isRetryingSync
+    ) {
+      return;
+    }
+
+    setIsRetryingSync(true);
+    try {
+      await onRetrySyncTransaction(syncInfo.id);
+    } finally {
+      setIsRetryingSync(false);
+    }
+  };
+
   const togglePaymentMethod = () => {
     const currentIndex = PAYMENT_METHODS.indexOf(paymentMethod as PaymentMethod);
     setPaymentMethod(PAYMENT_METHODS[(currentIndex + 1) % PAYMENT_METHODS.length]);
@@ -635,6 +722,40 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     ? 'border-red-400/40'
     : getAiBorderClass(['amount', 'currency']);
   const isAiAnimationVisible = isAiProcessing;
+  const syncStatus: TransactionSyncStatus = syncInfo?.syncStatus || 'pending';
+  const syncStatusMeta = SYNC_STATUS_META[syncStatus];
+  const SyncStatusIcon = syncStatusMeta.Icon;
+  const isSyncRecordMissing = syncInfo?.exists === false;
+  const hasSyncError = syncStatus === 'error';
+  const hasManualSyncAction = syncStatus === 'pending' || syncStatus === 'error';
+  const syncStatusDescription = isSyncRecordMissing
+    ? '這筆交易已不存在，無法重新上傳。'
+    : !isSyncConfigured && syncStatus !== 'synced'
+      ? '尚未設定雲端同步，請先儲存 Sync API URL 與 Token。'
+      : isOfflineMode && syncStatus !== 'synced'
+        ? '目前離線，恢復連線後可重新上傳。'
+        : isSyncing && syncStatus !== 'synced'
+          ? '同步處理中，請稍候。'
+          : syncStatusMeta.description;
+  const isRetryDisabled = (
+    isRetryingSync ||
+    isSyncing ||
+    isSyncRecordMissing ||
+    isOfflineMode ||
+    !isSyncConfigured ||
+    !onRetrySyncTransaction
+  );
+  const retryButtonTitle = isRetryingSync || isSyncing
+    ? '同步中'
+    : isSyncRecordMissing
+      ? '找不到交易'
+      : isOfflineMode
+        ? '目前離線'
+        : !isSyncConfigured
+          ? '尚未設定同步'
+          : syncStatus === 'pending'
+            ? '立即上傳'
+            : '重新上傳';
 
   const getTextMatchRank = (value: string, rawQuery: string) => {
     const query = rawQuery.trim().toLowerCase();
@@ -1054,6 +1175,35 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <button onClick={handleDelete} className="w-full py-5 text-red-500 text-sm font-bold flex items-center justify-center gap-2 bg-red-500/5 rounded-2xl border border-red-500/10 active:bg-red-500/20 transition-all">
               <Trash2 size={20} /><span>刪除這筆紀錄</span>
             </button>
+            <div className={`rounded-2xl border px-4 py-4 shadow-lg ${syncStatusMeta.panelClassName}`}>
+              <div className="flex items-start gap-3">
+                {hasManualSyncAction ? (
+                  <button
+                    type="button"
+                    onClick={handleRetrySync}
+                    disabled={isRetryDisabled}
+                    title={retryButtonTitle}
+                    aria-label={retryButtonTitle}
+                    className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 ${syncStatusMeta.iconClassName}`}
+                  >
+                    <SyncStatusIcon size={18} />
+                  </button>
+                ) : (
+                  <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 ${syncStatusMeta.iconClassName}`}>
+                    <SyncStatusIcon size={18} className={syncStatus === 'syncing' ? 'animate-spin' : undefined} />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-white">{syncStatusMeta.label}</p>
+                  <p className="mt-2 text-xs font-bold leading-relaxed text-slate-300">{syncStatusDescription}</p>
+                  {hasSyncError && syncInfo?.lastSyncError && (
+                    <p className="mt-3 break-all rounded-xl border border-rose-300/15 bg-rose-950/20 px-3 py-2 text-[11px] font-medium leading-relaxed text-rose-100">
+                      {syncInfo.lastSyncError}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </>
         )}
         </div>

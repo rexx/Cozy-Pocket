@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { format, isSameDay, isWithinInterval, endOfDay, addDays } from 'date-fns';
 import { AlertCircle, X } from 'lucide-react';
 import TransactionItem from './components/TransactionItem';
-import AddTransactionModal from './components/AddTransactionModal';
+import AddTransactionModal, { type TransactionSyncInfo } from './components/AddTransactionModal';
 import SettingsPage, { type SettingsSectionPage } from './components/SettingsPage';
 import SyncStatusPage from './components/SyncStatusPage';
 import SearchPage from './components/SearchPage';
@@ -218,6 +218,7 @@ const App: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [toastMessage, setToastMessage] = useState('');
   const [isOfflineMode, setIsOfflineMode] = useState(isOffline());
+  const [isSyncConfigured, setIsSyncConfigured] = useState(false);
   const toastHideTimerRef = useRef<number | null>(null);
   const isApplyingHistoryRef = useRef(false);
   const clearErrors = useCallback(() => setCapturedErrors([]), []);
@@ -249,14 +250,23 @@ const App: React.FC = () => {
       ]);
       setTransactions(allTransactions);
       setPullReports(allPullReports);
-      const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting] = await Promise.all([
+      const [
+        defaultCurrencySetting,
+        enabledCurrenciesSetting,
+        paymentMethodDisplayModeSetting,
+        syncApiUrlSetting,
+        syncTokenSetting,
+      ] = await Promise.all([
         db.settings.get('defaultCurrency'),
         db.settings.get('enabledCurrencies'),
-        db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY)
+        db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY),
+        db.settings.get('syncApiUrl'),
+        db.settings.get('syncToken'),
       ]);
       const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
       setDefaultCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
       setPaymentMethodDisplayMode(getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value));
+      setIsSyncConfigured(Boolean((syncApiUrlSetting?.value || '').trim() && (syncTokenSetting?.value || '').trim()));
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
     }
@@ -651,6 +661,33 @@ const App: React.FC = () => {
     }
   };
 
+  const retrySyncTransaction = useCallback(async (id: string) => {
+    if (isOffline()) {
+      return;
+    }
+
+    try {
+      const transaction = await db.transactions.get(id);
+      if (!transaction) {
+        setCapturedErrors(prev => [...prev, `Retry Sync Error [${id}]: Transaction not found`]);
+        await refreshData();
+        return;
+      }
+
+      const results = await runSyncWithProgress('重新上傳交易', (onProgress) => syncCreateItems([transaction], onProgress));
+      const failed = results.find((result) => result.id === id && result.status === 'error');
+      if (failed) {
+        setCapturedErrors(prev => [...prev, `Retry Sync Error [${id}]: ${failed.message || 'Retry sync failed'}`]);
+      } else {
+        showToast('重新上傳完成');
+      }
+      await refreshData();
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `Retry Sync Error [${id}]: ${err.message || 'Retry sync failed'}`]);
+      await refreshData();
+    }
+  }, [refreshData, runSyncWithProgress, showToast]);
+
   const closeTransactionModal = useCallback(() => {
     setIsModalOpen(false);
     setEditingTransaction(null);
@@ -829,6 +866,27 @@ const App: React.FC = () => {
     return formatCurrencyAmount(val, currency, { withSpace: true });
   };
 
+  const editingTransactionSyncInfo = useMemo<TransactionSyncInfo | null>(() => {
+    if (!editingTransaction) return null;
+
+    const latestTransaction = transactions.find((tx) => tx.id === editingTransaction.id);
+    if (!latestTransaction) {
+      return {
+        id: editingTransaction.id,
+        syncStatus: editingTransaction.syncStatus,
+        lastSyncError: editingTransaction.lastSyncError,
+        exists: false,
+      };
+    }
+
+    return {
+      id: latestTransaction.id,
+      syncStatus: latestTransaction.syncStatus,
+      lastSyncError: latestTransaction.lastSyncError,
+      exists: true,
+    };
+  }, [editingTransaction, transactions]);
+
   useEffect(() => {
     const nextState: AppHistoryState = {
       view: activeView,
@@ -888,6 +946,22 @@ const App: React.FC = () => {
     ? Math.round((syncProgressUI.processed / syncProgressUI.total) * 100)
     : 0;
   const settingsSection = SETTINGS_VIEW_SECTION_MAP[activeView] ?? null;
+  const transactionModalProps = {
+    initialDate: selectedDate,
+    editingTransaction,
+    prefilledTransaction,
+    onClose: closeTransactionModal,
+    onAdd: addTransaction,
+    onUpdate: updateTransaction,
+    onDelete: deleteTransaction,
+    onDuplicate: handleDuplicateItem,
+    onRetrySyncTransaction: retrySyncTransaction,
+    syncInfo: editingTransactionSyncInfo,
+    isOffline: isOfflineMode,
+    isSyncConfigured,
+    isSyncing: syncProgressUI.visible,
+    suggestions: suggestionIndex,
+  };
 
   if (activeView === 'stats') {
     return (
@@ -903,18 +977,7 @@ const App: React.FC = () => {
           onTransactionClick={handleEditItem}
         />
         {isModalOpen && (
-          <AddTransactionModal
-            key={modalInstanceKey}
-            initialDate={selectedDate}
-            editingTransaction={editingTransaction}
-            prefilledTransaction={prefilledTransaction}
-            onClose={closeTransactionModal}
-            onAdd={addTransaction}
-            onUpdate={updateTransaction}
-            onDelete={deleteTransaction}
-            onDuplicate={handleDuplicateItem}
-            suggestions={suggestionIndex}
-          />
+          <AddTransactionModal key={modalInstanceKey} {...transactionModalProps} />
         )}
       </div>
     );
@@ -953,18 +1016,7 @@ const App: React.FC = () => {
           onMerchantTransactionClick={handleEditItem}
         />
         {isModalOpen && (
-          <AddTransactionModal
-            key={modalInstanceKey}
-            initialDate={selectedDate}
-            editingTransaction={editingTransaction}
-            prefilledTransaction={prefilledTransaction}
-            onClose={closeTransactionModal}
-            onAdd={addTransaction}
-            onUpdate={updateTransaction}
-            onDelete={deleteTransaction}
-            onDuplicate={handleDuplicateItem}
-            suggestions={suggestionIndex}
-          />
+          <AddTransactionModal key={modalInstanceKey} {...transactionModalProps} />
         )}
       </div>
     );
@@ -982,18 +1034,7 @@ const App: React.FC = () => {
           onDeleteReport={deletePullReport}
         />
         {isModalOpen && (
-          <AddTransactionModal
-            key={modalInstanceKey}
-            initialDate={selectedDate}
-            editingTransaction={editingTransaction}
-            prefilledTransaction={prefilledTransaction}
-            onClose={closeTransactionModal}
-            onAdd={addTransaction}
-            onUpdate={updateTransaction}
-            onDelete={deleteTransaction}
-            onDuplicate={handleDuplicateItem}
-            suggestions={suggestionIndex}
-          />
+          <AddTransactionModal key={modalInstanceKey} {...transactionModalProps} />
         )}
       </div>
     );
@@ -1016,18 +1057,7 @@ const App: React.FC = () => {
           onTransactionClick={handleEditItem}
         />
         {isModalOpen && (
-          <AddTransactionModal
-            key={modalInstanceKey}
-            initialDate={selectedDate}
-            editingTransaction={editingTransaction}
-            prefilledTransaction={prefilledTransaction}
-            onClose={closeTransactionModal}
-            onAdd={addTransaction}
-            onUpdate={updateTransaction}
-            onDelete={deleteTransaction}
-            onDuplicate={handleDuplicateItem}
-            suggestions={suggestionIndex}
-          />
+          <AddTransactionModal key={modalInstanceKey} {...transactionModalProps} />
         )}
       </div>
     );
@@ -1049,18 +1079,7 @@ const App: React.FC = () => {
           onTransactionClick={handleEditItem}
         />
         {isModalOpen && (
-          <AddTransactionModal
-            key={modalInstanceKey}
-            initialDate={selectedDate}
-            editingTransaction={editingTransaction}
-            prefilledTransaction={prefilledTransaction}
-            onClose={closeTransactionModal}
-            onAdd={addTransaction}
-            onUpdate={updateTransaction}
-            onDelete={deleteTransaction}
-            onDuplicate={handleDuplicateItem}
-            suggestions={suggestionIndex}
-          />
+          <AddTransactionModal key={modalInstanceKey} {...transactionModalProps} />
         )}
       </div>
     );
@@ -1094,18 +1113,7 @@ const App: React.FC = () => {
         formatStatAmount={formatStatAmount}
       />
       {isModalOpen && (
-        <AddTransactionModal
-          key={modalInstanceKey}
-          initialDate={selectedDate}
-          editingTransaction={editingTransaction}
-          prefilledTransaction={prefilledTransaction}
-          onClose={closeTransactionModal}
-          onAdd={addTransaction}
-          onUpdate={updateTransaction}
-          onDelete={deleteTransaction}
-          onDuplicate={handleDuplicateItem}
-          suggestions={suggestionIndex}
-        />
+        <AddTransactionModal key={modalInstanceKey} {...transactionModalProps} />
       )}
     </div>
   );
