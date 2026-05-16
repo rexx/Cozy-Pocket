@@ -224,6 +224,7 @@ this.version(1).stores({
 *   類別列依金額由高到低排序，金額相同時再依筆數與類別名稱排序；不同幣別不會混算。
 *   類別列會使用既有分類圖示與分類顏色，並顯示該類別在同類型總額中的占比。
 *   點擊類別列後會展開子類別摘要與該類別交易列表；交易項目沿用既有 `TransactionItem` 呈現，點擊後會直接進入原本的編輯流程。
+*   展開後的子類別摘要會顯示筆數、金額、佔比與沿用主類別顏色的 progress bar；佔比分母為展開類別的總額，不跨類別或幣別比較。
 
 ### 6.8 PWA / iOS 離線模式
 *   專案現在會在 production build 產生 Service Worker，precache app shell、manifest 與 icon 資產。

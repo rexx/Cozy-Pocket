@@ -53,7 +53,7 @@
 ## 統計與分析
 
 - 🟡 統計頁改為分頁顯示，先提供「總計」與「依照類別統計」，後續可擴充依照商家／標籤統計。（計劃：[stats-tabbed-layout.md](docs/todo-references/stats-tabbed-layout.md)）
-- 🟡 統計頁的子類別摘要也顯示 progress bar 與佔比，讓展開類別後能快速比較子類別佔比。（計劃：[stats-subcategory-progress-bars.md](docs/todo-references/stats-subcategory-progress-bars.md)）
+- ✅ 統計頁的子類別摘要已加入沿用主類別顏色的 progress bar 與佔比，可在展開類別後快速比較子類別佔比。（紀錄：[stats-subcategory-progress-bars.md](docs/completed-references/stats-subcategory-progress-bars.md)）
 - 🟡 統計頁可從「依照類別分析」的子類別卡牌排除指定子類別，並用 local storage 保留排除清單，例如房貸。（計劃：[stats-excluded-subcategories.md](docs/todo-references/stats-excluded-subcategories.md)）
 - 🟡 統計頁沒有收入資料時，隱藏整個收入區塊，避免空狀態佔用畫面空間。（計劃：[stats-hide-empty-income.md](docs/todo-references/stats-hide-empty-income.md)）
 - ✅ 統計頁已加入依類別彙整區塊，支援金額、筆數、子類別摘要與交易展開。（紀錄：[category-stats.md](docs/completed-references/category-stats.md)）
