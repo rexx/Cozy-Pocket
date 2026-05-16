@@ -297,24 +297,41 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                     <div className="mt-2 space-y-3">
                       {item.subcategories.length > 0 && (
                         <div className="space-y-2">
-                          {item.subcategories.map((subItem) => (
-                            <div
-                              key={`${categoryKey}:${subItem.subCategoryId || 'none'}`}
-                              className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.045] px-4 py-3"
-                            >
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-black text-gray-100">
-                                  {getSubCategoryName(item.categoryId, subItem.subCategoryId)}
-                                </p>
-                                <p className="mt-1 text-xs font-bold text-gray-500">
-                                  {subItem.count} 筆
-                                </p>
+                          {item.subcategories.map((subItem) => {
+                            const subPercentage = item.total > 0
+                              ? Math.round((subItem.total / item.total) * 100)
+                              : 0;
+
+                            return (
+                              <div
+                                key={`${categoryKey}:${subItem.subCategoryId || 'none'}`}
+                                className="rounded-2xl bg-white/[0.045] px-4 py-3"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-black text-gray-100">
+                                      {getSubCategoryName(item.categoryId, subItem.subCategoryId)}
+                                    </p>
+                                    <p className="mt-1 text-xs font-bold text-gray-500">
+                                      {subItem.count} 筆 · {subPercentage}%
+                                    </p>
+                                  </div>
+                                  <p className="shrink-0 text-sm font-black tabular-nums text-gray-200">
+                                    {formatStatAmount(subItem.total, currency)}
+                                  </p>
+                                </div>
+                                <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/5">
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{
+                                      width: `${Math.min(100, subPercentage)}%`,
+                                      backgroundColor: categoryColor,
+                                    }}
+                                  />
+                                </div>
                               </div>
-                              <p className="shrink-0 text-sm font-black tabular-nums text-gray-200">
-                                {formatStatAmount(subItem.total, currency)}
-                              </p>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
 
