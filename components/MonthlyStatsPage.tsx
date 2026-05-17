@@ -1,9 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addMonths, addYears, format } from 'date-fns';
-import { ArrowDownUp, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, EyeOff, Filter, MoreHorizontal, X } from 'lucide-react';
+import { ArrowDownUp, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, EyeOff, Filter, MoreHorizontal, Store, X } from 'lucide-react';
 import { CATEGORIES, formatCurrencyAmount } from '../constants';
 import { PaymentMethod, PaymentMethodDisplayMode, Transaction, TransactionType } from '../types';
-import { CategoryStatsItem, filterTransactionsByTag, getCategoryStats, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
+import {
+  CategoryStatsItem,
+  MerchantStatsItem,
+  filterTransactionsByTag,
+  getCategoryStats,
+  getMerchantStats,
+  getMonthTags,
+  getMonthTransactions,
+  getStatsByCurrency,
+  getYearTransactions,
+} from '../services/statsService';
 import {
   buildSubCategoryExclusionKey,
   readExcludedSubCategoryKeys,
@@ -28,6 +38,11 @@ interface MonthlyStatsPageProps {
 interface CategoryStatsByCurrency {
   income: CategoryStatsItem[];
   expense: CategoryStatsItem[];
+}
+
+interface MerchantStatsByCurrency {
+  income: MerchantStatsItem[];
+  expense: MerchantStatsItem[];
 }
 
 const CATEGORY_BY_ID = new Map(CATEGORIES.map((category) => [category.id, category]));
@@ -90,7 +105,9 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [isExcludedPanelOpen, setIsExcludedPanelOpen] = useState(false);
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
   const [expandedCategoryKey, setExpandedCategoryKey] = useState<string | null>(null);
+  const [expandedMerchantKey, setExpandedMerchantKey] = useState<string | null>(null);
   const [categoryBreakdownExpanded, setCategoryBreakdownExpanded] = useState<Record<string, boolean>>({});
+  const [merchantBreakdownExpanded, setMerchantBreakdownExpanded] = useState<Record<string, boolean>>({});
   const [excludedSubCategoryKeys, setExcludedSubCategoryKeys] = useState<string[]>(
     () => readExcludedSubCategoryKeys()
   );
@@ -163,6 +180,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   useEffect(() => {
     setExpandedSectionKey(null);
     setExpandedCategoryKey(null);
+    setExpandedMerchantKey(null);
   }, [selectedDate, selectedTag, selectedPaymentMethod, periodMode]);
 
   const filteredTransactions = useMemo(
@@ -213,6 +231,27 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     return grouped;
   }, [categoryStats]);
 
+  const merchantStats = useMemo(
+    () => getMerchantStats(filteredTransactions),
+    [filteredTransactions]
+  );
+
+  const merchantStatsByCurrency = useMemo(() => {
+    return merchantStats.reduce((acc, item) => {
+      if (!acc[item.currency]) {
+        acc[item.currency] = { income: [], expense: [] };
+      }
+
+      if (item.type === '收入') {
+        acc[item.currency].income.push(item);
+      } else {
+        acc[item.currency].expense.push(item);
+      }
+
+      return acc;
+    }, {} as Record<string, MerchantStatsByCurrency>);
+  }, [merchantStats]);
+
   const currencies = Object.keys(statsByCurrency);
 
   const formatStatAmount = (value: number, currency: string) => (
@@ -230,6 +269,9 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const monthNavButtonClassName = 'pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[#24273c]/80 text-gray-300 shadow-lg transition-all hover:text-white active:scale-90';
   const getSectionKey = (currency: string, type: TransactionType) => `${currency}:${type}`;
   const getCategoryKey = (item: CategoryStatsItem) => `${item.currency}:${item.type}:${item.categoryId}`;
+  const getMerchantKey = (item: MerchantStatsItem) => (
+    `${item.currency}:${item.type}:${item.merchant.toLocaleLowerCase()}`
+  );
   const periodLabel = periodMode === 'month'
     ? format(selectedDate, 'yyyy 年 MM 月')
     : format(selectedDate, 'yyyy 年');
@@ -255,6 +297,131 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   };
   const toggleCategoryBreakdownExpanded = (currency: string) => {
     setCategoryBreakdownExpanded((prev) => ({ ...prev, [currency]: !prev[currency] }));
+  };
+  const toggleMerchantBreakdownExpanded = (currency: string) => {
+    setMerchantBreakdownExpanded((prev) => ({ ...prev, [currency]: !prev[currency] }));
+  };
+  const renderMerchantStatsGroup = (
+    type: TransactionType,
+    items: MerchantStatsItem[],
+    typeTotal: number,
+    currency: string
+  ) => {
+    const isIncome = type === '收入';
+    const groupCount = items.reduce((sum, item) => sum + item.count, 0);
+    const emptyMessage = isIncome ? '沒有收入商家資料' : '沒有支出商家資料';
+    const accentColor = isIncome ? '#7A4E5F' : '#427267';
+
+    return (
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${isIncome ? 'text-rose-300/70' : 'text-emerald-300/70'}`}>
+            {type}商家
+          </p>
+          <p className="shrink-0 text-[10px] font-black text-gray-500">
+            {groupCount} 筆
+          </p>
+        </div>
+
+        {items.length > 0 ? (
+          <div className="space-y-2">
+            {items.map((item) => {
+              const merchantKey = getMerchantKey(item);
+              const isExpanded = expandedMerchantKey === merchantKey;
+              const percentage = typeTotal > 0
+                ? Math.round((item.total / typeTotal) * 100)
+                : 0;
+              const sortedItemTransactions = sortTransactions(item.transactions);
+
+              return (
+                <div key={merchantKey}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpandedSectionKey(null);
+                      setExpandedCategoryKey(null);
+                      setExpandedMerchantKey((prev) => (prev === merchantKey ? null : merchantKey));
+                    }}
+                    className={`w-full rounded-2xl border p-3 text-left transition-all active:scale-[0.99] ${
+                      isExpanded
+                        ? 'border-cyan-300/25 bg-cyan-500/10'
+                        : 'border-white/8 bg-white/[0.035] hover:border-white/15 hover:bg-white/[0.055]'
+                    }`}
+                    aria-expanded={isExpanded}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg"
+                        style={{ backgroundColor: accentColor }}
+                      >
+                        <Store size={20} color="white" strokeWidth={2.5} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-black text-gray-100">{item.merchant}</p>
+                        <p className="mt-1 text-[11px] font-bold text-gray-500">
+                          {item.count} 筆 · {percentage}%
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className="text-right">
+                          <p className={`text-sm font-black tabular-nums ${isIncome ? 'text-rose-300' : 'text-emerald-300'}`}>
+                            {isIncome ? '+' : '-'}{formatStatAmount(item.total, currency)}
+                          </p>
+                          <p className="mt-1 text-[9px] font-black text-gray-600">
+                            {formatStatAmount(typeTotal, currency)}
+                          </p>
+                        </div>
+                        <ChevronDown
+                          size={16}
+                          className={`text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          strokeWidth={2.4}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, percentage)}%`,
+                          backgroundColor: accentColor,
+                        }}
+                      />
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="mt-2 overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
+                      {sortedItemTransactions.length > 0 ? (
+                        sortedItemTransactions.map((transaction) => (
+                          <TransactionItem
+                            key={transaction.id}
+                            transaction={transaction}
+                            onClick={onTransactionClick}
+                            paymentMethodDisplayMode={paymentMethodDisplayMode}
+                            showDateTime
+                          />
+                        ))
+                      ) : (
+                        <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
+                          沒有符合條件的交易項目
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.025] px-4 py-5 text-center text-xs font-bold text-gray-500">
+            {emptyMessage}
+          </div>
+        )}
+      </div>
+    );
   };
   const renderCategoryStatsGroup = (
     type: TransactionType,
@@ -296,6 +463,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                     type="button"
                     onClick={() => {
                       setExpandedSectionKey(null);
+                      setExpandedMerchantKey(null);
                       setExpandedCategoryKey((prev) => (prev === categoryKey ? null : categoryKey));
                     }}
                     className={`w-full rounded-2xl border p-3 text-left transition-all active:scale-[0.99] ${
@@ -645,10 +813,14 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                 );
                 const activeSectionKey = expandedSectionKey;
                 const currencyCategoryStats = categoryStatsByCurrency[currency] || { income: [], expense: [] };
+                const currencyMerchantStats = merchantStatsByCurrency[currency] || { income: [], expense: [] };
                 const hasIncome = stats.income > 0;
                 const categoryCount = (hasIncome ? currencyCategoryStats.income.length : 0) + currencyCategoryStats.expense.length;
+                const merchantCount = (hasIncome ? currencyMerchantStats.income.length : 0) + currencyMerchantStats.expense.length;
                 const isCategoryBreakdownExpanded = Boolean(categoryBreakdownExpanded[currency]);
+                const isMerchantBreakdownExpanded = Boolean(merchantBreakdownExpanded[currency]);
                 const categoryBreakdownContentId = `category-breakdown-${currency}`;
+                const merchantBreakdownContentId = `merchant-breakdown-${currency}`;
 
                 return (
                   <section
@@ -671,6 +843,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                           type="button"
                           onClick={() => {
                             setExpandedCategoryKey(null);
+                            setExpandedMerchantKey(null);
                             setExpandedSectionKey((prev) => prev === getSectionKey(currency, '收入') ? null : getSectionKey(currency, '收入'));
                           }}
                           className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
@@ -690,6 +863,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                         type="button"
                         onClick={() => {
                           setExpandedCategoryKey(null);
+                          setExpandedMerchantKey(null);
                           setExpandedSectionKey((prev) => prev === getSectionKey(currency, '支出') ? null : getSectionKey(currency, '支出'));
                         }}
                         className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
@@ -775,6 +949,45 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                           <div id={categoryBreakdownContentId} className="space-y-5">
                             {renderCategoryStatsGroup('支出', currencyCategoryStats.expense, stats.expense, currency)}
                             {hasIncome && renderCategoryStatsGroup('收入', currencyCategoryStats.income, stats.income, currency)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {merchantCount > 0 && (
+                      <div className="mt-5 border-t border-white/8 pt-5">
+                        <button
+                          type="button"
+                          onClick={() => toggleMerchantBreakdownExpanded(currency)}
+                          aria-expanded={isMerchantBreakdownExpanded}
+                          aria-controls={merchantBreakdownContentId}
+                          className={`flex w-full items-end justify-between gap-3 rounded-2xl border border-transparent px-1 py-1 text-left transition-all hover:border-white/10 hover:bg-white/5 active:scale-[0.99] ${
+                            isMerchantBreakdownExpanded ? 'mb-4' : ''
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <h3 className="truncate text-lg font-black text-white">依商家彙整</h3>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black text-gray-400">
+                              {merchantCount} 商家
+                            </div>
+                            <ChevronDown
+                              size={18}
+                              strokeWidth={2.5}
+                              className={`text-gray-400 transition-transform ${isMerchantBreakdownExpanded ? 'rotate-180' : ''}`}
+                            />
+                          </div>
+                        </button>
+
+                        {isMerchantBreakdownExpanded && (
+                          <div id={merchantBreakdownContentId} className="space-y-5">
+                            {currencyMerchantStats.expense.length > 0 && (
+                              renderMerchantStatsGroup('支出', currencyMerchantStats.expense, stats.expense, currency)
+                            )}
+                            {hasIncome && currencyMerchantStats.income.length > 0 && (
+                              renderMerchantStatsGroup('收入', currencyMerchantStats.income, stats.income, currency)
+                            )}
                           </div>
                         )}
                       </div>

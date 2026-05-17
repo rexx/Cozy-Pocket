@@ -2,6 +2,7 @@ import { endOfMonth, endOfYear } from 'date-fns';
 import { Transaction, TransactionType } from '../types';
 import { toEpochSeconds } from '../time';
 import { extractTransactionTags, normalizeTag } from './tagService';
+import { normalizeMerchantName } from './merchantService';
 
 export interface CurrencyStats {
   income: number;
@@ -23,6 +24,16 @@ export interface CategoryStatsItem {
   count: number;
   transactions: Transaction[];
   subcategories: CategoryStatsSubItem[];
+}
+
+export interface MerchantStatsItem {
+  currency: string;
+  type: TransactionType;
+  merchant: string;
+  total: number;
+  count: number;
+  latestTransactionAt: number;
+  transactions: Transaction[];
 }
 
 type MutableCategoryStatsItem = Omit<CategoryStatsItem, 'subcategories'> & {
@@ -109,6 +120,52 @@ export const getCategoryStats = (txs: Transaction[]): CategoryStatsItem[] => {
       if (b.count !== a.count) return b.count - a.count;
       return a.categoryId.localeCompare(b.categoryId);
     });
+};
+
+export const getMerchantStats = (txs: Transaction[]): MerchantStatsItem[] => {
+  const grouped = new Map<string, MerchantStatsItem>();
+
+  txs.forEach((tx) => {
+    const merchant = normalizeMerchantName(tx.merchant || '');
+    if (!merchant) return;
+
+    const currency = tx.currency || 'TWD';
+    const merchantKey = merchant.toLocaleLowerCase();
+    const key = `${currency}:${tx.type}:${merchantKey}`;
+    const amount = Math.abs(tx.amount);
+    let item = grouped.get(key);
+
+    if (!item) {
+      item = {
+        currency,
+        type: tx.type,
+        merchant,
+        total: 0,
+        count: 0,
+        latestTransactionAt: 0,
+        transactions: [],
+      };
+      grouped.set(key, item);
+    }
+
+    item.total += amount;
+    item.count += 1;
+    if (tx.timestamp > item.latestTransactionAt) {
+      item.latestTransactionAt = tx.timestamp;
+    }
+    item.transactions.push(tx);
+  });
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    if (a.currency !== b.currency) return a.currency.localeCompare(b.currency);
+    if (a.type !== b.type) return a.type === '支出' ? -1 : 1;
+    if (b.total !== a.total) return b.total - a.total;
+    if (b.count !== a.count) return b.count - a.count;
+    if (b.latestTransactionAt !== a.latestTransactionAt) {
+      return b.latestTransactionAt - a.latestTransactionAt;
+    }
+    return a.merchant.localeCompare(b.merchant, 'zh-Hant');
+  });
 };
 
 export const getMonthTransactions = (transactions: Transaction[], date: Date) => {
