@@ -39,7 +39,7 @@
 
 ## 設定頁體驗
 
-- 🟡 新增刪除範例資料按鈕，讓 demo 或測試後可移除由範例資料入口建立的交易。（計劃：[delete-sample-data-button.md](docs/todo-references/delete-sample-data-button.md)）
+- ✅ 危險操作已新增刪除範例資料按鈕，依 `sample-tx-` id prefix 預覽並刪除由範例資料入口建立的交易，不影響使用者自行建立的紀錄。（紀錄：[delete-sample-data-button.md](docs/completed-references/delete-sample-data-button.md)）
 - ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；紀錄：[settings-header-color.md](docs/completed-references/settings-header-color.md)）
 
 ## 商家與資料維護

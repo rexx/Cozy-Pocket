@@ -18,7 +18,7 @@ import { PaymentMethodDisplayMode, PullReport, Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
-import { SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
+import { SUPPORTED_CURRENCIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
 import { TagRenamePreview, TagUsageSummary, normalizeTag } from '../services/tagService';
 import { MerchantRenamePreview, MerchantUsageSummary, normalizeMerchantName } from '../services/merchantService';
@@ -42,6 +42,8 @@ interface SettingsPageProps {
   onOpenSection: (section: SettingsSectionPage) => void;
   onDataChange: () => void;
   onInsertExamples: () => Promise<number>;
+  onPreviewDeleteExamples: () => Promise<Transaction[]>;
+  onDeleteExamples: (ids: string[]) => Promise<number>;
   onTriggerSync: (label: string) => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
   onOpenSyncProgress: () => void;
   onOpenPullReports: (reportId?: string) => void;
@@ -64,6 +66,16 @@ interface SettingsPageProps {
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
+
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] || ch);
 const MOCK_SYNC_API_URL = 'mock://cloud-sync';
 const MOCK_SYNC_TOKEN = 'mock-token';
 
@@ -94,6 +106,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenSection,
   onDataChange,
   onInsertExamples,
+  onPreviewDeleteExamples,
+  onDeleteExamples,
   onTriggerSync,
   onOpenSyncProgress,
   onOpenPullReports,
@@ -871,6 +885,63 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
   };
 
+  const deleteExamples = async () => {
+    let candidates: Transaction[];
+    try {
+      candidates = await onPreviewDeleteExamples();
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `預覽範例資料失敗: ${err.message}` });
+      return;
+    }
+
+    if (candidates.length === 0) {
+      onNotify('目前沒有範例資料可刪除');
+      setStatus({ type: 'idle', message: '' });
+      return;
+    }
+
+    const previewItems = [...candidates]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .map((tx) => {
+        const label = tx.merchant?.trim() || tx.name?.trim() || '未命名';
+        const dateLabel = tx.readableDateTime?.trim()
+          || format(new Date(tx.timestamp * 1000), 'yyyy-MM-dd HH:mm');
+        const amountLabel = formatCurrencyAmount(tx.amount, tx.currency || 'TWD');
+        const sign = tx.type === '支出' ? '-' : '+';
+        return `<li class="flex justify-between gap-3"><span class="truncate text-slate-200">${escapeHtml(dateLabel)} · ${escapeHtml(label)}</span><span class="font-mono text-slate-300">${sign}${escapeHtml(amountLabel)}</span></li>`;
+      })
+      .join('');
+    const previewHtml = `
+      <div class="space-y-2 text-sm">
+        <p class="text-slate-300">將刪除 <span class="font-black text-white">${candidates.length}</span> 筆 id 以 <code class="rounded bg-white/10 px-1 py-0.5 text-xs">sample-tx-</code> 開頭的範例交易：</p>
+        <ul class="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-3">${previewItems}</ul>
+        <p class="text-xs text-slate-400">此操作只會刪除 id 具有範例資料 prefix 的交易，不會影響你自己建立的紀錄。</p>
+      </div>
+    `;
+
+    const confirmed = await confirmAction({
+      title: '刪除範例資料？',
+      html: previewHtml,
+      confirmButtonText: '刪除範例',
+      cancelButtonText: '取消',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    try {
+      const removed = await onDeleteExamples(candidates.map((tx) => tx.id));
+      onDataChange();
+      if (removed === 0) {
+        onNotify('沒有可刪除的範例資料');
+      } else {
+        onNotify(`已刪除範例資料 (${removed} 筆)`);
+      }
+      setStatus({ type: 'idle', message: '' });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `刪除範例資料失敗: ${err.message}` });
+    }
+  };
+
   const pageTitle = section ? SETTINGS_SECTION_COPY[section].title : '資料與設定';
   const pageBackgroundStyle: React.CSSProperties = {
     background: `radial-gradient(circle at top, ${SECTION_GLOW_COLORS[section || 'overview']}, transparent 28%), linear-gradient(180deg, #1f2235 0%, #171a29 48%, #121520 100%)`,
@@ -1081,6 +1152,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           <DangerZoneSection
             onResetLocalData={() => void resetLocalData()}
             onInsertExamples={() => void insertExamples()}
+            onDeleteExamples={() => void deleteExamples()}
           />
         );
       default:

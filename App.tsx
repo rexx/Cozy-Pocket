@@ -64,6 +64,10 @@ const SETTINGS_VIEW_SECTION_MAP: Partial<Record<AppView, SettingsSectionPage>> =
 
 const HOME_CALENDAR_VIEW_MODE_STORAGE_KEY = 'home-calendar-view-mode';
 
+const SAMPLE_TRANSACTION_ID_PREFIX = 'sample-tx-';
+
+const isSampleTransaction = (tx: Transaction): boolean => tx.id.startsWith(SAMPLE_TRANSACTION_ID_PREFIX);
+
 const getInitialCalendarViewMode = (): CalendarViewMode => {
   if (typeof window === 'undefined') return 'month';
 
@@ -278,7 +282,7 @@ const App: React.FC = () => {
       const normalizedTimestamp = toEpochSeconds(t.timestamp);
       return {
         ...t,
-        id: `${now}-${idx}-${Math.random().toString(36).slice(2, 8)}`,
+        id: `${SAMPLE_TRANSACTION_ID_PREFIX}${now}-${idx}-${Math.random().toString(36).slice(2, 8)}`,
         currency: t.currency || 'TWD',
         amount: t.type === '支出' ? -Math.abs(t.amount) : Math.abs(t.amount),
         timestamp: normalizedTimestamp,
@@ -311,6 +315,34 @@ const App: React.FC = () => {
       return examples.length;
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `Insert Example Error: ${err.message}`]);
+      throw err;
+    }
+  };
+
+  const previewSampleTransactions = async (): Promise<Transaction[]> => {
+    try {
+      const all = await db.transactions.toArray();
+      return all.filter(isSampleTransaction);
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `Preview Sample Error: ${err.message}`]);
+      throw err;
+    }
+  };
+
+  const deleteSampleTransactions = async (ids: string[]): Promise<number> => {
+    try {
+      const sampleIds = ids.filter(id => id.startsWith(SAMPLE_TRANSACTION_ID_PREFIX));
+      if (sampleIds.length === 0) return 0;
+      const existing = await db.transactions.bulkGet(sampleIds);
+      const existingIds = existing
+        .filter((tx): tx is Transaction => Boolean(tx) && isSampleTransaction(tx as Transaction))
+        .map(tx => tx.id);
+      if (existingIds.length === 0) return 0;
+      await db.transactions.bulkDelete(existingIds);
+      setTransactions(prev => prev.filter(t => !existingIds.includes(t.id)));
+      return existingIds.length;
+    } catch (err: any) {
+      setCapturedErrors(prev => [...prev, `Delete Sample Error: ${err.message}`]);
       throw err;
     }
   };
@@ -995,6 +1027,8 @@ const App: React.FC = () => {
           onOpenSection={(section) => setActiveView(SETTINGS_SECTION_VIEW_MAP[section])}
           onDataChange={refreshData}
           onInsertExamples={insertExampleTransactions}
+          onPreviewDeleteExamples={previewSampleTransactions}
+          onDeleteExamples={deleteSampleTransactions}
           onTriggerSync={triggerPendingSync}
           onOpenSyncProgress={() => openSyncStatusFrom('settings')}
           onOpenPullReports={openPullReportsPage}

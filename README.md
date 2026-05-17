@@ -278,7 +278,7 @@ this.version(1).stores({
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
 *   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發、Tag 與商家更名與 status 訊息，避免子頁重複實作資料流程。
 *   各區段元件只負責 UI 與事件轉發，不直接操作資料庫或同步服務。
-*   匯入與匯出已整併在同一個 section 中；插入範例資料與清除本機資料則集中在危險操作區。
+*   匯入與匯出已整併在同一個 section 中；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。
 *   設定首頁會顯示目前 tag 數量與商家數量；商家數量直接取自已載入交易計算的商家用量摘要（`MerchantUsageSummary`），不額外讀取 IndexedDB。
 *   商家管理已整併為 `SettingsPage` 的正式設定子頁，與 Tag 管理等其他子頁共用設定首頁卡片、子頁 routing 與返回行為。
 
