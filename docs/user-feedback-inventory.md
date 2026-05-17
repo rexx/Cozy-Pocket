@@ -38,6 +38,7 @@
 | `SettingsPage` | `confirm()` | 最終匯入確認 | `confirmAction()`，覆寫為 danger、附加為 default | 是 |
 | `SettingsPage` | `confirm()` | 重置本機資料確認 | `confirmAction()` danger dialog | 是 |
 | `SettingsPage` | 無 | 插入範例資料前確認 | `confirmAction()` default dialog | 是 |
+| `SettingsPage` | 無 | 刪除範例資料前確認 | `confirmAction()` danger dialog（附 HTML 預覽清單） | 是 |
 
 `TODO.md` 與 `docs/cloud-sync-specification.md` 仍有 `alert()` / `confirm()` 字樣，屬於需求或歷史規格描述，不是 runtime 呼叫點。
 
@@ -55,6 +56,7 @@
 | `SettingsPage` | 附加匯入最終確認 | `執行附加匯入？` | 匯入資料，可能包含已確認的覆蓋行為 | `default` | 將 CSV 寫入 IndexedDB | 中止匯入 |
 | `SettingsPage` | 重置本機資料 | `重置本機資料？` | 清除 Local Storage 與 IndexedDB | `danger` | 清除本機資料並 reload | 保留資料 |
 | `SettingsPage` | 插入範例資料 | `插入範例資料？` | 新增多筆預設範例交易 | `default` | 插入範例資料並觸發既有同步流程 | 不新增資料 |
+| `SettingsPage` | 刪除範例資料 | `刪除範例資料？` | 刪除 id 以 `sample-tx-` 開頭的交易（附 HTML 預覽清單） | `danger` | 透過 `bulkDelete()` 刪除符合 prefix 的交易，toast 顯示實際筆數 | 不刪除資料 |
 
 ## Toast 盤點
 
@@ -70,6 +72,7 @@
 | 匯出 | `匯出成功` | 成功摘要 | 維持 toast |
 | 匯入 | `匯入成功 (...)` 或部分同步失敗摘要 | 操作結果摘要 | 維持 toast，詳細內容留頁內 status |
 | 插入範例資料 | `已插入範例資料 (...)` | 成功摘要 | 維持 toast |
+| 刪除範例資料 | `已刪除範例資料 (...)` / `目前沒有範例資料可刪除` / `沒有可刪除的範例資料` | 成功摘要或無資料提示 | 維持 toast |
 | 商家 / Tag 更名 | 更名成功或同步部分失敗摘要 | 操作結果摘要 | 維持 toast，詳細內容留頁內 status |
 | 幣別設定防呆 | `至少要保留一個可用幣別` | 短錯誤提醒 | 可維持 status + toast，不建議 swal |
 
