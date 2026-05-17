@@ -90,6 +90,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [isExcludedPanelOpen, setIsExcludedPanelOpen] = useState(false);
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
   const [expandedCategoryKey, setExpandedCategoryKey] = useState<string | null>(null);
+  const [categoryBreakdownExpanded, setCategoryBreakdownExpanded] = useState<Record<string, boolean>>({});
   const [excludedSubCategoryKeys, setExcludedSubCategoryKeys] = useState<string[]>(
     () => readExcludedSubCategoryKeys()
   );
@@ -251,6 +252,9 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   };
   const toggleSortMode = () => {
     setSortMode((prev) => (prev === 'latest' ? 'amount-desc' : 'latest'));
+  };
+  const toggleCategoryBreakdownExpanded = (currency: string) => {
+    setCategoryBreakdownExpanded((prev) => ({ ...prev, [currency]: !prev[currency] }));
   };
   const renderCategoryStatsGroup = (
     type: TransactionType,
@@ -643,6 +647,8 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                 const currencyCategoryStats = categoryStatsByCurrency[currency] || { income: [], expense: [] };
                 const hasIncome = stats.income > 0;
                 const categoryCount = (hasIncome ? currencyCategoryStats.income.length : 0) + currencyCategoryStats.expense.length;
+                const isCategoryBreakdownExpanded = Boolean(categoryBreakdownExpanded[currency]);
+                const categoryBreakdownContentId = `category-breakdown-${currency}`;
 
                 return (
                   <section
@@ -739,22 +745,40 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                       </div>
                     )}
 
-                    <div className="mt-5 border-t border-white/8 pt-5">
-                      <div className="mb-4 flex items-end justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">分析</p>
-                          <h3 className="mt-1 truncate text-lg font-black text-white">依類別彙整</h3>
-                        </div>
-                        <div className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black text-gray-400">
-                          {categoryCount} 類別
-                        </div>
-                      </div>
+                    {categoryCount > 0 && (
+                      <div className="mt-5 border-t border-white/8 pt-5">
+                        <button
+                          type="button"
+                          onClick={() => toggleCategoryBreakdownExpanded(currency)}
+                          aria-expanded={isCategoryBreakdownExpanded}
+                          aria-controls={categoryBreakdownContentId}
+                          className={`flex w-full items-end justify-between gap-3 rounded-2xl border border-transparent px-1 py-1 text-left transition-all hover:border-white/10 hover:bg-white/5 active:scale-[0.99] ${
+                            isCategoryBreakdownExpanded ? 'mb-4' : ''
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <h3 className="truncate text-lg font-black text-white">依類別彙整</h3>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black text-gray-400">
+                              {categoryCount} 類別
+                            </div>
+                            <ChevronDown
+                              size={18}
+                              strokeWidth={2.5}
+                              className={`text-gray-400 transition-transform ${isCategoryBreakdownExpanded ? 'rotate-180' : ''}`}
+                            />
+                          </div>
+                        </button>
 
-                      <div className="space-y-5">
-                        {renderCategoryStatsGroup('支出', currencyCategoryStats.expense, stats.expense, currency)}
-                        {hasIncome && renderCategoryStatsGroup('收入', currencyCategoryStats.income, stats.income, currency)}
+                        {isCategoryBreakdownExpanded && (
+                          <div id={categoryBreakdownContentId} className="space-y-5">
+                            {renderCategoryStatsGroup('支出', currencyCategoryStats.expense, stats.expense, currency)}
+                            {hasIncome && renderCategoryStatsGroup('收入', currencyCategoryStats.income, stats.income, currency)}
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    )}
                   </section>
                 );
               })}

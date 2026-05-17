@@ -52,7 +52,7 @@
 
 ## 統計與分析
 
-- 🟡 統計頁改為分頁顯示，先提供「總計」與「依照類別統計」，後續可擴充依照商家／標籤統計。（計劃：[stats-tabbed-layout.md](docs/todo-references/stats-tabbed-layout.md)）
+- ✅ 統計頁「依類別彙整」區塊已改為預設收合，點擊標題列才展開內容，維持單頁排版。（紀錄：[stats-collapsible-category.md](docs/completed-references/stats-collapsible-category.md)）
 - ✅ 統計頁的子類別摘要已加入沿用主類別顏色的 progress bar 與佔比，可在展開類別後快速比較子類別佔比。（紀錄：[stats-subcategory-progress-bars.md](docs/completed-references/stats-subcategory-progress-bars.md)）
 - ✅ 統計頁可從「依照類別分析」的子類別卡牌按下排除按鈕，將該子類別從統計與交易明細移除；已排除清單存於 local storage，並提供清除單一或全部排除條件。（紀錄：[stats-excluded-subcategories.md](docs/completed-references/stats-excluded-subcategories.md)）
 - ✅ 統計頁在沒有收入資料時，整段隱藏收入摘要卡、收入明細與收入類別群組，避免空狀態佔用畫面。（紀錄：[stats-hide-empty-income.md](docs/completed-references/stats-hide-empty-income.md)）
