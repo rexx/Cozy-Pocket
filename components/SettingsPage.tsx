@@ -30,6 +30,7 @@ import MerchantManagementSection from './settings/MerchantManagementSection';
 import ImportExportSection from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
 import { SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
+import { idleStatus, type SettingsStatus } from './settings/settingsStatus';
 import { confirmAction } from '../services/dialogService';
 import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
@@ -129,7 +130,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onMerchantTransactionClick,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<{ type: 'success' | 'error' | 'idle', message: string }>({ type: 'idle', message: '' });
+  const [status, setStatus] = useState<SettingsStatus>(idleStatus);
+  const openSyncProgressAction = { label: '查看同步狀態', onClick: onOpenSyncProgress };
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
   const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
   const [geminiApiKeyInput, setGeminiApiKeyInput] = useState('');
@@ -365,6 +367,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         setStatus({
           type: 'error',
           message: `同步設定已儲存\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
+          action: openSyncProgressAction,
         });
       } else {
         onNotify('同步設定已儲存');
@@ -507,6 +510,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         setStatus({
           type: 'error',
           message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+          action: openSyncProgressAction,
         });
         return;
       }
@@ -588,6 +592,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         setStatus({
           type: 'error',
           message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+          action: openSyncProgressAction,
         });
         return;
       }
@@ -827,6 +832,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         setStatus({
           type: 'error',
           message: `${importBaseMessage}\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
+          action: openSyncProgressAction,
         });
       } else if (syncResult.total > 0) {
         onNotify(importBaseMessage);
@@ -1008,10 +1014,29 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const renderStatusMessage = () => {
     if (status.type === 'idle') return null;
 
+    const toneClassName = status.type === 'success'
+      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+      : 'border-red-500/20 bg-red-500/10 text-red-300';
+    const actionToneClassName = status.type === 'success'
+      ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25'
+      : 'border-red-400/30 bg-red-500/15 text-red-100 hover:bg-red-500/25';
+
     return (
-      <div className={`flex items-center gap-3 rounded-2xl border p-4 animate-slide-up ${status.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-red-500/20 bg-red-500/10 text-red-300'}`}>
-        {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-        <span className="text-sm font-bold whitespace-pre-line">{status.message}</span>
+      <div className={`flex flex-col gap-3 rounded-2xl border p-4 animate-slide-up sm:flex-row sm:items-center sm:justify-between ${toneClassName}`}>
+        <div className="flex items-center gap-3">
+          {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+          <span className="text-sm font-bold whitespace-pre-line">{status.message}</span>
+        </div>
+        {status.action && (
+          <button
+            type="button"
+            onClick={status.action.onClick}
+            className={`inline-flex shrink-0 items-center justify-center gap-2 self-stretch rounded-2xl border px-4 py-2 text-xs font-black transition-colors sm:self-auto ${actionToneClassName}`}
+          >
+            <CloudUpload size={14} />
+            {status.action.label}
+          </button>
+        )}
       </div>
     );
   };

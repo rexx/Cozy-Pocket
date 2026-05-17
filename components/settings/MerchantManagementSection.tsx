@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Eye, LoaderCircle, PencilLine, Search, X } from 'lucide-react';
+import { CheckCircle2, CloudUpload, Eye, LoaderCircle, PencilLine, Search, X } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { MerchantRenamePreview, MerchantUsageSummary, normalizeMerchantName } from '../../services/merchantService';
 import TransactionItem from '../TransactionItem';
@@ -11,6 +11,7 @@ import SettingsSection, {
   sectionPanelClassName,
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
+import type { SettingsStatus, SettingsStatusAction } from './settingsStatus';
 
 const MERCHANT_PAGE_SIZE = 200;
 
@@ -29,7 +30,7 @@ const merchantFeedbackTitleClassName: Record<MerchantFeedbackTone, string> = {
 };
 
 interface MerchantManagementSectionProps {
-  status: { type: 'success' | 'error' | 'idle'; message: string };
+  status: SettingsStatus;
   merchantSummaries: MerchantUsageSummary[];
   selectedMerchantToRename: string;
   renamedMerchantInput: string;
@@ -46,16 +47,33 @@ interface MerchantManagementSectionProps {
   onMerchantTransactionClick: (transaction: Transaction) => void;
 }
 
+const merchantFeedbackActionClassName: Record<MerchantFeedbackTone, string> = {
+  error: 'border-red-400/30 bg-red-500/15 text-red-100 hover:bg-red-500/25',
+  success: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25',
+  warning: 'border-amber-400/30 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25',
+};
+
 const MerchantFeedbackCard: React.FC<{
   children: React.ReactNode;
   title?: string;
   tone: MerchantFeedbackTone;
-}> = ({ children, title, tone }) => (
+  action?: SettingsStatusAction;
+}> = ({ children, title, tone, action }) => (
   <div className={`rounded-2xl border px-4 py-3 text-xs ${merchantFeedbackCardClassName[tone]}`}>
     {title && <p className={`font-black ${merchantFeedbackTitleClassName[tone]}`}>{title}</p>}
     <div className={title ? 'mt-1 space-y-1' : 'space-y-1'}>
       {children}
     </div>
+    {action && (
+      <button
+        type="button"
+        onClick={action.onClick}
+        className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2 text-xs font-black transition-colors sm:w-auto ${merchantFeedbackActionClassName[tone]}`}
+      >
+        <CloudUpload size={14} />
+        {action.label}
+      </button>
+    )}
   </div>
 );
 
@@ -114,7 +132,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   }, [merchantSummaries]);
 
   const statusMessage = status.type !== 'idle' ? (
-    <MerchantFeedbackCard tone={status.type}>
+    <MerchantFeedbackCard tone={status.type} action={status.action}>
       <p className="text-sm font-bold whitespace-pre-line">{status.message}</p>
     </MerchantFeedbackCard>
   ) : null;
