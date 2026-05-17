@@ -146,6 +146,53 @@ Two folders track design notes (in addition to inline comments):
 
 When you finish work that has a `todo-references/<name>.md` plan, move that file to `completed-references/` rather than deleting it.
 
+### Implementation workflow
+
+The standard end-to-end flow for non-trivial changes. Trivial fixes (typo, one-line tweak) can skip the worktree and commit straight on `main`; everything else uses this flow.
+
+**1. Plan**
+
+- Write the plan to `docs/todo-references/<slug>.md`. Slug is lowercase kebab-case, scoped (`stats-*`, `merchant-*`, `sync-*`, etc.).
+- Plan sections: 摘要 / 關鍵變更 / 介面與型別 / UI 細節 / 測試計劃 / 假設. State the intended worktree path (`worktrees/<slug>`) so the next step is unambiguous.
+- Add a `🟡 <one-line summary>。（計劃：[<slug>.md](docs/todo-references/<slug>.md)）` entry under the matching section of `TODO.md`.
+
+**2. Worktree setup**
+
+- `git worktree add worktrees/<slug> -b <slug> main` — feature branch from current `main`.
+- If the plan rename / TODO edit is still uncommitted on `main`, stash it first (`git stash push -m "<slug> plan"`), then `git stash pop` inside the worktree so the plan files land on the feature branch with the implementation.
+- `ln -s ../../node_modules worktrees/<slug>/node_modules` so the worktree shares the main repo's deps. Avoid `npm install` per worktree.
+
+**3. Implement + self-verify**
+
+- All worktree commands need an explicit prefix because the Bash tool's cwd does not persist between calls:
+  - File edits: absolute paths.
+  - Git: `git -C worktrees/<slug> <cmd>`.
+  - npm: `npm --prefix worktrees/<slug> run <script>`.
+- Run `npm --prefix worktrees/<slug> run build` after each meaningful change. This is the sole automated gate (tsc strict + Vite production build).
+- **Do not commit before the user accepts the result in step 4.** A green build is necessary but not sufficient — the user's browser verification is part of the contract. The whole point of holding the commit is that step 4 is iterative: user finds something, code changes, HMR re-renders, user looks again. Committing after each round produces a churn of fix-up commits that nobody wants in `git log`. Keep the working tree dirty across the entire verify→tweak→re-verify loop; bundle everything into the single commit that step 5 produces.
+
+**4. Browser verification**
+
+- **Wait for the user to invoke `/start-local-server` before launching the dev server.** Do not auto-start the server after `npm run build` passes; pause and let the user decide when they want to verify in a browser. Once `/start-local-server` fires, follow the skill's steps:
+  - Start dev server: `npm --prefix worktrees/<slug> run dev -- --host` in the background. Without `--prefix` the server boots from `main` and the user will see stale code.
+  - Wait for the `Local:` URL via `until grep -q "Local:" <output-file>; do sleep 0.5; done` rather than fixed sleeps.
+  - Open `http://localhost:5173/Cozy-Pocket/` in Microsoft Edge (`open -a "Microsoft Edge" <url>`).
+- When the user reports no visual change after an edit, the cause is almost always service-worker cache from a previous dev run. Tell them to hard-reload (`⌘+Shift+R`) or unregister the SW in DevTools → Application before debugging the code.
+- Iterate on user feedback with HMR; restart the server only when the project root changes (different worktree, dep change).
+
+**5. Cleanup — delegate to `/git-branch-cleanup`**
+
+**Wait for the user to invoke `/git-branch-cleanup` before starting this step.** The user's invocation is the signal that step 4 verification has been accepted and the feature is ready to land — until then, assume they may still iterate on the implementation. Once the skill fires, it owns the finalization sequence:
+
+- Stop the dev server (do this proactively before the skill runs if it's still streaming).
+- Update `README.md` (§6 behavior spec + operations cheat sheet), `TODO.md` (flip 🟡 → ✅, link target → `docs/completed-references/<slug>.md`), and any affected `docs/*.md`.
+- `git mv docs/todo-references/<slug>.md docs/completed-references/<slug>.md`, then rewrite the body from plan language into a completed record: drop the worktree-setup paragraph, replace 測試計劃 → 驗證, use past-tense final-state wording.
+- Run a doc audit: grep the old slug across `README.md`, `TODO.md`, `docs/` and confirm no stale links; grep plan-only phrasing (實作計劃 / 測試計劃 / 會 / 將) in the moved completed reference.
+- Commit (HEREDOC commit message, subject + body explaining the why).
+- `git rebase main`; on conflicts, resolve manually, rerun `npm run build`, then `git rebase --continue`.
+- `git checkout main && git merge --ff-only <slug>` in the primary worktree.
+- Remove the worktree's `node_modules` symlink first, then `git worktree remove worktrees/<slug>` and `git branch -d <slug>`.
+
 ### Operational reset
 
 User-facing reset: 資料與設定 → 危險操作 → 「清除本機資料並重置」 (`localStorage.clear()` + delete `CozyPocketDB` + reload).
