@@ -39,7 +39,7 @@
 
 ## 設定頁體驗
 
-- 🟡 把 Tag 更名的按鈕顯示邏輯對齊商家更名：預設只顯示預覽按鈕，按下預覽後才在下方出現黃色預覽匡與確認按鈕，並補上確認送出中的旋轉 icon。（計劃：[tag-rename-confirm-alignment.md](docs/todo-references/tag-rename-confirm-alignment.md)）
+- 🟡 把 Tag 更名互動對齊商家更名：預設只顯示預覽按鈕、預覽後才出現黃色預覽匡與確認按鈕、確認送出中加旋轉 icon，並把錯誤訊息卡樣式（移除 ⚠️ icon）以及更名完成後切到新 tag 編輯畫面的行為一併對齊。（計劃：[tag-rename-confirm-alignment.md](docs/todo-references/tag-rename-confirm-alignment.md)）
 - ✅ 危險操作已新增刪除範例資料按鈕，依 `sample-tx-` id prefix 預覽並刪除由範例資料入口建立的交易，不影響使用者自行建立的紀錄。（紀錄：[delete-sample-data-button.md](docs/completed-references/delete-sample-data-button.md)）
 - ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；紀錄：[settings-header-color.md](docs/completed-references/settings-header-color.md)）
 

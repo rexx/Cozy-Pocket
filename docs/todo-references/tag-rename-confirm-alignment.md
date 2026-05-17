@@ -2,52 +2,79 @@
 
 ## 摘要
 
-把 `TagManagementSection` 的更名按鈕順序與顯示邏輯，對齊到 `MerchantManagementSection` 已採用的「預覽 → 確認」兩階段顯示。預設只顯示預覽按鈕，按下預覽後才在輸入下方出現黃色預覽匡，並同時露出確認按鈕；同步補上確認按鈕送出中的旋轉 icon，讓兩個設定子頁的更名操作有一致的視覺節奏。
+把 `TagManagementSection` 的更名互動全面對齊到 `MerchantManagementSection` 已採用的節奏：
+1. 預設只顯示預覽按鈕，按下預覽後才在輸入下方同時出現黃色預覽匡與確認按鈕。
+2. 確認按鈕送出中顯示旋轉中的 `LoaderCircle`。
+3. 把目前由 `SettingsPage.renderStatusMessage()` 套上 `AlertTriangle` ⚠️ icon 的紅色狀態卡，改成 tag section 內聯渲染、與商家相同樣式（無 icon、色塊 + 文字 + 同步動作按鈕）。
+4. 更名完成後不再把選取清掉、整個編輯區消失；改成把選取切到新 tag（含合併到既有 tag 的情境），讓使用者可以延續查看與調整。
 
 ## 關鍵變更
 
-- `components/settings/TagManagementSection.tsx`
-  - 拆掉現有的 `預覽 + 確認` 並排 grid，改成兩個獨立的 `grid grid-cols-1 gap-3` 區塊：
-    - 第一個區塊永遠顯示「預覽影響筆數」按鈕。
-    - 第二個區塊只在 `tagRenamePreview` 存在時才渲染「確認更名」按鈕。
-  - 黃色預覽匡保留在輸入區下方、確認按鈕上方，與 merchant 一致。
-  - 確認按鈕送出中時，將前綴 icon 從 `CheckCircle2` 換成旋轉中的 `LoaderCircle`（沿用 merchant 的 `lucide-react` 用法）。
-- 預覽按鈕 disabled 條件改成 `!renamedTagInput.trim() || isTagPreviewLoading || isTagRenameSubmitting`（含送出中），與 merchant 的判斷一致；確認按鈕仍依 `affectedCount` 與 loading 狀態 disable。
+### `components/SettingsPage.tsx`
+
+- `case 'tags'` 改成跟 `case 'merchant'` 一樣，把 `status` prop 傳進 `TagManagementSection`。
+- `renderSection()` 之後渲染 `renderStatusMessage()` 的條件由 `section !== 'merchant'` 擴大為 `section !== 'merchant' && section !== 'tags'`，避免 status 同時被 SettingsPage 與 tag section 各自渲染一次。
+- `handleRenameTag` 完成後從 `resetTagRenameState('')` 改為 `resetTagRenameState(result.newTag)`：
+  - 不管是一般更名或合併到既有 tag，都把選取切到新 tag。
+  - 沿用既有 `resetTagRenameState` 的清空輸入與 preview 行為，並讓 tag transactions 重新載入（透過 `useEffect` watch `selectedTagToRename` 或同樣呼叫 reset helper，視現有實作）。
+- 設定相關交易重新載入：tag transactions 目前由 `selectedTagToRename` 變更時的 effect 觸發；切到 `result.newTag` 後會自動重抓，與 merchant 的行為一致。
+
+### `components/settings/TagManagementSection.tsx`
+
+- 新增 `status: SettingsStatus` prop（型別來自 `./settingsStatus`），與 merchant section 同形狀。
+- 內聯一份與 `MerchantFeedbackCard` 樣式相同的 `TagFeedbackCard`（不抽共用元件——`SettingsFeedbackCard` 統一抽離已被 `TODO.md` 的 `section-owned-status-state.md` 追蹤，留給後續一次處理）：
+  - tone：`error` / `success` / `warning`，色票與 merchant 對齊（`text-slate-200` body、`text-amber-300` warning 標題等）。
+  - 無左側 ⚠️ icon，避免與 merchant 不一致。
+  - 支援可選 `action: SettingsStatusAction`，按鈕樣式（`CloudUpload` + label）與 merchant 一致，避免「查看同步狀態」按鈕在 tag 子頁缺席或樣式飄移。
+- 渲染位置：
+  - 預覽 / 更名相關訊息（一般 error、合併提醒、預覽結果為 0 等）放在輸入區下方、預覽按鈕上方或之後，與 merchant 的 `renameFeedbackMessage` 對齊：
+    - merchant 規則：`!merchantRenamePreview && status.type !== 'idle'` 時才顯示 feedback。
+    - tag 採用同邏輯，避免黃色預覽匡同時與紅色錯誤卡爭搶位置。
+  - 完成更名後（已切到新 tag、`tagRenamePreview === null`）的成功 / 同步失敗訊息，仍透過同一個 `TagFeedbackCard` 顯示在預覽按鈕上方。
+- 拆掉現有「預覽 + 確認」並排 grid：
+  - 預覽按鈕永遠渲染。
+  - 確認按鈕只在 `tagRenamePreview` 存在時才渲染，icon 在送出中切換為 `LoaderCircle + animate-spin`、文字為「更名中...」。
+- 預覽按鈕 disabled 條件對齊 merchant：`!renamedTagInput.trim() || isTagPreviewLoading || isTagRenameSubmitting`。
+
+### 不會改動
+
+- `services/tagService.ts`：`TagRenamePreview`、`renameTagInTransactions` 不變。
+- `App.tsx` 的 `renameTag` 回傳形狀已含 `newTag`，不必調整。
 
 ## 介面與型別
 
-- 無需新增 props。`TagManagementSectionProps` 既有欄位（`tagRenamePreview`、`isTagPreviewLoading`、`isTagRenameSubmitting`、`onPreviewTagRename`、`onRenameTag` 等）已足以驅動新顯示邏輯。
-- `TagRenamePreview` 型別維持原狀（`oldTag` / `newTag` / `affectedCount` / `conflictsWithExistingTag`），不影響 `services/tagService.ts`。
-- `SettingsPage` 端不需要改動，因為輸入變更時已會 `setTagRenamePreview(null)`，確認按鈕會自動隱藏。
+- `TagManagementSectionProps` 新增 `status: SettingsStatus`，引用 `./settingsStatus`。
+- 共用型別已存在於 `components/settings/settingsStatus.ts`，tag section 直接 import；不新增任何型別。
 
 ## UI 細節
 
 - 預設狀態（尚未按下預覽）：
-  - 顯示原 tag 與新名稱輸入框。
-  - 下方只出現預覽按鈕；確認按鈕完全不渲染（不是 disabled），避免使用者誤點與視覺擁擠。
+  - 顯示原 tag、新名稱輸入框與預覽按鈕；確認按鈕、黃色預覽匡都不渲染。
+  - 若有上一輪殘留的成功 / 失敗 status，顯示在預覽按鈕上方的 `TagFeedbackCard`，樣式與 merchant 對齊（無 ⚠️）。
 - 按下預覽且 `tagRenamePreview` 取得後：
-  - 輸入下方顯示既有的黃色預覽匡：`#oldTag → #newTag`、`預計影響：N 筆`、若 `conflictsWithExistingTag` 顯示合併提醒。
-  - 預覽匡下方接著出現確認按鈕；位置與 merchant 的「黃色匡 → 確認」一致。
+  - 輸入下方依序：黃色預覽匡 → 確認按鈕。
+  - 合併警告 `conflictsWithExistingTag` 仍顯示在黃色匡內，文字保留：「提醒：新名稱已存在；確認後會合併為同一個 tag，並自動去除重複 tag。」
 - 確認送出中：
   - 預覽按鈕同步 disable。
-  - 確認按鈕左側 icon 改為 `LoaderCircle` + `animate-spin`，文字變為「更名中...」。
-- 輸入變更導致 `tagRenamePreview` 被清掉時：
-  - 黃色預覽匡與確認按鈕一起消失，回到只顯示預覽按鈕的初始狀態。
-- 視覺色系維持 tag 既有的青色（`sectionCyanButtonClassName`）與綠色（`sectionEmeraldButtonClassName`），不引入 merchant 的 `MerchantFeedbackCard` 共用元件；這次只對齊「按鈕順序與顯隱」，不擴大到 feedback card 抽共用。
+  - 確認按鈕 icon 切換到 `LoaderCircle` + `animate-spin`，文字「更名中...」。
+- 完成更名：
+  - 編輯區仍保留，但已切到新 tag（`result.newTag`）。
+  - 黃色預覽匡與確認按鈕消失，回到只有預覽按鈕的初始狀態。
+  - `TagFeedbackCard` 顯示成功 / 離線 / 同步部分失敗訊息；若是同步部分失敗，附帶「查看同步狀態」按鈕。
 
 ## 測試計劃
 
 - `npm --prefix worktrees/tag-rename-confirm-alignment run build` 通過 `tsc --strict` 與 Vite production build。
 - 手動驗證：
-  - 開啟 Tag 管理子頁，選一個 tag，未按預覽前畫面只看得到預覽按鈕。
-  - 輸入新名稱按預覽 → 黃色匡與確認按鈕同時出現；按確認後旋轉 icon 顯示，完成後 tag 列表更新、表單回到只剩預覽按鈕的初始狀態。
-  - 修改新名稱輸入 → 黃色匡與確認按鈕同時消失。
-  - 輸入既有 tag 名稱觸發合併警告 → 確認按鈕仍可按；完成後合併結果正確。
-  - 在 merchant 管理子頁交叉確認操作節奏一致。
+  - 一般更名：選 tag、輸入新名稱、預覽 → 黃色匡 + 確認按鈕；按確認 → 訊息卡無 ⚠️、樣式與 merchant 一致；更名完成後選取自動切到新 tag，編輯區不消失。
+  - 合併到既有 tag：輸入既有 tag 名，預覽顯示合併提醒；按確認後選取切到合併目標 tag，related transactions 重抓。
+  - 修改新名稱輸入：黃色匡與確認按鈕同時消失。
+  - 同步部分失敗：訊息卡內出現「查看同步狀態」按鈕，可導向同步狀態頁，返回後仍在 tag 子頁。
+  - 在 merchant 子頁交叉確認操作節奏與訊息卡樣式一致。
 
 ## 假設
 
-- 維持「預覽 → 確認」兩段式互動，不引入「直接確認」捷徑；與 merchant 子頁一致是目標。
-- 不重構共用 feedback card，也不調整文字色系或 icon 大小，只動按鈕顯示邏輯與旋轉 icon，避免影響其他設定子頁。
-- 不修改 `services/tagService.ts` 與 `SettingsPage` 內既有的 state 清空時機；本次純前端視覺與互動對齊。
+- 不抽出 `SettingsFeedbackCard` 共用元件；那項抽共用已被 `docs/todo-references/section-owned-status-state.md` 追蹤，留待後續一起處理。
+- 不調整 `services/tagService.ts` 與 `App.tsx` 的 rename 行為；本次純前端視覺與選取狀態對齊。
+- 不修改 merchant section 行為，以 merchant 為基準對齊 tag。
 - worktree 路徑：`worktrees/tag-rename-confirm-alignment`。
