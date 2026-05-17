@@ -274,6 +274,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [aiFeedback, setAiFeedback] = useState<AiFeedback | null>(null);
   const [aiFilledFields, setAiFilledFields] = useState<Set<AiFilledField>>(() => new Set<AiFilledField>());
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [errorPulseKey, setErrorPulseKey] = useState(0);
   const [isRetryingSync, setIsRetryingSync] = useState(false);
   const hasApiKey = geminiApiKey.length > 0;
   const suggestionLimit = 6;
@@ -303,6 +304,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     setAiFeedback(null);
     setAiFilledFields(new Set<AiFilledField>());
     setValidationErrors({});
+    setErrorPulseKey(0);
   }, [sourceTransaction]);
 
   useEffect(() => {
@@ -600,6 +602,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     if (Object.keys(nextErrors).length > 0) {
       setValidationErrors(nextErrors);
+      setErrorPulseKey((prev) => prev + 1);
       if (categoryId && activeTab === '支出' && !subCategoryId) {
         setIsSubView(true);
         setIsCategoryCollapsed(false);
@@ -608,6 +611,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
 
     setValidationErrors({});
+    setErrorPulseKey(0);
     
     const multiplier = activeTab === '支出' ? -1 : 1;
     const finalAmount = parsedAmount * multiplier;
@@ -703,6 +707,9 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const currentMainCat = categoriesToDisplay.find(c => c.id === categoryId);
   const currentSubCategory = currentMainCat?.subcategories?.find(item => item.id === subCategoryId);
   const validationMessages = Object.values(validationErrors).filter(Boolean);
+  const errorPulseSuffix = errorPulseKey > 0 ? (errorPulseKey % 2 === 0 ? 'a' : 'b') : null;
+  const errorShakeClass = errorPulseSuffix ? `validation-error-shake-${errorPulseSuffix}` : '';
+  const errorPulseClass = errorPulseSuffix ? `validation-error-pulse-${errorPulseSuffix}` : '';
   const collapsedCategoryIcon = activeTab === '支出' && currentSubCategory
     ? currentSubCategory.icon
     : currentMainCat?.icon;
@@ -710,16 +717,16 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const categoryContainerClassName = [
     isCategoryCollapsed ? 'mb-3' : 'px-2 mb-6 min-h-[180px]',
     categoryHasValidationError
-      ? 'rounded-3xl border border-red-400/20 p-3'
+      ? `rounded-3xl border border-red-400/20 p-3 ${errorPulseClass}`
       : aiFilledFields.has('category') && !isCategoryCollapsed
         ? `rounded-3xl border ${AI_BORDER_CLASS_NAME} p-3`
         : '',
   ].filter(Boolean).join(' ');
   const collapsedCategoryBorderClassName = categoryHasValidationError
-    ? 'border-red-400/20'
+    ? `border-red-400/20 ${errorPulseClass}`.trim()
     : getAiBorderClass('category', 'border-white/10');
   const amountCurrencyBorderClassName = validationErrors.amount
-    ? 'border-red-400/40'
+    ? `border-red-400/40 ${errorPulseClass}`.trim()
     : getAiBorderClass(['amount', 'currency']);
   const isAiAnimationVisible = isAiProcessing;
   const syncStatus: TransactionSyncStatus = syncInfo?.syncStatus || 'pending';
@@ -883,7 +890,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       <div className="flex-1 overflow-y-auto px-4 pt-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         <div className="min-h-[calc(100%+1px)] space-y-4 pb-10">
         {validationMessages.length > 0 && (
-          <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-100 shadow-lg">
+          <div
+            role="alert"
+            aria-live="assertive"
+            className={`flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-red-100 shadow-lg ${errorShakeClass}`.trim()}
+          >
             <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-300" />
             <div className="space-y-1 text-sm font-bold leading-relaxed">
               {validationMessages.map((message) => (

@@ -3,7 +3,8 @@
 ## 通知與互動體驗
 
 - ✅ 設定頁在同步部分失敗時，頁內狀態訊息會附帶可直接前往同步狀態頁的「查看同步狀態」按鈕，覆蓋同步設定儲存、Tag 更名、商家更名、CSV 匯入四個場景。（紀錄：[sync-failure-status-link.md](docs/completed-references/sync-failure-status-link.md)）
-- 🟡 新增／編輯項目發生驗證錯誤時，在既有紅框之外加入微動畫，讓錯誤提示更顯眼。（計劃：[transaction-validation-error-animation.md](docs/todo-references/transaction-validation-error-animation.md)）
+- 🟡 交易編輯完成按下儲存時，除了 toast 之外也提供震動回饋。（計劃：[transaction-save-haptic-feedback.md](docs/todo-references/transaction-save-haptic-feedback.md)）
+- ✅ 新增／編輯項目發生驗證錯誤時，錯誤卡會 shake、金額與類別紅框會 pulse，重複按儲存也會重新觸發。（紀錄：[transaction-validation-error-animation.md](docs/completed-references/transaction-validation-error-animation.md)）
 - 🟡 抽出共用的通知文案與摘要組裝 helper，避免 toast 與頁內狀態訊息逐漸分歧。（計劃：[notification-message-helper.md](docs/todo-references/notification-message-helper.md)）
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。（計劃：[settings-status-types.md](docs/todo-references/settings-status-types.md)）
 - 🟡 改善全域 toast 元件，讓它能更穩定地承接稍長摘要，例如支援兩行換行或依訊息長度調整顯示時間。（計劃：[toast-resilience.md](docs/todo-references/toast-resilience.md)）

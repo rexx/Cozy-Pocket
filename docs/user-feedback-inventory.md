@@ -95,8 +95,8 @@
 
 | 頁面 / 元件 | 情境 | 目前呈現 | 建議 |
 | --- | --- | --- | --- |
-| `AddTransactionModal` | 金額空白或非數字 | modal 上方內嵌紅色錯誤框，並保留金額欄位紅框 | 維持 inline |
-| `AddTransactionModal` | 未選類別、已選主類別但未選子類別 | modal 上方內嵌紅色錯誤框，並以低調紅框標示類別區塊；子類別錯誤會展開子類別選擇區 | 維持 inline |
+| `AddTransactionModal` | 金額空白或非數字 | modal 上方內嵌紅色錯誤框並 shake、金額欄位紅框 pulse；重複按儲存會重新觸發動畫，`prefers-reduced-motion` 啟用時停用動畫 | 維持 inline |
+| `AddTransactionModal` | 未選類別、已選主類別但未選子類別 | modal 上方內嵌紅色錯誤框並 shake、類別區塊紅框 pulse；子類別錯誤會展開子類別選擇區；重複按儲存會重新觸發動畫，`prefers-reduced-motion` 啟用時停用動畫 | 維持 inline |
 | `AddTransactionModal` | AI 解析失敗 | AI 輸入框下方紅色文字 | 維持 inline |
 | `AddTransactionModal` | 離線時 AI 不可用 | AI 輸入框下方 amber 提示 | 維持 inline |
 | `AddTransactionModal` | 交易同步狀態 | 編輯模式底部顯示待同步 / 同步中 / 已同步 / 同步失敗；待同步與同步失敗可點左側圖示觸發單筆上傳，離線或同步中時 disabled | 維持 inline |
