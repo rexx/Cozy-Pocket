@@ -650,7 +650,8 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                 );
                 const activeSectionKey = expandedSectionKey;
                 const currencyCategoryStats = categoryStatsByCurrency[currency] || { income: [], expense: [] };
-                const categoryCount = currencyCategoryStats.income.length + currencyCategoryStats.expense.length;
+                const hasIncome = stats.income > 0;
+                const categoryCount = (hasIncome ? currencyCategoryStats.income.length : 0) + currencyCategoryStats.expense.length;
 
                 return (
                   <section
@@ -668,23 +669,25 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                     </div>
 
                     <div className="grid grid-cols-1 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setExpandedCategoryKey(null);
-                          setExpandedSectionKey((prev) => prev === getSectionKey(currency, '收入') ? null : getSectionKey(currency, '收入'));
-                        }}
-                        className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
-                          activeSectionKey === getSectionKey(currency, '收入')
-                            ? 'border-rose-300/30 bg-rose-500/15'
-                            : 'border-rose-400/15 bg-rose-500/10'
-                        }`}
-                      >
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-300/70">收入</p>
-                        <p className="mt-2 text-3xl font-black tracking-tight text-rose-300">
-                          +{formatStatAmount(stats.income, currency)}
-                        </p>
-                      </button>
+                      {hasIncome && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedCategoryKey(null);
+                            setExpandedSectionKey((prev) => prev === getSectionKey(currency, '收入') ? null : getSectionKey(currency, '收入'));
+                          }}
+                          className={`rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
+                            activeSectionKey === getSectionKey(currency, '收入')
+                              ? 'border-rose-300/30 bg-rose-500/15'
+                              : 'border-rose-400/15 bg-rose-500/10'
+                          }`}
+                        >
+                          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-300/70">收入</p>
+                          <p className="mt-2 text-3xl font-black tracking-tight text-rose-300">
+                            +{formatStatAmount(stats.income, currency)}
+                          </p>
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -705,7 +708,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                       </button>
                     </div>
 
-                    {activeSectionKey === getSectionKey(currency, '收入') && (
+                    {hasIncome && activeSectionKey === getSectionKey(currency, '收入') && (
                       <div className="mt-4 overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
                         {incomeTransactions.length > 0 ? (
                           incomeTransactions.map((transaction) => (
@@ -758,7 +761,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 
                       <div className="space-y-5">
                         {renderCategoryStatsGroup('支出', currencyCategoryStats.expense, stats.expense, currency)}
-                        {renderCategoryStatsGroup('收入', currencyCategoryStats.income, stats.income, currency)}
+                        {hasIncome && renderCategoryStatsGroup('收入', currencyCategoryStats.income, stats.income, currency)}
                       </div>
                     </div>
                   </section>
