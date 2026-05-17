@@ -84,8 +84,8 @@
 
 | 頁面 | 類型 | 典型情境 | 建議 |
 | --- | --- | --- | --- |
-| `SettingsPage` | `success` / `error` / `idle` | 同步設定儲存後離線、同步部分失敗、Tag 更名結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤 | 維持頁內 status |
-| `MerchantManagementSection`（`SettingsPage` 子頁內 inline） | `success` / `error` / `idle` + feedback card tone | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗 | 維持頁內 feedback card |
+| `SettingsPage` | `success` / `error` / `idle`（可選 `action`） | 同步設定儲存後離線、同步部分失敗、Tag 更名結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤；同步設定儲存、Tag 更名、商家更名、CSV 匯入若有 `failed > 0` 會附帶「查看同步狀態」按鈕 | 維持頁內 status |
+| `MerchantManagementSection`（`SettingsPage` 子頁內 inline） | `success` / `error` / `idle` + feedback card tone（可選 `action`） | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗；商家更名部分失敗時 feedback card 會附帶「查看同步狀態」按鈕 | 維持頁內 feedback card |
 | `SyncStatusPage` | persistent list/detail | 待同步 / 同步中 / 失敗 / 已同步統計，單筆 `lastSyncError` 詳情 | 維持頁面呈現 |
 | `AddTransactionModal` | persistent item status | 編輯單筆交易時顯示該筆同步狀態，`pending` / `error` 可點左側圖示單筆上傳，`error` 會顯示 `lastSyncError` 摘要 | 維持 modal 內嵌狀態 |
 
@@ -113,7 +113,7 @@
 | `lastSyncError` | `syncPendingTransactions` / `syncCreateItems` 結果 | 單筆同步失敗詳情 | 保留在 `SyncStatusPage` 中可回看，並在交易編輯頁的同步失敗區塊顯示摘要 |
 | `syncProgressUI` | `runSyncWithProgress()` | 同步中狀態、首頁同步 icon、同步頁按鈕 disabled | 保留 progress UI，不改 swal |
 
-同步與 debug 訊息不適合 swal，因為錯誤可能很多筆、需要回看、也可能在背景流程產生。若未來要改善，較適合加「前往同步狀態頁」CTA 或整理錯誤摘要，不是改成 blocking dialog。
+同步與 debug 訊息不適合 swal，因為錯誤可能很多筆、需要回看、也可能在背景流程產生。設定頁的同步部分失敗狀態已附帶「查看同步狀態」按鈕，可直接跳到同步狀態頁查看失敗交易與錯誤詳情；後續若要再改善，方向應該是擴充錯誤摘要或加更多就地操作入口，而不是改成 blocking dialog。
 
 ## 其他適合評估改用 Swal 的地方
 
