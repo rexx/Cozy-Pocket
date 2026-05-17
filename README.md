@@ -225,6 +225,8 @@ this.version(1).stores({
 *   類別列會使用既有分類圖示與分類顏色，並顯示該類別在同類型總額中的占比。
 *   點擊類別列後會展開子類別摘要與該類別交易列表；交易項目沿用既有 `TransactionItem` 呈現，點擊後會直接進入原本的編輯流程。
 *   展開後的子類別摘要會顯示筆數、金額、佔比與沿用主類別顏色的 progress bar；佔比分母為展開類別的總額，不跨類別或幣別比較。
+*   每個子類別摘要列右側提供排除按鈕，按下後該子類別會從幣別總額、類別占比、子類別摘要、收入／支出展開明細與交易列表一起移除。
+*   排除清單以 `localStorage` key `statsExcludedSubCategoryKeys` 保存（內容為 JSON array，每筆為 `categoryId:subCategoryId`），切換期間／tag／支付方式不會清空；重新開啟統計頁時自動套用，並可透過篩選列上的「排除 N」按鈕展開摘要進行單筆取消或全部清除。
 
 ### 6.8 PWA / iOS 離線模式
 *   專案現在會在 production build 產生 Service Worker，precache app shell、manifest 與 icon 資產。

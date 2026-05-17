@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addMonths, addYears, format } from 'date-fns';
-import { ArrowDownUp, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Filter, MoreHorizontal } from 'lucide-react';
+import { ArrowDownUp, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, EyeOff, Filter, MoreHorizontal, X } from 'lucide-react';
 import { CATEGORIES, formatCurrencyAmount } from '../constants';
 import { PaymentMethod, PaymentMethodDisplayMode, Transaction, TransactionType } from '../types';
 import { CategoryStatsItem, filterTransactionsByTag, getCategoryStats, getMonthTags, getMonthTransactions, getStatsByCurrency, getYearTransactions } from '../services/statsService';
+import {
+  buildSubCategoryExclusionKey,
+  readExcludedSubCategoryKeys,
+  writeExcludedSubCategoryKeys,
+} from '../preferences';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
 import { categoryIconMap } from './categoryIcons';
@@ -51,6 +56,17 @@ const getSubCategoryName = (categoryId: string, subCategoryId: string) => {
   return subCategory?.name || '未知子類別';
 };
 
+const getExclusionDisplayLabel = (key: string) => {
+  const separatorIndex = key.indexOf(':');
+  if (separatorIndex < 0) return key;
+  const categoryId = key.slice(0, separatorIndex);
+  const subCategoryId = key.slice(separatorIndex + 1);
+  const category = CATEGORY_BY_ID.get(categoryId);
+  const categoryName = category?.name || categoryId || '未知類別';
+  const subCategoryName = getSubCategoryName(categoryId, subCategoryId);
+  return `${categoryName} / ${subCategoryName}`;
+};
+
 const compareCategoryStatsItems = (a: CategoryStatsItem, b: CategoryStatsItem) => {
   if (b.total !== a.total) return b.total - a.total;
   if (b.count !== a.count) return b.count - a.count;
@@ -71,12 +87,43 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | ''>('');
   const [sortMode, setSortMode] = useState<StatsSortMode>('latest');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [isExcludedPanelOpen, setIsExcludedPanelOpen] = useState(false);
   const [expandedSectionKey, setExpandedSectionKey] = useState<string | null>(null);
   const [expandedCategoryKey, setExpandedCategoryKey] = useState<string | null>(null);
+  const [excludedSubCategoryKeys, setExcludedSubCategoryKeys] = useState<string[]>(
+    () => readExcludedSubCategoryKeys()
+  );
 
   useEffect(() => {
     setSelectedDate(initialDate);
   }, [initialDate]);
+
+  useEffect(() => {
+    writeExcludedSubCategoryKeys(excludedSubCategoryKeys);
+    if (excludedSubCategoryKeys.length === 0) {
+      setIsExcludedPanelOpen(false);
+    }
+  }, [excludedSubCategoryKeys]);
+
+  const excludedSubCategorySet = useMemo(
+    () => new Set(excludedSubCategoryKeys),
+    [excludedSubCategoryKeys]
+  );
+
+  const toggleExcludeSubCategory = (categoryId: string, subCategoryId: string) => {
+    const key = buildSubCategoryExclusionKey(categoryId, subCategoryId);
+    setExcludedSubCategoryKeys((prev) => (
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
+    ));
+  };
+
+  const removeExcludedSubCategory = (key: string) => {
+    setExcludedSubCategoryKeys((prev) => prev.filter((item) => item !== key));
+  };
+
+  const clearAllExcludedSubCategories = () => {
+    setExcludedSubCategoryKeys([]);
+  };
 
   const periodTransactions = useMemo(
     () => (periodMode === 'month'
@@ -118,10 +165,18 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   }, [selectedDate, selectedTag, selectedPaymentMethod, periodMode]);
 
   const filteredTransactions = useMemo(
-    () => filterTransactionsByTag(periodTransactions, selectedTag).filter((tx) => (
-      selectedPaymentMethod ? tx.paymentMethod === selectedPaymentMethod : true
-    )),
-    [periodTransactions, selectedTag, selectedPaymentMethod]
+    () => filterTransactionsByTag(periodTransactions, selectedTag).filter((tx) => {
+      if (selectedPaymentMethod && tx.paymentMethod !== selectedPaymentMethod) return false;
+      if (excludedSubCategorySet.size > 0) {
+        const exclusionKey = buildSubCategoryExclusionKey(
+          tx.categoryId || '',
+          tx.subCategoryId || ''
+        );
+        if (excludedSubCategorySet.has(exclusionKey)) return false;
+      }
+      return true;
+    }),
+    [periodTransactions, selectedTag, selectedPaymentMethod, excludedSubCategorySet]
   );
 
   const statsByCurrency = useMemo(
@@ -178,9 +233,14 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     ? format(selectedDate, 'yyyy 年 MM 月')
     : format(selectedDate, 'yyyy 年');
   const selectedSortLabel = sortMode === 'latest' ? '日期' : '金額';
-  const hasActiveFilters = Boolean(selectedTag || selectedPaymentMethod);
+  const hasExclusions = excludedSubCategoryKeys.length > 0;
+  const hasActiveFilters = Boolean(selectedTag || selectedPaymentMethod) || hasExclusions;
   const activeFilterBadgeLabel = hasActiveFilters
-    ? [selectedTag ? `#${selectedTag}` : null, selectedPaymentMethod || null].filter(Boolean).join(' · ')
+    ? [
+        selectedTag ? `#${selectedTag}` : null,
+        selectedPaymentMethod || null,
+        hasExclusions ? `排除 ${excludedSubCategoryKeys.length} 個子類別` : null,
+      ].filter(Boolean).join(' · ')
     : '全部交易';
   const movePeriod = (direction: -1 | 1) => {
     setSelectedDate((prev) => (
@@ -298,6 +358,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                       {item.subcategories.length > 0 && (
                         <div className="space-y-2">
                           {item.subcategories.map((subItem) => {
+                            const subCategoryDisplayName = getSubCategoryName(item.categoryId, subItem.subCategoryId);
                             const subPercentage = item.total > 0
                               ? Math.round((subItem.total / item.total) * 100)
                               : 0;
@@ -310,15 +371,26 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="min-w-0">
                                     <p className="truncate text-sm font-black text-gray-100">
-                                      {getSubCategoryName(item.categoryId, subItem.subCategoryId)}
+                                      {subCategoryDisplayName}
                                     </p>
                                     <p className="mt-1 text-xs font-bold text-gray-500">
                                       {subItem.count} 筆 · {subPercentage}%
                                     </p>
                                   </div>
-                                  <p className="shrink-0 text-sm font-black tabular-nums text-gray-200">
-                                    {formatStatAmount(subItem.total, currency)}
-                                  </p>
+                                  <div className="flex shrink-0 items-center gap-3">
+                                    <p className="text-sm font-black tabular-nums text-gray-200">
+                                      {formatStatAmount(subItem.total, currency)}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleExcludeSubCategory(item.categoryId, subItem.subCategoryId)}
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-400 transition-all hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-90"
+                                      aria-label={`從統計排除 ${subCategoryDisplayName}`}
+                                      title={`從統計排除 ${subCategoryDisplayName}`}
+                                    >
+                                      <EyeOff size={14} strokeWidth={2.3} />
+                                    </button>
+                                  </div>
                                 </div>
                                 <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-white/5">
                                   <div
@@ -424,6 +496,21 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 
         <div className="border-b border-white/5 px-5 py-4">
           <div className="flex items-center justify-end gap-2">
+            {hasExclusions && (
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setIsExcludedPanelOpen((prev) => !prev)}
+                  className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-[10px] font-black text-gray-300 shadow-lg transition-all hover:text-white active:scale-[0.99]"
+                  aria-expanded={isExcludedPanelOpen}
+                  aria-label={isExcludedPanelOpen ? '收合已排除子類別' : '展開已排除子類別'}
+                >
+                  <EyeOff size={12} strokeWidth={2.3} />
+                  排除 {excludedSubCategoryKeys.length}
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center">
               <button
                 type="button"
@@ -513,6 +600,38 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {hasExclusions && isExcludedPanelOpen && (
+            <div className="mt-3 rounded-2xl border border-white/10 bg-[#24273c]/70 px-4 py-3 shadow-lg">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">
+                  已排除子類別 · {excludedSubCategoryKeys.length}
+                </p>
+                <button
+                  type="button"
+                  onClick={clearAllExcludedSubCategories}
+                  className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black text-gray-300 transition-all hover:text-white active:scale-95"
+                >
+                  清除全部
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {excludedSubCategoryKeys.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => removeExcludedSubCategory(key)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-black text-gray-300 transition-all hover:text-white active:scale-95"
+                    aria-label={`取消排除 ${getExclusionDisplayLabel(key)}`}
+                    title={`取消排除 ${getExclusionDisplayLabel(key)}`}
+                  >
+                    <span className="max-w-[160px] truncate">{getExclusionDisplayLabel(key)}</span>
+                    <X size={12} strokeWidth={2.5} />
+                  </button>
+                ))}
               </div>
             </div>
           )}
