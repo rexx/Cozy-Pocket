@@ -7,7 +7,7 @@
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。（計劃：[settings-status-types.md](docs/todo-references/settings-status-types.md)）
 - 🟡 改善全域 toast 元件，讓它能更穩定地承接稍長摘要，例如支援兩行換行或依訊息長度調整顯示時間。（計劃：[toast-resilience.md](docs/todo-references/toast-resilience.md)）
 - 🟢 補上通知行為的 UI 測試。（計劃：[notification-ui-tests.md](docs/todo-references/notification-ui-tests.md)）
-- 🟡 點下搜尋按鈕進入搜尋畫面時，應自動 focus 搜尋輸入框，讓使用者可以直接輸入。
+- ✅ 點下搜尋按鈕進入搜尋畫面時會在同一個點擊事件內同步聚焦搜尋輸入框，iPhone PWA 上會一併彈出虛擬鍵盤。（紀錄：[search-page-auto-focus.md](docs/completed-references/search-page-auto-focus.md)）
 - 🟡 新增交易 modal 開啟時不要自動 focus 輸入框，避免立刻彈出鍵盤。
 - 🟡 Alert toast 改為置中顯示。
 - ✅ 設定頁在同步部分失敗時，頁內狀態訊息會附帶可直接前往同步狀態頁的「查看同步狀態」按鈕，覆蓋同步設定儲存、Tag 更名、商家更名、CSV 匯入四個場景。（紀錄：[sync-failure-status-link.md](docs/completed-references/sync-failure-status-link.md)）

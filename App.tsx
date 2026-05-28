@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { format, isSameDay, isWithinInterval, endOfDay, addDays } from 'date-fns';
 import { AlertCircle, X } from 'lucide-react';
 import TransactionItem from './components/TransactionItem';
@@ -885,8 +886,14 @@ const App: React.FC = () => {
   }, []);
 
   const openSearchPage = () => {
-    setActiveView('search');
-    window.setTimeout(() => searchInputRef.current?.focus(), 100);
+    // flushSync commits the view switch synchronously so SearchPage mounts
+    // before focus(), keeping the call inside the same user-gesture context.
+    // Required on iOS PWA: a setTimeout-deferred focus() loses the gesture
+    // chain and the virtual keyboard refuses to pop up.
+    flushSync(() => {
+      setActiveView('search');
+    });
+    searchInputRef.current?.focus();
   };
 
   const closeSearchPage = () => {
