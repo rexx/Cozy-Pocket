@@ -107,7 +107,12 @@ this.version(1).stores({
 *   整合 Gemini API，支援將自然語言輸入（如「午餐 120 現金」）結構化為帳務紀錄。
 *   AI 交易解析目前使用 `gemini-3.1-flash-lite-preview`，並將 Gemini 3 thinking level 設為 `minimal`，以符合 free tier 日常記帳用量與低延遲需求。
 *   Gemini API key 由使用者在「資料與設定」頁輸入並儲存在本機 IndexedDB，不使用 build-time env。
-*   尚未設定 Gemini API key 時，新增交易頁會隱藏 AI 快速填寫入口。
+*   AI 快速填寫整合為新增交易頁的「支出 / AI / 收入」tab 之一，AI tab 夾在支出與收入中間，按鈕本體只顯示 `Sparkles` icon 不含文字，active 時 icon 與底色 underline 採用 cyan。
+*   只有切到 AI tab 才會顯示 AI 輸入區與其狀態訊息；切到 AI tab 時會自動 focus 輸入框，方便使用者直接輸入。停留在支出／收入 tab 時表單佔滿整個 modal 內容，不再保留 AI 輸入框佔位。
+*   尚未設定 Gemini API key、或處於編輯既有交易的模式時，AI tab 不會出現在 tab 列，只剩支出與收入兩個 tab。
+*   AI 解析成功後 tab 會自動切回對應的支出或收入並顯示填入後的表單；無法辨識 type 時 fallback 為支出，並以 inline 警告提示。
+*   AI 已填入欄位摘要（如「AI 已填入：金額、類別⋯」）顯示在 scroll 區頂端，與目前 active tab 無關，因此切回支出／收入 tab 仍能看見 AI 剛剛填了哪些欄位；使用者在 AI 輸入框重新輸入時摘要會自動清除。
+*   切到 AI tab 不會清除表單已輸入的內容；從 AI tab 切回支出／收入時也會保留目前選好的類別、金額等欄位。
 *   等待 Gemini API 回應時，AI 快速填寫輸入框會顯示 SVG 外框流動動畫，成功或失敗後停止。
 *   AI 填入的欄位會以 cyan 邊框標示；手動修改該欄位後會移除標示。
 *   AI 可套用支援但未啟用的幣別到單筆交易，但不會自動修改偏好設定中的啟用幣別清單。

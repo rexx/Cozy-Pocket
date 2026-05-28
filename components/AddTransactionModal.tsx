@@ -28,6 +28,7 @@ interface ValidationErrors {
   subCategory?: string;
 }
 
+type ModalTab = TransactionType | 'AI';
 type AiFilledField = 'amount' | 'currency' | 'category' | 'paymentMethod' | 'merchant' | 'name' | 'note';
 type AiFeedback = {
   type: 'success' | 'warning';
@@ -228,6 +229,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   
   const amountInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const aiInputRef = useRef<HTMLInputElement>(null);
   
   const getInitialAmount = () => {
     if (!sourceTransaction) return '';
@@ -243,7 +245,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     sourceTransaction ? format(new Date(toEpochMillis(sourceTransaction.timestamp)), 'HH:mm') : format(new Date(), 'HH:mm')
   );
 
-  const [activeTab, setActiveTab] = useState<TransactionType>(sourceTransaction?.type || '支出');
+  const [activeTab, setActiveTab] = useState<ModalTab>(sourceTransaction?.type || '支出');
   const [amount, setAmount] = useState(getInitialAmount());
   const [currency, setCurrency] = useState(sourceTransaction?.currency || 'TWD');
   const [availableCurrencies, setAvailableCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
@@ -337,6 +339,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   }, [isEditing]);
 
+  useEffect(() => {
+    if (activeTab === 'AI') {
+      aiInputRef.current?.focus();
+    }
+  }, [activeTab]);
+
   const clearAiField = (field: AiFilledField) => {
     setAiFilledFields((prev) => {
       if (!prev.has(field)) return prev;
@@ -370,8 +378,12 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       : baseMessage;
   };
 
-  const handleTabChange = (tab: TransactionType) => {
+  const handleTabChange = (tab: ModalTab) => {
+    const previousTab = activeTab;
+    if (tab === previousTab) return;
     setActiveTab(tab);
+    if (tab === 'AI') return;
+    if (previousTab === 'AI') return;
     setIsSubView(false);
     setIsCategoryCollapsed(false);
     setValidationErrors((prev) => ({ ...prev, category: undefined, subCategory: undefined }));
@@ -445,7 +457,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       if (result) {
         const nextFilledFields = new Set<AiFilledField>();
         const warnings: string[] = [];
-        const nextType = result.type === '支出' || result.type === '收入' ? result.type : activeTab;
+        const fallbackType: TransactionType = activeTab === 'AI' ? '支出' : activeTab;
+        const nextType: TransactionType = result.type === '支出' || result.type === '收入' ? result.type : fallbackType;
         const didChangeType = nextType !== activeTab;
 
         if (result.type && result.type !== nextType) {
@@ -587,6 +600,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   };
 
   const handleSubmit = async () => {
+    if (activeTab === 'AI') return;
+    const transactionType: TransactionType = activeTab;
     const normalizedAmount = amount.trim();
     const parsedAmount = Number(normalizedAmount);
     const nextErrors: ValidationErrors = {};
@@ -596,14 +611,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
     if (!categoryId) {
       nextErrors.category = '請選擇類別';
-    } else if (activeTab === '支出' && !subCategoryId) {
+    } else if (transactionType === '支出' && !subCategoryId) {
       nextErrors.subCategory = '請選擇子類別';
     }
 
     if (Object.keys(nextErrors).length > 0) {
       setValidationErrors(nextErrors);
       setErrorPulseKey((prev) => prev + 1);
-      if (categoryId && activeTab === '支出' && !subCategoryId) {
+      if (categoryId && transactionType === '支出' && !subCategoryId) {
         setIsSubView(true);
         setIsCategoryCollapsed(false);
       }
@@ -612,8 +627,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     setValidationErrors({});
     setErrorPulseKey(0);
-    
-    const multiplier = activeTab === '支出' ? -1 : 1;
+
+    const multiplier = transactionType === '支出' ? -1 : 1;
     const finalAmount = parsedAmount * multiplier;
 
     let finalTagList = [...tagList];
@@ -629,7 +644,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     const timestamp = toEpochSeconds(baseDate.getTime());
 
     const data: Omit<Transaction, 'id'> = {
-      type: activeTab,
+      type: transactionType,
       amount: finalAmount,
       currency,
       categoryId: categoryId!,
@@ -869,7 +884,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           title={isEditing ? '修改項目' : '新增項目'}
           leftAction={<X size={26} />}
           onLeftAction={onClose}
-          rightSlot={(
+          rightSlot={activeTab === 'AI' ? null : (
             <button onClick={handleSubmit} className="p-2 text-cyan-400 active:scale-90 transition-transform">
               <Check size={26} strokeWidth={2.5} />
             </button>
@@ -877,19 +892,40 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         />
         {!isCategoryCollapsed && (
           <div className="flex bg-[#1e1e2d] border-b border-white/5 no-scrollbar px-4">
-            {['支出', '收入'].map((tab) => (
-              <button key={tab} onClick={() => handleTabChange(tab as TransactionType)} className={`flex-1 py-4 text-xs font-bold tracking-widest transition-all relative ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>
-                {tab}
-                {activeTab === tab && <div className={`absolute bottom-0 left-4 right-4 h-1 rounded-t-full ${activeTab === '收入' ? 'bg-rose-500 shadow-rose-500/30' : 'bg-emerald-500 shadow-emerald-500/30'}`}></div>}
-              </button>
-            ))}
+            {(((hasApiKey && !isEditing) ? ['支出', 'AI', '收入'] : ['支出', '收入']) as ModalTab[]).map((tab) => {
+              const isActive = activeTab === tab;
+              const underlineClass = tab === 'AI'
+                ? 'bg-cyan-400 shadow-cyan-400/30'
+                : tab === '收入'
+                  ? 'bg-rose-500 shadow-rose-500/30'
+                  : 'bg-emerald-500 shadow-emerald-500/30';
+              const isAiTab = tab === 'AI';
+              return (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  aria-label={isAiTab ? 'AI 快速填寫' : tab}
+                  className={`py-4 text-xs font-bold tracking-widest transition-all relative ${isAiTab ? 'flex-none px-6 flex items-center justify-center' : 'flex-1'} ${isActive ? (isAiTab ? 'text-cyan-300' : 'text-white') : 'text-gray-500'}`}
+                >
+                  {isAiTab ? (
+                    <Sparkles size={18} strokeWidth={2.5} />
+                  ) : tab}
+                  {isActive && <div className={`absolute bottom-0 left-4 right-4 h-1 rounded-t-full ${underlineClass}`}></div>}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pt-6 no-scrollbar bg-gradient-to-b from-[#1e1e2d] to-[#1a1c2c] overscroll-contain">
         <div className="min-h-[calc(100%+1px)] space-y-4 pb-10">
-        {validationMessages.length > 0 && (
+        {aiFeedback && !aiError && (
+          <p className={`px-1 text-[11px] font-bold whitespace-pre-line ${aiFeedback.type === 'success' ? 'text-cyan-200' : 'text-amber-200'}`}>
+            {aiFeedback.message}
+          </p>
+        )}
+        {activeTab !== 'AI' && validationMessages.length > 0 && (
           <div
             role="alert"
             aria-live="assertive"
@@ -903,7 +939,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </div>
           </div>
         )}
-        {hasApiKey && !isEditing && (
+        {activeTab === 'AI' && (
           <div className="px-2 mb-5 pt-1 pb-3">
             <form onSubmit={handleAiSubmit} className="relative group h-12 rounded-2xl" aria-busy={isAiAnimationVisible}>
               <div className={`relative flex h-12 items-center rounded-2xl px-4 backdrop-blur-md transition-all ${isAiAnimationVisible ? 'ai-input-pulse-glow bg-[#252538]' : 'bg-[#252538]/60'}`}>
@@ -940,7 +976,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 <div className="flex-shrink-0 mr-3 text-cyan-400">
                   <Sparkles size={16} className={isAiAnimationVisible ? 'animate-pulse' : undefined} />
                 </div>
-                <input 
+                <input
+                  ref={aiInputRef}
                   type="text"
                   placeholder="AI 快速填寫，例：拉麵 1500日圓 現金..."
                   className="bg-transparent text-xs font-medium text-white w-full focus:outline-none placeholder-gray-600"
@@ -974,14 +1011,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 {aiError}
               </p>
             )}
-            {!isOffline() && !aiError && aiFeedback && (
-              <p className={`mt-2 px-1 text-[11px] font-bold whitespace-pre-line ${aiFeedback.type === 'success' ? 'text-cyan-200' : 'text-amber-200'}`}>
-                {aiFeedback.message}
-              </p>
-            )}
           </div>
         )}
 
+        {activeTab !== 'AI' && (
+        <>
         <div className={categoryContainerClassName}>
           {isCategoryCollapsed && currentMainCat ? (
             <button
@@ -1216,6 +1250,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </div>
             </div>
           </>
+        )}
+        </>
         )}
         </div>
       </div>
