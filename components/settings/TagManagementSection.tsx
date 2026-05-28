@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Eye, PencilLine } from 'lucide-react';
+import { CheckCircle2, CloudUpload, Eye, LoaderCircle, PencilLine } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { TagRenamePreview, TagUsageSummary } from '../../services/tagService';
 import TransactionItem from '../TransactionItem';
@@ -10,8 +10,54 @@ import SettingsSection, {
   sectionLabelClassName,
   sectionPanelClassName,
 } from './SettingsSection';
+import type { SettingsStatus, SettingsStatusAction } from './settingsStatus';
+
+type TagFeedbackTone = 'error' | 'success' | 'warning';
+
+const tagFeedbackCardClassName: Record<TagFeedbackTone, string> = {
+  error: 'border-red-500/20 bg-red-500/10 text-red-200',
+  success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
+  warning: 'border-amber-400/20 bg-amber-500/10 text-slate-200',
+};
+
+const tagFeedbackTitleClassName: Record<TagFeedbackTone, string> = {
+  error: 'text-red-200',
+  success: 'text-emerald-200',
+  warning: 'text-amber-300',
+};
+
+const tagFeedbackActionClassName: Record<TagFeedbackTone, string> = {
+  error: 'border-red-400/30 bg-red-500/15 text-red-100 hover:bg-red-500/25',
+  success: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25',
+  warning: 'border-amber-400/30 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25',
+};
+
+const TagFeedbackCard: React.FC<{
+  children: React.ReactNode;
+  title?: string;
+  tone: TagFeedbackTone;
+  action?: SettingsStatusAction;
+}> = ({ children, title, tone, action }) => (
+  <div className={`rounded-2xl border px-4 py-3 text-xs ${tagFeedbackCardClassName[tone]}`}>
+    {title && <p className={`font-black ${tagFeedbackTitleClassName[tone]}`}>{title}</p>}
+    <div className={title ? 'mt-1 space-y-1' : 'space-y-1'}>
+      {children}
+    </div>
+    {action && (
+      <button
+        type="button"
+        onClick={action.onClick}
+        className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2 text-xs font-black transition-colors sm:w-auto ${tagFeedbackActionClassName[tone]}`}
+      >
+        <CloudUpload size={14} />
+        {action.label}
+      </button>
+    )}
+  </div>
+);
 
 interface TagManagementSectionProps {
+  status: SettingsStatus;
   tagSummaries: TagUsageSummary[];
   selectedTagToRename: string;
   renamedTagInput: string;
@@ -29,6 +75,7 @@ interface TagManagementSectionProps {
 }
 
 const TagManagementSection: React.FC<TagManagementSectionProps> = ({
+  status,
   tagSummaries,
   selectedTagToRename,
   renamedTagInput,
@@ -44,6 +91,16 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
   onRenameTag,
   onTagTransactionClick,
 }) => {
+  const isPreviewDisabled = !renamedTagInput.trim() || isTagPreviewLoading || isTagRenameSubmitting;
+
+  const statusMessage = status.type !== 'idle' ? (
+    <TagFeedbackCard tone={status.type} action={status.action}>
+      <p className="text-sm font-bold whitespace-pre-line">{status.message}</p>
+    </TagFeedbackCard>
+  ) : null;
+  const renameFeedbackMessage = !tagRenamePreview && status.type !== 'idle' ? statusMessage : null;
+  const resultStatusMessage = !selectedTagToRename && status.type !== 'idle' ? statusMessage : null;
+
   return (
     <SettingsSection>
       {tagSummaries.length === 0 ? (
@@ -70,6 +127,8 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
             </div>
           </div>
 
+          {resultStatusMessage}
+
           {selectedTagToRename ? (
             <div className={`${sectionPanelClassName} space-y-4`}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -95,37 +154,48 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
                 </div>
               </div>
 
-              {tagRenamePreview && (
-                <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-xs text-slate-200">
-                  <p className="font-black text-amber-300">更名預覽</p>
-                  <p className="mt-1">#{tagRenamePreview.oldTag} → #{tagRenamePreview.newTag}</p>
-                  <p className="mt-1 text-emerald-300">預計影響：{tagRenamePreview.affectedCount} 筆交易</p>
-                  {tagRenamePreview.conflictsWithExistingTag && (
-                    <p className="mt-1 text-amber-200">提醒：新名稱已存在；確認後會合併為同一個 tag，並自動去除重複 tag。</p>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
                   onClick={onPreviewTagRename}
-                  disabled={!renamedTagInput.trim() || isTagPreviewLoading || isTagRenameSubmitting}
+                  disabled={isPreviewDisabled}
                   className={sectionCyanButtonClassName}
                 >
                   <Eye size={16} />
                   {isTagPreviewLoading ? '預覽中...' : '預覽影響筆數'}
                 </button>
-                <button
-                  type="button"
-                  onClick={onRenameTag}
-                  disabled={!tagRenamePreview || tagRenamePreview.affectedCount === 0 || isTagPreviewLoading || isTagRenameSubmitting}
-                  className={sectionEmeraldButtonClassName}
-                >
-                  <CheckCircle2 size={16} />
-                  {isTagRenameSubmitting ? '更名中...' : '確認更名'}
-                </button>
               </div>
+
+              {tagRenamePreview && (
+                <TagFeedbackCard title="更名預覽" tone="warning">
+                  <p>#{tagRenamePreview.oldTag} → #{tagRenamePreview.newTag}</p>
+                  <p className="text-emerald-300">預計影響：{tagRenamePreview.affectedCount} 筆交易</p>
+                  {tagRenamePreview.conflictsWithExistingTag && (
+                    <p className="text-amber-200">
+                      提醒：#{tagRenamePreview.newTag} 已存在；確認後會合併為同一個 tag，並自動去除重複 tag。
+                    </p>
+                  )}
+                </TagFeedbackCard>
+              )}
+              {renameFeedbackMessage}
+
+              {tagRenamePreview && (
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={onRenameTag}
+                    disabled={tagRenamePreview.affectedCount === 0 || isTagPreviewLoading || isTagRenameSubmitting}
+                    className={sectionEmeraldButtonClassName}
+                  >
+                    {isTagRenameSubmitting ? (
+                      <LoaderCircle size={16} className="animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={16} />
+                    )}
+                    {isTagRenameSubmitting ? '更名中...' : '確認更名'}
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">

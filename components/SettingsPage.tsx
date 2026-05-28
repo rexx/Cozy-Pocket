@@ -450,14 +450,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const resetTagRenameState = (nextSelectedTag = '') => {
+    const currentTagKey = normalizeTag(selectedTagToRename);
+    const nextTagKey = normalizeTag(nextSelectedTag);
+    const willSwitchTag = currentTagKey !== nextTagKey;
+
     setSelectedTagToRename(nextSelectedTag);
     setRenamedTagInput('');
     setTagRenamePreview(null);
     setIsTagPreviewLoading(false);
     setIsTagRenameSubmitting(false);
-    if (!nextSelectedTag) {
+    if (!nextSelectedTag || willSwitchTag) {
       setTagTransactions([]);
-      setIsTagTransactionsLoading(false);
+      setIsTagTransactionsLoading(Boolean(nextSelectedTag));
     }
   };
 
@@ -495,13 +499,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       setIsTagRenameSubmitting(true);
       setStatus({ type: 'idle', message: '' });
       const result = await onRenameTag(selectedTagToRename, renamedTagInput);
-      resetTagRenameState('');
-      onDataChange();
+      await onDataChange();
+      resetTagRenameState(result.newTag);
+      const renameSummary = `已將 #${result.oldTag} 更名為 #${result.newTag}`;
 
       if (result.skippedOffline) {
         setStatus({
           type: 'success',
-          message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
+          message: `${renameSummary}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
         });
         return;
       }
@@ -509,13 +514,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       if (result.syncResult && result.syncResult.failed > 0) {
         setStatus({
           type: 'error',
-          message: `已將 #${result.oldTag} 更名為 #${result.newTag}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+          message: `${renameSummary}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
           action: openSyncProgressAction,
         });
         return;
       }
 
-      setStatus({ type: 'idle', message: '' });
+      setStatus({
+        type: 'success',
+        message: `${renameSummary}，共更新 ${result.affectedCount} 筆`,
+      });
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || 'Tag 更名失敗' });
     } finally {
@@ -1118,6 +1126,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       case 'tags':
         return (
           <TagManagementSection
+            status={status}
             tagSummaries={tagSummaries}
             selectedTagToRename={selectedTagToRename}
             renamedTagInput={renamedTagInput}
@@ -1206,7 +1215,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             </p>
           )}
           {renderSection()}
-          {section !== 'merchant' && renderStatusMessage()}
+          {section !== 'merchant' && section !== 'tags' && renderStatusMessage()}
           <p className="pt-6 text-center text-[10px] font-bold uppercase tracking-[0.4em] text-gray-700 opacity-15">
             Cozy Pocket • Minimalism
           </p>
