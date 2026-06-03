@@ -16,7 +16,7 @@
 | 機制 | 實作位置 | 適用情境 | 是否適合改 swal |
 | --- | --- | --- | --- |
 | `confirmAction()` swal dialog | `services/dialogService.ts` | 危險操作、不可逆操作、需要繼續 / 取消的明確決策 | 已使用 |
-| `showAutoDismissToast()` swal toast | `services/dialogService.ts` | 目前用於新增 / 修改 / 刪除交易成功的短通知 | 試用中 |
+| `showAutoDismissToast()` swal toast | `services/dialogService.ts` | 用於新增 / 修改 / 刪除交易成功的短通知，外觀沿用 `confirmAction()` 的圓角方形 modal、置中顯示、無背景遮罩、1800ms 自動消失 | 已使用 |
 | 全域 toast | `App.tsx` 的 `SuccessToast` / `showToast()` | 短成功訊息、連線狀態、操作摘要 | 通常不適合 |
 | 頁內 status | `SettingsPage`（含 `MerchantManagementSection` 的 inline `MerchantFeedbackCard`） | 長訊息、部分成功、同步失敗、預覽提醒、表單流程錯誤 | 通常不適合 |
 | inline validation / inline error | `AddTransactionModal` | 可立即修正的表單錯誤、AI 解析錯誤、離線提示 | 不適合 |
@@ -76,7 +76,7 @@
 | 商家 / Tag 更名 | 更名成功或同步部分失敗摘要 | 操作結果摘要 | 維持 toast，詳細內容留頁內 status |
 | 幣別設定防呆 | `至少要保留一個可用幣別` | 短錯誤提醒 | 可維持 status + toast，不建議 swal |
 
-一般不建議把所有 toast 類訊息都改成 swal，因為它們不需要使用者做決策。交易新增 / 修改 / 刪除成功目前作為 swal toast 試用點，用來評估視覺一致性與干擾程度。
+一般不建議把所有 toast 類訊息都改成 swal，因為它們不需要使用者做決策。交易新增 / 修改 / 刪除成功已正式走 `showAutoDismissToast()`，外觀對齊 `confirmAction()`（圓角方形 modal、置中、無背景遮罩、1800ms 自動消失）。
 
 ## 頁內 Status 盤點
 
