@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useLayoutEffect, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   X, Check, Trash2, Copy, RotateCcw, Hash,
   MoreHorizontal, Calendar as CalendarIcon, Clock,
@@ -227,7 +227,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const sourceTransaction = editingTransaction ?? prefilledTransaction ?? null;
   const safeInitialDate = (initialDate && isValid(initialDate)) ? initialDate : new Date();
   
-  const amountInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
   const aiInputRef = useRef<HTMLInputElement>(null);
   
@@ -332,12 +331,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       isMounted = false;
     };
   }, [sourceTransaction]);
-
-  useLayoutEffect(() => {
-    if (amountInputRef.current && !isEditing) {
-      amountInputRef.current.focus();
-    }
-  }, [isEditing]);
 
   useEffect(() => {
     if (activeTab === 'AI') {
@@ -1093,7 +1086,6 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <span className="text-[11px] text-gray-300 font-black tracking-widest">{currency}</span>
             </button>
             <input
-              ref={amountInputRef}
               type="number"
               step="any"
               inputMode="decimal"
