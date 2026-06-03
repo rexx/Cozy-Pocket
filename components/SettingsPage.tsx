@@ -32,7 +32,7 @@ import DangerZoneSection from './settings/DangerZoneSection';
 import { SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
 import { idleStatus, type SettingsStatus } from './settings/settingsStatus';
 import { confirmAction } from '../services/dialogService';
-import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getGeminiApiKey } from '../preferences';
+import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
 export type SettingsSectionPage = keyof typeof SETTINGS_SECTION_COPY;
 
@@ -54,6 +54,8 @@ interface SettingsPageProps {
   isOffline: boolean;
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onPaymentMethodDisplayModeChange: (mode: PaymentMethodDisplayMode) => void;
+  homeNavArrowsVisible: boolean;
+  onHomeNavArrowsVisibleChange: (visible: boolean) => void;
   tagSummaries: TagUsageSummary[];
   merchantSummaries: MerchantUsageSummary[];
   onPreviewTagRename: (oldTag: string, newTag: string) => Promise<TagRenamePreview>;
@@ -118,6 +120,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   isOffline,
   paymentMethodDisplayMode,
   onPaymentMethodDisplayModeChange,
+  homeNavArrowsVisible,
+  onHomeNavArrowsVisibleChange,
   tagSummaries,
   merchantSummaries,
   onPreviewTagRename,
@@ -326,6 +330,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     setStatus({ type: 'idle', message: '' });
     onPaymentMethodDisplayModeChange(mode);
     await db.settings.put({ key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: mode });
+    onDataChange();
+  };
+
+  const handleHomeNavArrowsVisibleChange = async (visible: boolean) => {
+    setStatus({ type: 'idle', message: '' });
+    onHomeNavArrowsVisibleChange(visible);
+    await db.settings.put({ key: HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, value: visible });
     onDataChange();
   };
 
@@ -1090,9 +1101,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             defaultCurrency={defaultCurrency}
             enabledCurrencies={enabledCurrencies}
             paymentMethodDisplayMode={paymentMethodDisplayMode}
+            homeNavArrowsVisible={homeNavArrowsVisible}
             onDefaultCurrencyChange={handleDefaultCurrencyChange}
             onEnabledCurrencyToggle={(currency) => void handleEnabledCurrencyToggle(currency)}
             onPaymentMethodDisplayModeChange={(mode) => void handlePaymentMethodDisplayModeChange(mode)}
+            onHomeNavArrowsVisibleChange={(visible) => void handleHomeNavArrowsVisibleChange(visible)}
           />
         );
       case 'ai':

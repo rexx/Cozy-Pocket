@@ -144,6 +144,7 @@ this.version(1).stores({
 *   `同步狀態` 已改為獨立頁面，可從首頁或資料與設定進入；返回時會依入口回到原本頁面。
 *   `首頁` 負責日期切換、每日交易列表，以及進入其他功能頁的入口。
 *   首頁上半部日曆支援週／月切換：月模式可左右滑動切換月份，週模式可左右滑動切換週次；下半部每日交易列表支援左右滑動切換前後日，與既有左右按鈕行為一致。
+*   首頁的左右導覽按鈕（上半日曆切週／月、下半交易列表切前後日）可在偏好設定一次隱藏，預設顯示；隱藏後左右滑動手勢仍可切換，週／月切換鈕與新增交易按鈕不受影響。
 *   `統計` 與 `資料與設定` 都是獨立頁面，不再是首頁上的小型浮層工具。
 *   共用頁面 header 使用與 PWA 外框一致的 `#1a1c2c`，並保留較短的上方留白，讓設定、同步狀態、搜尋、統計與交易 modal 在手機 PWA 上維持連續色面。
 *   目前的**overlay / modal 畫面**包含：`新增／編輯交易`。
@@ -292,7 +293,7 @@ this.version(1).stores({
 *   `App.tsx` 以 `settings-preferences`、`settings-ai`、`settings-sync`、`settings-tags`、`settings-merchant`、`settings-import-export`、`settings-danger` 等 view 管理設定子頁導覽與 history state。
 *   `SettingsPage` 會依設定子頁顯示置中的頁面副標題，並用與入口圖示一致的背景 glow。設定子頁內容使用玻璃感功能子卡牌，不再額外包一層重複標題的外框卡牌。
 *   設定首頁與設定子頁標題／副標題共用 `components/settings/settingsSectionCopy.ts`，避免入口卡片與子頁文案分歧。
-*   `PreferencesSection` 會分成「Payment Method Display」與「Currency Options」兩張功能子卡牌；支付方式支援文字／圖示切換，幣別清單預設直接展開。
+*   `PreferencesSection` 會分成「Payment Method Display」、「Home Navigation Buttons」與「Currency Options」三張功能子卡牌；支付方式支援文字／圖示切換，首頁左右導覽按鈕支援顯示／隱藏切換（預設顯示），幣別清單預設直接展開。
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
 *   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發、Tag 與商家更名與 status 訊息，避免子頁重複實作資料流程。

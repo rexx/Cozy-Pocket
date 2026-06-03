@@ -21,7 +21,7 @@ import { getMonthTransactions, getStatsByCurrency } from './services/statsServic
 import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 import { showAutoDismissToast } from './services/dialogService';
-import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, getPaymentMethodDisplayMode } from './preferences';
+import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, getPaymentMethodDisplayMode, getHomeNavArrowsVisible } from './preferences';
 
 type AppView =
   | 'home'
@@ -203,6 +203,7 @@ const App: React.FC = () => {
   const [capturedErrors, setCapturedErrors] = useState<string[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
   const [paymentMethodDisplayMode, setPaymentMethodDisplayMode] = useState<PaymentMethodDisplayMode>('text');
+  const [homeNavArrowsVisible, setHomeNavArrowsVisible] = useState(true);
   const [syncProgressUI, setSyncProgressUI] = useState<{
     visible: boolean;
     label: string;
@@ -259,18 +260,21 @@ const App: React.FC = () => {
         defaultCurrencySetting,
         enabledCurrenciesSetting,
         paymentMethodDisplayModeSetting,
+        homeNavArrowsVisibleSetting,
         syncApiUrlSetting,
         syncTokenSetting,
       ] = await Promise.all([
         db.settings.get('defaultCurrency'),
         db.settings.get('enabledCurrencies'),
         db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY),
+        db.settings.get(HOME_NAV_ARROWS_VISIBLE_SETTING_KEY),
         db.settings.get('syncApiUrl'),
         db.settings.get('syncToken'),
       ]);
       const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
       setDefaultCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
       setPaymentMethodDisplayMode(getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value));
+      setHomeNavArrowsVisible(getHomeNavArrowsVisible(homeNavArrowsVisibleSetting?.value));
       setIsSyncConfigured(Boolean((syncApiUrlSetting?.value || '').trim() && (syncTokenSetting?.value || '').trim()));
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
@@ -367,18 +371,21 @@ const App: React.FC = () => {
             await db.transactions.bulkPut(normalized);
           }
         }
-        const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting] = await Promise.all([
+        const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting, homeNavArrowsVisibleSetting] = await Promise.all([
           db.settings.get('defaultCurrency'),
           db.settings.get('enabledCurrencies'),
-          db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY)
+          db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY),
+          db.settings.get(HOME_NAV_ARROWS_VISIBLE_SETTING_KEY)
         ]);
         const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
         const safeDefaultCurrency = getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies);
         const safePaymentMethodDisplayMode = getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value);
+        const safeHomeNavArrowsVisible = getHomeNavArrowsVisible(homeNavArrowsVisibleSetting?.value);
         await db.settings.bulkPut([
           { key: 'enabledCurrencies', value: enabledCurrencies },
           { key: 'defaultCurrency', value: safeDefaultCurrency },
-          { key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: safePaymentMethodDisplayMode }
+          { key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: safePaymentMethodDisplayMode },
+          { key: HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, value: safeHomeNavArrowsVisible }
         ]);
         await refreshData();
       } catch (err: any) {
@@ -1045,6 +1052,8 @@ const App: React.FC = () => {
           isOffline={isOfflineMode}
           paymentMethodDisplayMode={paymentMethodDisplayMode}
           onPaymentMethodDisplayModeChange={setPaymentMethodDisplayMode}
+          homeNavArrowsVisible={homeNavArrowsVisible}
+          onHomeNavArrowsVisibleChange={setHomeNavArrowsVisible}
           tagSummaries={tagUsageSummaries}
           merchantSummaries={merchantUsageSummaries}
           onPreviewTagRename={previewTagRename}
@@ -1140,6 +1149,7 @@ const App: React.FC = () => {
         defaultCurrency={defaultCurrency}
         isOffline={isOfflineMode}
         isSyncProgressVisible={syncProgressUI.visible}
+        showNavArrows={homeNavArrowsVisible}
         paymentMethodDisplayMode={paymentMethodDisplayMode}
         onDateSelect={setSelectedDate}
         onCalendarViewModeChange={setCalendarViewMode}

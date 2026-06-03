@@ -28,6 +28,7 @@ interface CalendarProps {
   onSyncProgressClick?: () => void;
   isSyncProgressVisible?: boolean;
   isOffline?: boolean;
+  showNavArrows?: boolean;
   transactions: Transaction[];
 }
 
@@ -40,6 +41,7 @@ const Calendar: React.FC<CalendarProps> = ({
   onSyncProgressClick,
   isSyncProgressVisible = false,
   isOffline = false,
+  showNavArrows = true,
   transactions
 }) => {
   const safeDate = (selectedDate && isValid(selectedDate)) ? selectedDate : new Date();
@@ -200,24 +202,26 @@ const Calendar: React.FC<CalendarProps> = ({
         style={{ touchAction: 'pan-y' }}
         {...swipeHandlers}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between px-2">
-          <button
-            onClick={goToPrevPeriod}
-            className={monthNavButtonClassName}
-            aria-label={`切換到${previousPeriodLabel}`}
-            title={previousPeriodLabel}
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={goToNextPeriod}
-            className={monthNavButtonClassName}
-            aria-label={`切換到${nextPeriodLabel}`}
-            title={nextPeriodLabel}
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
+        {showNavArrows && (
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-between px-2">
+            <button
+              onClick={goToPrevPeriod}
+              className={monthNavButtonClassName}
+              aria-label={`切換到${previousPeriodLabel}`}
+              title={previousPeriodLabel}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={goToNextPeriod}
+              className={monthNavButtonClassName}
+              aria-label={`切換到${nextPeriodLabel}`}
+              title={nextPeriodLabel}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
 
         <div className={`grid grid-cols-7 text-center ${viewMode === 'week' ? 'gap-y-2' : 'gap-y-1'}`}>
           {weekDays.map(day => (

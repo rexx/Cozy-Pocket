@@ -2,7 +2,6 @@
 
 ## 通知與互動體驗
 
-- 🟡 交易編輯完成按下儲存時，除了 toast 之外也提供震動回饋。（計劃：[transaction-save-haptic-feedback.md](docs/todo-references/transaction-save-haptic-feedback.md)）
 - 🟡 抽出共用的通知文案與摘要組裝 helper，避免 toast 與頁內狀態訊息逐漸分歧。（計劃：[notification-message-helper.md](docs/todo-references/notification-message-helper.md)）
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。（計劃：[settings-status-types.md](docs/todo-references/settings-status-types.md)）
 - 🟡 改善全域 toast 元件，讓它能更穩定地承接稍長摘要，例如支援兩行換行或依訊息長度調整顯示時間。（計劃：[toast-resilience.md](docs/todo-references/toast-resilience.md)）
@@ -34,6 +33,7 @@
 
 ## 首頁與日曆體驗
 
+- ✅ 偏好設定可一次隱藏首頁的左右導覽按鈕（上半月曆左右、下半日期左右），預設顯示，隱藏後仍可左右滑動切換，週／月切換鈕與新增交易按鈕不受影響。（紀錄：[home-nav-arrow-visibility.md](docs/completed-references/home-nav-arrow-visibility.md)）
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
 - ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。（紀錄：[home-week-calendar.md](docs/completed-references/home-week-calendar.md)）
 - ✅ 首頁已支援週／月切換模式，並會記住使用者最後一次選擇；週模式聚焦近期日期與交易，月模式保留整月分布檢視，且導覽手勢會跟隨模式切換。

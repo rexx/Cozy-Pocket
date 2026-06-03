@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Type, type LucideIcon } from 'lucide-react';
+import { CreditCard, Eye, EyeOff, Type, type LucideIcon } from 'lucide-react';
 import { getCurrencyDisplay, SUPPORTED_CURRENCIES } from '../../constants';
 import { type PaymentMethodDisplayMode } from '../../types';
 import SettingsSection, {
@@ -12,9 +12,11 @@ interface PreferencesSectionProps {
   defaultCurrency: string;
   enabledCurrencies: string[];
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
+  homeNavArrowsVisible: boolean;
   onDefaultCurrencyChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onEnabledCurrencyToggle: (currency: string) => void;
   onPaymentMethodDisplayModeChange: (mode: PaymentMethodDisplayMode) => void;
+  onHomeNavArrowsVisibleChange: (visible: boolean) => void;
 }
 
 const PAYMENT_METHOD_DISPLAY_OPTIONS: Array<{
@@ -26,13 +28,24 @@ const PAYMENT_METHOD_DISPLAY_OPTIONS: Array<{
   { value: 'icon', label: '圖示', Icon: CreditCard },
 ];
 
+const HOME_NAV_ARROWS_OPTIONS: Array<{
+  value: boolean;
+  label: string;
+  Icon: LucideIcon;
+}> = [
+  { value: true, label: '顯示', Icon: Eye },
+  { value: false, label: '隱藏', Icon: EyeOff },
+];
+
 const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   defaultCurrency,
   enabledCurrencies,
   paymentMethodDisplayMode,
+  homeNavArrowsVisible,
   onDefaultCurrencyChange,
   onEnabledCurrencyToggle,
   onPaymentMethodDisplayModeChange,
+  onHomeNavArrowsVisibleChange,
 }) => {
   const getCurrencyOptionLabel = (currency: string) => `${currency} (${getCurrencyDisplay(currency)})`;
 
@@ -53,6 +66,37 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
                   key={option.value}
                   type="button"
                   onClick={() => onPaymentMethodDisplayModeChange(option.value)}
+                  aria-pressed={isActive}
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-[0.9rem] px-3 text-sm font-black transition-all ${
+                    isActive
+                      ? 'bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <OptionIcon size={15} strokeWidth={2.4} />
+                  <span>{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className={sectionPanelClassName}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className={sectionLabelClassName}>Home Navigation Buttons</p>
+            <p className="text-sm text-slate-300">控制首頁月曆與交易列表的左右切換按鈕是否顯示；隱藏後仍可左右滑動切換。</p>
+          </div>
+          <div className="grid w-full grid-cols-2 gap-1 rounded-2xl border border-white/10 bg-[#0f1321] p-1 sm:w-auto sm:min-w-[11rem]">
+            {HOME_NAV_ARROWS_OPTIONS.map((option) => {
+              const OptionIcon = option.Icon;
+              const isActive = homeNavArrowsVisible === option.value;
+              return (
+                <button
+                  key={String(option.value)}
+                  type="button"
+                  onClick={() => onHomeNavArrowsVisibleChange(option.value)}
                   aria-pressed={isActive}
                   className={`inline-flex h-10 items-center justify-center gap-2 rounded-[0.9rem] px-3 text-sm font-black transition-all ${
                     isActive

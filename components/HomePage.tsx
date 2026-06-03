@@ -15,6 +15,7 @@ interface HomePageProps {
   defaultCurrency: string;
   isOffline: boolean;
   isSyncProgressVisible: boolean;
+  showNavArrows: boolean;
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onDateSelect: (date: Date) => void;
   onCalendarViewModeChange: (mode: CalendarViewMode) => void;
@@ -39,6 +40,7 @@ const HomePage: React.FC<HomePageProps> = ({
   defaultCurrency,
   isOffline,
   isSyncProgressVisible,
+  showNavArrows,
   paymentMethodDisplayMode,
   onDateSelect,
   onCalendarViewModeChange,
@@ -118,6 +120,7 @@ const HomePage: React.FC<HomePageProps> = ({
           onSyncProgressClick={onOpenSyncStatus}
           isSyncProgressVisible={isSyncProgressVisible}
           isOffline={isOffline}
+          showNavArrows={showNavArrows}
           transactions={transactions}
         />
         <button
@@ -132,24 +135,26 @@ const HomePage: React.FC<HomePageProps> = ({
         </button>
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">
-          <button
-            onClick={onPrevDay}
-            className="pointer-events-auto w-8 h-8 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
-            aria-label="切換到昨天"
-            title="昨天"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={onNextDay}
-            className="pointer-events-auto w-8 h-8 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
-            aria-label="切換到明天"
-            title="明天"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
+        {showNavArrows && (
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-40 flex items-center justify-between px-6">
+            <button
+              onClick={onPrevDay}
+              className="pointer-events-auto w-8 h-8 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+              aria-label="切換到昨天"
+              title="昨天"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={onNextDay}
+              className="pointer-events-auto w-8 h-8 rounded-full bg-[#24273c]/80 border border-white/10 text-gray-300 flex items-center justify-center shadow-lg hover:text-white active:scale-90 transition-all"
+              aria-label="切換到明天"
+              title="明天"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
         <div className="absolute right-8 bottom-[calc(2rem+env(safe-area-inset-bottom))] z-40">
           <button onClick={onOpenAddTransaction} className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(34,211,238,0.4)] active:scale-90 transition-all hover:brightness-110">
             <Plus size={36} strokeWidth={2.5} />

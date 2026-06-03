@@ -4,6 +4,9 @@ export const PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY = 'paymentMethodDisplayMode
 export const DEFAULT_PAYMENT_METHOD_DISPLAY_MODE: PaymentMethodDisplayMode = 'text';
 export const GEMINI_API_KEY_SETTING_KEY = 'geminiApiKey';
 
+export const HOME_NAV_ARROWS_VISIBLE_SETTING_KEY = 'homeNavArrowsVisible';
+export const DEFAULT_HOME_NAV_ARROWS_VISIBLE = true;
+
 export const STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY = 'statsExcludedSubCategoryKeys';
 
 export const getPaymentMethodDisplayMode = (value: unknown): PaymentMethodDisplayMode => (
@@ -14,6 +17,12 @@ export const getPaymentMethodDisplayMode = (value: unknown): PaymentMethodDispla
 
 export const getGeminiApiKey = (value: unknown): string => (
   typeof value === 'string' ? value.trim() : ''
+);
+
+// Only an explicit stored `false` hides the arrows; anything else (unset,
+// legacy values) keeps them visible so the default stays "show".
+export const getHomeNavArrowsVisible = (value: unknown): boolean => (
+  value === false ? false : DEFAULT_HOME_NAV_ARROWS_VISIBLE
 );
 
 const sanitizeSubCategoryExclusionKey = (value: unknown): string | null => {
