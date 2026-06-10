@@ -20,20 +20,11 @@
 
 ## 拆解步驟（建議由低風險到高風險）
 
-### 1. 把更名流程 state 移進對應的 Section（含 Tag、Merchant）
+### 1. 把更名流程 state 移進對應的 Section（含 Tag、Merchant）✅ 已完成
 
-> 已拆出獨立 focused TODO：[`section-owned-rename-state.md`](./section-owned-rename-state.md)。建議先做完該項再推進 Step 2。
+> 完成紀錄：[`section-owned-rename-state.md`](../completed-references/section-owned-rename-state.md)。
 
-目前 Tag / Merchant 的 `selected*ToRename`、`renamed*Input`、`*RenamePreview`、`isPreviewLoading`、`isSubmitting`、`*Transactions`、`isTransactionsLoading` 共 7 個 state 加兩個 useEffect 都住在 `SettingsPage`。這些狀態的生命週期天然跟「目前打開的設定子頁」綁在一起，不需要在切換到其他子頁時保留。
-
-實作方向：
-- 把 state 跟 effects 移進 `TagManagementSection` / `MerchantManagementSection`，Section 對外只接受 `transactions`、`onPreviewRename`、`onRename`、`onGetTransactions`、`onTransactionClick`、`onNotify`、`paymentMethodDisplayMode` 這幾個與「資料來源 / app 級副作用」相關的 prop。
-- `SettingsPage` 不再傳 `selected*` / `renamed*` / `*Preview` 等流程內 state，也不再保留對應 handler。
-- 兩個 Section 的更名流程 status 改由 Section 內部維護（已經有 `MerchantFeedbackCard` 結構支援 inline 顯示）；剩餘 Section 的 status 拆解由 Step 2 處理。
-
-風險：切換到別的設定子頁時，預覽 state 會清空；確認此行為對使用者是否可接受（多數情境下應該是想要的）。
-
-預估去除：~250 行。
+`TagManagementSection` / `MerchantManagementSection` 已各自以 `useState` 持有 `selected*ToRename`、`renamed*Input`、`*RenamePreview`、`isPreviewLoading`、`isSubmitting`、`*Transactions`、`isTransactionsLoading` 與 inline status，連同失效檢查與載入相關交易的兩個 useEffect、四個 handler 一併移入；`SettingsPage` 對這兩條子頁只剩 props 透傳（資料來源 + preview／rename／get-transactions／`onDataChange`／`onOpenSyncProgress`）。切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置，已驗證為刻意行為。底部 `renderStatusMessage` 的 `section !== 'merchant' && section !== 'tags'` 守衛保留，由 Step 2 連同 `status` 一起拆。
 
 ### 2. 把共用 status state 拆解到各 Section
 

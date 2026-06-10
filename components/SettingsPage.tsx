@@ -20,8 +20,8 @@ import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
 import { SUPPORTED_CURRENCIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
-import { TagRenamePreview, TagUsageSummary, normalizeTag } from '../services/tagService';
-import { MerchantRenamePreview, MerchantUsageSummary, normalizeMerchantName } from '../services/merchantService';
+import { TagRenamePreview, TagUsageSummary } from '../services/tagService';
+import { MerchantRenamePreview, MerchantUsageSummary } from '../services/merchantService';
 import PreferencesSection from './settings/PreferencesSection';
 import AiSection from './settings/AiSection';
 import SyncSection from './settings/SyncSection';
@@ -144,20 +144,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   const [syncToken, setSyncToken] = useState('');
   const [selectedImportFileName, setSelectedImportFileName] = useState('');
   const [isParsingImportFile, setIsParsingImportFile] = useState(false);
-  const [selectedTagToRename, setSelectedTagToRename] = useState('');
-  const [renamedTagInput, setRenamedTagInput] = useState('');
-  const [tagRenamePreview, setTagRenamePreview] = useState<TagRenamePreview | null>(null);
-  const [isTagPreviewLoading, setIsTagPreviewLoading] = useState(false);
-  const [isTagRenameSubmitting, setIsTagRenameSubmitting] = useState(false);
-  const [tagTransactions, setTagTransactions] = useState<Transaction[]>([]);
-  const [isTagTransactionsLoading, setIsTagTransactionsLoading] = useState(false);
-  const [selectedMerchantToRename, setSelectedMerchantToRename] = useState('');
-  const [renamedMerchantInput, setRenamedMerchantInput] = useState('');
-  const [merchantRenamePreview, setMerchantRenamePreview] = useState<MerchantRenamePreview | null>(null);
-  const [isMerchantPreviewLoading, setIsMerchantPreviewLoading] = useState(false);
-  const [isMerchantRenameSubmitting, setIsMerchantRenameSubmitting] = useState(false);
-  const [merchantTransactions, setMerchantTransactions] = useState<Transaction[]>([]);
-  const [isMerchantTransactionsLoading, setIsMerchantTransactionsLoading] = useState(false);
   const [importPreview, setImportPreview] = useState<{
     transactions: Transaction[];
     totalRows: number;
@@ -201,98 +187,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
         : pullYearOptions[0]
     ));
   }, [pullYearOptions]);
-
-  useEffect(() => {
-    if (!selectedTagToRename) return;
-    const normalizedSelectedTag = normalizeTag(selectedTagToRename);
-    const hasSelectedTag = tagSummaries.some(({ tag }) => tag === normalizedSelectedTag);
-    if (!hasSelectedTag) {
-      setSelectedTagToRename('');
-      setRenamedTagInput('');
-      setTagRenamePreview(null);
-      setTagTransactions([]);
-    }
-  }, [selectedTagToRename, tagSummaries]);
-
-  useEffect(() => {
-    if (!selectedTagToRename) {
-      setTagTransactions([]);
-      setIsTagTransactionsLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadTagTransactions = async () => {
-      try {
-        setIsTagTransactionsLoading(true);
-        const results = await onGetTagTransactions(selectedTagToRename);
-        if (!isMounted) return;
-        setTagTransactions(results);
-      } catch (err: any) {
-        if (!isMounted) return;
-        setTagTransactions([]);
-        setStatus({ type: 'error', message: err.message || '讀取 tag 項目失敗' });
-      } finally {
-        if (isMounted) {
-          setIsTagTransactionsLoading(false);
-        }
-      }
-    };
-
-    void loadTagTransactions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [onGetTagTransactions, selectedTagToRename]);
-
-  useEffect(() => {
-    if (!selectedMerchantToRename || isMerchantRenameSubmitting) return;
-    const selectedMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
-    const hasSelectedMerchant = merchantSummaries.some(({ merchant }) => (
-      normalizeMerchantName(merchant).toLocaleLowerCase() === selectedMerchantKey
-    ));
-    if (!hasSelectedMerchant) {
-      setSelectedMerchantToRename('');
-      setRenamedMerchantInput('');
-      setMerchantRenamePreview(null);
-      setMerchantTransactions([]);
-    }
-  }, [isMerchantRenameSubmitting, merchantSummaries, selectedMerchantToRename]);
-
-  useEffect(() => {
-    if (!selectedMerchantToRename) {
-      setMerchantTransactions([]);
-      setIsMerchantTransactionsLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadMerchantTransactions = async () => {
-      try {
-        setIsMerchantTransactionsLoading(true);
-        const results = await onGetMerchantTransactions(selectedMerchantToRename);
-        if (!isMounted) return;
-        setMerchantTransactions(results);
-      } catch (err: any) {
-        if (!isMounted) return;
-        setMerchantTransactions([]);
-        setStatus({ type: 'error', message: err.message || '讀取商家項目失敗' });
-      } finally {
-        if (isMounted) {
-          setIsMerchantTransactionsLoading(false);
-        }
-      }
-    };
-
-    void loadMerchantTransactions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [onGetMerchantTransactions, selectedMerchantToRename]);
 
   const handleDefaultCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVal = e.target.value;
@@ -457,173 +351,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       setStatus({ type: 'error', message: err.message || '年度雲端同步失敗' });
     } finally {
       setIsPullSubmitting(false);
-    }
-  };
-
-  const resetTagRenameState = (nextSelectedTag = '') => {
-    const currentTagKey = normalizeTag(selectedTagToRename);
-    const nextTagKey = normalizeTag(nextSelectedTag);
-    const willSwitchTag = currentTagKey !== nextTagKey;
-
-    setSelectedTagToRename(nextSelectedTag);
-    setRenamedTagInput('');
-    setTagRenamePreview(null);
-    setIsTagPreviewLoading(false);
-    setIsTagRenameSubmitting(false);
-    if (!nextSelectedTag || willSwitchTag) {
-      setTagTransactions([]);
-      setIsTagTransactionsLoading(Boolean(nextSelectedTag));
-    }
-  };
-
-  const handleSelectTagToRename = (tag: string) => {
-    setStatus({ type: 'idle', message: '' });
-    resetTagRenameState(tag);
-  };
-
-  const handlePreviewTagRename = async () => {
-    try {
-      setIsTagPreviewLoading(true);
-      setStatus({ type: 'idle', message: '' });
-      const preview = await onPreviewTagRename(selectedTagToRename, renamedTagInput);
-      setTagRenamePreview(preview);
-      if (preview.affectedCount === 0) {
-        setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行更名' });
-      } else if (preview.conflictsWithExistingTag) {
-        setStatus({ type: 'success', message: `提醒：#${preview.newTag} 已存在，執行後會合併 tag 並自動去重` });
-      }
-    } catch (err: any) {
-      setTagRenamePreview(null);
-      setStatus({ type: 'error', message: err.message || 'Tag 預覽失敗' });
-    } finally {
-      setIsTagPreviewLoading(false);
-    }
-  };
-
-  const handleRenameTag = async () => {
-    if (!tagRenamePreview || tagRenamePreview.affectedCount === 0) {
-      setStatus({ type: 'error', message: '請先預覽受影響筆數後再執行更名' });
-      return;
-    }
-
-    try {
-      setIsTagRenameSubmitting(true);
-      setStatus({ type: 'idle', message: '' });
-      const result = await onRenameTag(selectedTagToRename, renamedTagInput);
-      await onDataChange();
-      resetTagRenameState(result.newTag);
-      const renameSummary = `已將 #${result.oldTag} 更名為 #${result.newTag}`;
-
-      if (result.skippedOffline) {
-        setStatus({
-          type: 'success',
-          message: `${renameSummary}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
-        });
-        return;
-      }
-
-      if (result.syncResult && result.syncResult.failed > 0) {
-        setStatus({
-          type: 'error',
-          message: `${renameSummary}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
-          action: openSyncProgressAction,
-        });
-        return;
-      }
-
-      setStatus({
-        type: 'success',
-        message: `${renameSummary}，共更新 ${result.affectedCount} 筆`,
-      });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: err.message || 'Tag 更名失敗' });
-    } finally {
-      setIsTagRenameSubmitting(false);
-    }
-  };
-
-  const resetMerchantRenameState = (nextSelectedMerchant = '') => {
-    const currentMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
-    const nextMerchantKey = normalizeMerchantName(nextSelectedMerchant).toLocaleLowerCase();
-    const willSwitchMerchant = currentMerchantKey !== nextMerchantKey;
-
-    setSelectedMerchantToRename(nextSelectedMerchant);
-    setRenamedMerchantInput('');
-    setMerchantRenamePreview(null);
-    setIsMerchantPreviewLoading(false);
-    setIsMerchantRenameSubmitting(false);
-    if (!nextSelectedMerchant || willSwitchMerchant) {
-      setMerchantTransactions([]);
-      setIsMerchantTransactionsLoading(Boolean(nextSelectedMerchant));
-    }
-  };
-
-  const handleSelectMerchantToRename = (merchant: string) => {
-    setStatus({ type: 'idle', message: '' });
-    resetMerchantRenameState(merchant);
-  };
-
-  const handlePreviewMerchantRename = async () => {
-    try {
-      setIsMerchantPreviewLoading(true);
-      setStatus({ type: 'idle', message: '' });
-      const preview = await onPreviewMerchantRename(selectedMerchantToRename, renamedMerchantInput);
-      setMerchantRenamePreview(preview);
-      if (preview.affectedCount === 0) {
-        setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行更名' });
-      }
-    } catch (err: any) {
-      setMerchantRenamePreview(null);
-      setStatus({ type: 'error', message: err.message || '商家預覽失敗' });
-    } finally {
-      setIsMerchantPreviewLoading(false);
-    }
-  };
-
-  const handleRenameMerchant = async () => {
-    if (!merchantRenamePreview || merchantRenamePreview.affectedCount === 0) {
-      setStatus({ type: 'error', message: '請先預覽受影響筆數後再執行更名' });
-      return;
-    }
-
-    try {
-      setIsMerchantRenameSubmitting(true);
-      setStatus({ type: 'idle', message: '' });
-      const result = await onRenameMerchant(
-        merchantRenamePreview.oldMerchant,
-        merchantRenamePreview.newMerchant
-      );
-      await onDataChange();
-      resetMerchantRenameState(result.newMerchant);
-      const actionMessage = result.willMerge
-        ? `已將 ${result.oldMerchant} 合併到 ${result.newMerchant}`
-        : `已將 ${result.oldMerchant} 更名為 ${result.newMerchant}`;
-
-      if (result.skippedOffline) {
-        setStatus({
-          type: 'success',
-          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
-        });
-        return;
-      }
-
-      if (result.syncResult && result.syncResult.failed > 0) {
-        setStatus({
-          type: 'error',
-          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
-          action: openSyncProgressAction,
-        });
-        return;
-      }
-
-      setStatus({
-        type: 'success',
-        message: `${actionMessage}，共更新 ${result.affectedCount} 筆`,
-      });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: err.message || '商家更名失敗' });
-    } finally {
-      setIsMerchantRenameSubmitting(false);
     }
   };
 
@@ -1139,47 +866,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       case 'tags':
         return (
           <TagManagementSection
-            status={status}
             tagSummaries={tagSummaries}
-            selectedTagToRename={selectedTagToRename}
-            renamedTagInput={renamedTagInput}
-            tagRenamePreview={tagRenamePreview}
-            tagTransactions={tagTransactions}
             paymentMethodDisplayMode={paymentMethodDisplayMode}
-            isTagPreviewLoading={isTagPreviewLoading}
-            isTagRenameSubmitting={isTagRenameSubmitting}
-            isTagTransactionsLoading={isTagTransactionsLoading}
-            onSelectTagToRename={handleSelectTagToRename}
-            onRenamedTagInputChange={(value) => {
-              setRenamedTagInput(value);
-              setTagRenamePreview(null);
-            }}
-            onPreviewTagRename={() => void handlePreviewTagRename()}
-            onRenameTag={() => void handleRenameTag()}
+            onPreviewTagRename={onPreviewTagRename}
+            onRenameTag={onRenameTag}
+            onGetTagTransactions={onGetTagTransactions}
             onTagTransactionClick={onTagTransactionClick}
+            onDataChange={onDataChange}
+            onOpenSyncProgress={onOpenSyncProgress}
           />
         );
       case 'merchant':
         return (
           <MerchantManagementSection
-            status={status}
             merchantSummaries={merchantSummaries}
-            selectedMerchantToRename={selectedMerchantToRename}
-            renamedMerchantInput={renamedMerchantInput}
-            merchantRenamePreview={merchantRenamePreview}
-            merchantTransactions={merchantTransactions}
             paymentMethodDisplayMode={paymentMethodDisplayMode}
-            isMerchantPreviewLoading={isMerchantPreviewLoading}
-            isMerchantRenameSubmitting={isMerchantRenameSubmitting}
-            isMerchantTransactionsLoading={isMerchantTransactionsLoading}
-            onSelectMerchantToRename={handleSelectMerchantToRename}
-            onRenamedMerchantInputChange={(value) => {
-              setRenamedMerchantInput(value);
-              setMerchantRenamePreview(null);
-            }}
-            onPreviewMerchantRename={() => void handlePreviewMerchantRename()}
-            onRenameMerchant={() => void handleRenameMerchant()}
+            onPreviewMerchantRename={onPreviewMerchantRename}
+            onRenameMerchant={onRenameMerchant}
+            onGetMerchantTransactions={onGetMerchantTransactions}
             onMerchantTransactionClick={onMerchantTransactionClick}
+            onDataChange={onDataChange}
+            onOpenSyncProgress={onOpenSyncProgress}
           />
         );
       case 'import-export':

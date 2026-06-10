@@ -2,7 +2,7 @@
 
 ## 摘要
 
-把目前 `SettingsPage` 內共用的 `status` state（`{ type: 'success' | 'error' | 'idle', message: string }`）以及底部統一的 `renderStatusMessage()` 拆解到各設定 Section 自行擁有，讓「寫入端」與「渲染端」回到同一個元件內。本項目與 [`section-owned-rename-state.md`](./section-owned-rename-state.md) 互補：前者處理 Tag / Merchant 兩條更名流程的 in-progress state（含其 status 顯示），本項目則收尾偏好、AI、同步、匯入匯出、危險操作這幾段非更名流程的 status。
+把目前 `SettingsPage` 內共用的 `status` state（`{ type: 'success' | 'error' | 'idle', message: string }`）以及底部統一的 `renderStatusMessage()` 拆解到各設定 Section 自行擁有，讓「寫入端」與「渲染端」回到同一個元件內。本項目與 [`section-owned-rename-state.md`](../completed-references/section-owned-rename-state.md) 互補：前者處理 Tag / Merchant 兩條更名流程的 in-progress state（含其 status 顯示），本項目則收尾偏好、AI、同步、匯入匯出、危險操作這幾段非更名流程的 status。
 
 > 本項目是 [`settings-page-decomposition.md`](./settings-page-decomposition.md) 第 2 步的獨立追蹤紀錄，緊接在 Step 1（Tag / Merchant 自管）之後執行；CSV / PullDialog（Step 3 / Step 4）排在後面。
 

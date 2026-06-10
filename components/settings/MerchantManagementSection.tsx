@@ -11,7 +11,7 @@ import SettingsSection, {
   sectionPanelClassName,
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
-import type { SettingsStatus, SettingsStatusAction } from './settingsStatus';
+import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
 
 const MERCHANT_PAGE_SIZE = 200;
 
@@ -30,21 +30,14 @@ const merchantFeedbackTitleClassName: Record<MerchantFeedbackTone, string> = {
 };
 
 interface MerchantManagementSectionProps {
-  status: SettingsStatus;
   merchantSummaries: MerchantUsageSummary[];
-  selectedMerchantToRename: string;
-  renamedMerchantInput: string;
-  merchantRenamePreview: MerchantRenamePreview | null;
-  merchantTransactions: Transaction[];
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
-  isMerchantPreviewLoading: boolean;
-  isMerchantRenameSubmitting: boolean;
-  isMerchantTransactionsLoading: boolean;
-  onSelectMerchantToRename: (merchant: string) => void;
-  onRenamedMerchantInputChange: (value: string) => void;
-  onPreviewMerchantRename: () => void;
-  onRenameMerchant: () => void;
+  onPreviewMerchantRename: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview>;
+  onRenameMerchant: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
+  onGetMerchantTransactions: (merchant: string) => Promise<Transaction[]>;
   onMerchantTransactionClick: (transaction: Transaction) => void;
+  onDataChange: () => void;
+  onOpenSyncProgress: () => void;
 }
 
 const merchantFeedbackActionClassName: Record<MerchantFeedbackTone, string> = {
@@ -78,24 +71,26 @@ const MerchantFeedbackCard: React.FC<{
 );
 
 const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
-  status,
   merchantSummaries,
-  selectedMerchantToRename,
-  renamedMerchantInput,
-  merchantRenamePreview,
-  merchantTransactions,
   paymentMethodDisplayMode,
-  isMerchantPreviewLoading,
-  isMerchantRenameSubmitting,
-  isMerchantTransactionsLoading,
-  onSelectMerchantToRename,
-  onRenamedMerchantInputChange,
   onPreviewMerchantRename,
   onRenameMerchant,
+  onGetMerchantTransactions,
   onMerchantTransactionClick,
+  onDataChange,
+  onOpenSyncProgress,
 }) => {
+  const [status, setStatus] = useState<SettingsStatus>(idleStatus);
+  const [selectedMerchantToRename, setSelectedMerchantToRename] = useState('');
+  const [renamedMerchantInput, setRenamedMerchantInput] = useState('');
+  const [merchantRenamePreview, setMerchantRenamePreview] = useState<MerchantRenamePreview | null>(null);
+  const [isMerchantPreviewLoading, setIsMerchantPreviewLoading] = useState(false);
+  const [isMerchantRenameSubmitting, setIsMerchantRenameSubmitting] = useState(false);
+  const [merchantTransactions, setMerchantTransactions] = useState<Transaction[]>([]);
+  const [isMerchantTransactionsLoading, setIsMerchantTransactionsLoading] = useState(false);
   const [merchantSearchQuery, setMerchantSearchQuery] = useState('');
   const [visibleMerchantCount, setVisibleMerchantCount] = useState(MERCHANT_PAGE_SIZE);
+  const openSyncProgressAction: SettingsStatusAction = { label: '查看同步狀態', onClick: onOpenSyncProgress };
   const normalizedMerchantInput = normalizeMerchantName(renamedMerchantInput);
   const isPreviewDisabled = !normalizedMerchantInput || isMerchantPreviewLoading || isMerchantRenameSubmitting;
   const affectedTransactionCount = merchantRenamePreview?.affectedCount ?? merchantTransactions.length;
@@ -130,6 +125,143 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   useEffect(() => {
     setVisibleMerchantCount(MERCHANT_PAGE_SIZE);
   }, [merchantSummaries]);
+
+  useEffect(() => {
+    if (!selectedMerchantToRename || isMerchantRenameSubmitting) return;
+    const selectedMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
+    const hasSelectedMerchant = merchantSummaries.some(({ merchant }) => (
+      normalizeMerchantName(merchant).toLocaleLowerCase() === selectedMerchantKey
+    ));
+    if (!hasSelectedMerchant) {
+      setSelectedMerchantToRename('');
+      setRenamedMerchantInput('');
+      setMerchantRenamePreview(null);
+      setMerchantTransactions([]);
+    }
+  }, [isMerchantRenameSubmitting, merchantSummaries, selectedMerchantToRename]);
+
+  useEffect(() => {
+    if (!selectedMerchantToRename) {
+      setMerchantTransactions([]);
+      setIsMerchantTransactionsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadMerchantTransactions = async () => {
+      try {
+        setIsMerchantTransactionsLoading(true);
+        const results = await onGetMerchantTransactions(selectedMerchantToRename);
+        if (!isMounted) return;
+        setMerchantTransactions(results);
+      } catch (err: any) {
+        if (!isMounted) return;
+        setMerchantTransactions([]);
+        setStatus({ type: 'error', message: err.message || '讀取商家項目失敗' });
+      } finally {
+        if (isMounted) {
+          setIsMerchantTransactionsLoading(false);
+        }
+      }
+    };
+
+    void loadMerchantTransactions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [onGetMerchantTransactions, selectedMerchantToRename]);
+
+  const resetMerchantRenameState = (nextSelectedMerchant = '') => {
+    const currentMerchantKey = normalizeMerchantName(selectedMerchantToRename).toLocaleLowerCase();
+    const nextMerchantKey = normalizeMerchantName(nextSelectedMerchant).toLocaleLowerCase();
+    const willSwitchMerchant = currentMerchantKey !== nextMerchantKey;
+
+    setSelectedMerchantToRename(nextSelectedMerchant);
+    setRenamedMerchantInput('');
+    setMerchantRenamePreview(null);
+    setIsMerchantPreviewLoading(false);
+    setIsMerchantRenameSubmitting(false);
+    if (!nextSelectedMerchant || willSwitchMerchant) {
+      setMerchantTransactions([]);
+      setIsMerchantTransactionsLoading(Boolean(nextSelectedMerchant));
+    }
+  };
+
+  const handleSelectMerchantToRename = (merchant: string) => {
+    setStatus({ type: 'idle', message: '' });
+    resetMerchantRenameState(merchant);
+  };
+
+  const handleRenamedMerchantInputChange = (value: string) => {
+    setRenamedMerchantInput(value);
+    setMerchantRenamePreview(null);
+  };
+
+  const handlePreviewMerchantRename = async () => {
+    try {
+      setIsMerchantPreviewLoading(true);
+      setStatus({ type: 'idle', message: '' });
+      const preview = await onPreviewMerchantRename(selectedMerchantToRename, renamedMerchantInput);
+      setMerchantRenamePreview(preview);
+      if (preview.affectedCount === 0) {
+        setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行更名' });
+      }
+    } catch (err: any) {
+      setMerchantRenamePreview(null);
+      setStatus({ type: 'error', message: err.message || '商家預覽失敗' });
+    } finally {
+      setIsMerchantPreviewLoading(false);
+    }
+  };
+
+  const handleRenameMerchant = async () => {
+    if (!merchantRenamePreview || merchantRenamePreview.affectedCount === 0) {
+      setStatus({ type: 'error', message: '請先預覽受影響筆數後再執行更名' });
+      return;
+    }
+
+    try {
+      setIsMerchantRenameSubmitting(true);
+      setStatus({ type: 'idle', message: '' });
+      const result = await onRenameMerchant(
+        merchantRenamePreview.oldMerchant,
+        merchantRenamePreview.newMerchant
+      );
+      await onDataChange();
+      resetMerchantRenameState(result.newMerchant);
+      const actionMessage = result.willMerge
+        ? `已將 ${result.oldMerchant} 合併到 ${result.newMerchant}`
+        : `已將 ${result.oldMerchant} 更名為 ${result.newMerchant}`;
+
+      if (result.skippedOffline) {
+        setStatus({
+          type: 'success',
+          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
+        });
+        return;
+      }
+
+      if (result.syncResult && result.syncResult.failed > 0) {
+        setStatus({
+          type: 'error',
+          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
+          action: openSyncProgressAction,
+        });
+        return;
+      }
+
+      setStatus({
+        type: 'success',
+        message: `${actionMessage}，共更新 ${result.affectedCount} 筆`,
+      });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || '商家更名失敗' });
+    } finally {
+      setIsMerchantRenameSubmitting(false);
+    }
+  };
 
   const statusMessage = status.type !== 'idle' ? (
     <MerchantFeedbackCard tone={status.type} action={status.action}>
@@ -184,7 +316,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                   {selectedMerchantSummary && !selectedMerchantIsVisible && (
                     <button
                       type="button"
-                      onClick={() => onSelectMerchantToRename(selectedMerchantSummary.merchant)}
+                      onClick={() => handleSelectMerchantToRename(selectedMerchantSummary.merchant)}
                       className="min-w-0 max-w-full break-words rounded-2xl border border-amber-400/25 bg-amber-500/12 px-3 py-2 text-left text-xs font-black leading-snug text-amber-100 transition-colors"
                     >
                       {selectedMerchantSummary.merchant} · {selectedMerchantSummary.count} 筆 · 已選取
@@ -194,7 +326,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                     <button
                       key={merchant}
                       type="button"
-                      onClick={() => onSelectMerchantToRename(merchant)}
+                      onClick={() => handleSelectMerchantToRename(merchant)}
                       className={`min-w-0 max-w-full break-words rounded-2xl border px-3 py-2 text-left text-xs font-black leading-snug transition-colors ${
                         selectedMerchantToRename === merchant
                           ? 'border-amber-400/25 bg-amber-500/12 text-amber-100'
@@ -247,7 +379,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                     <input
                       type="text"
                       value={renamedMerchantInput}
-                      onChange={(e) => onRenamedMerchantInputChange(e.target.value)}
+                      onChange={(e) => handleRenamedMerchantInputChange(e.target.value)}
                       placeholder="輸入新的商家名稱"
                       className={`${sectionInputClassName} pl-10`}
                       disabled={isMerchantPreviewLoading || isMerchantRenameSubmitting}
@@ -259,7 +391,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
               <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
-                  onClick={onPreviewMerchantRename}
+                  onClick={() => void handlePreviewMerchantRename()}
                   disabled={isPreviewDisabled}
                   className={sectionCyanButtonClassName}
                 >
@@ -288,7 +420,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                 <div className="grid grid-cols-1 gap-3">
                   <button
                     type="button"
-                    onClick={onRenameMerchant}
+                    onClick={() => void handleRenameMerchant()}
                     disabled={merchantRenamePreview.affectedCount === 0 || isMerchantPreviewLoading || isMerchantRenameSubmitting}
                     className={sectionEmeraldButtonClassName}
                   >

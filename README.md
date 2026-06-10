@@ -296,8 +296,10 @@ this.version(1).stores({
 *   `PreferencesSection` 會分成「Payment Method Display」、「Home Navigation Buttons」與「Currency Options」三張功能子卡牌；支付方式支援文字／圖示切換，首頁左右導覽按鈕支援顯示／隱藏切換（預設顯示），幣別清單預設直接展開。
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
-*   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發、Tag 與商家更名與 status 訊息，避免子頁重複實作資料流程。
-*   各區段元件只負責 UI 與事件轉發，不直接操作資料庫或同步服務。
+*   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發與 status 訊息，避免子頁重複實作資料流程。
+*   多數區段元件只負責 UI 與事件轉發，不直接操作資料庫或同步服務；`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。
+*   `TagManagementSection` 與 `MerchantManagementSection` 各自以 `useState` 持有選取的 tag／商家、新名稱輸入、預覽結果、送出狀態、相關交易與 inline status；container 只透過 props 傳入資料來源與 preview／rename／get-transactions／`onDataChange`／`onOpenSyncProgress` 等 callback，不再保留這兩條流程的 state 或 handler。
+*   這兩個更名子頁的選取與預覽 state 與「目前開啟的子頁」綁定；切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置為初始狀態（刻意行為）。
 *   匯入與匯出已整併在同一個 section 中；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。
 *   設定首頁會顯示目前 tag 數量與商家數量；商家數量直接取自已載入交易計算的商家用量摘要（`MerchantUsageSummary`），不額外讀取 IndexedDB。
 *   商家管理已整併為 `SettingsPage` 的正式設定子頁，與 Tag 管理等其他子頁共用設定首頁卡片、子頁 routing 與返回行為。
