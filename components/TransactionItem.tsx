@@ -66,10 +66,10 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   if (subCategory && title !== subCategory.name) subtitleParts.push(subCategory.name);
   else if (!subCategory && title !== category.name) subtitleParts.push(category.name);
   if (transaction.note) subtitleParts.push(transaction.note);
-  if (transaction.tags) {
-    const individualTags = transaction.tags.split(/\s+/).filter(t => t.length > 0);
-    individualTags.forEach(tag => subtitleParts.push(`#${tag}`));
-  }
+
+  const tags = transaction.tags
+    ? transaction.tags.split(/\s+/).filter(t => t.length > 0)
+    : [];
 
   const displayAmount = isIncome ? transaction.amount : -transaction.amount;
   const formattedAmount = `${displayAmount < 0 ? '-' : ''}${formatCurrencyAmount(displayAmount, transaction.currency)}`;
@@ -104,9 +104,31 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
       
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-0.5">
-          <h3 className="text-gray-100 font-bold truncate text-base tracking-tight leading-tight">
-            {title}
-          </h3>
+          {/* When tags exist, cap the title width so a long title cannot push tags
+              out entirely; tags then use all remaining space and truncate only when
+              the row genuinely runs out of room. flex-1 makes the percentage cap
+              resolve against the full row width instead of a content-sized box. */}
+          <div className="flex flex-1 items-center gap-2 min-w-0">
+            <h3
+              className={`text-gray-100 font-bold truncate text-base tracking-tight leading-tight ${
+                tags.length > 0 ? 'flex-shrink-0 max-w-[65%]' : ''
+              }`}
+            >
+              {title}
+            </h3>
+            {tags.length > 0 && (
+              <span className="flex items-center gap-1 min-w-0">
+                {tags.map((tag, index) => (
+                  <span
+                    key={`${tag}-${index}`}
+                    className="min-w-0 truncate text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-400 font-bold border border-white/5"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 flex-shrink-0 ml-4">
             <span
               title={syncStatusUi.title}

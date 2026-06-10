@@ -33,6 +33,7 @@
 
 ## 首頁與日曆體驗
 
+- ✅ 交易列表項目的 Tag 已改為小型 pill 顯示在交易名稱（主要文字）右邊，不再附加於次要文字尾端；主要文字太長時截斷並保留空間給 tag，沒有 tag 則不保留空間。（紀錄：[transaction-item-inline-tags.md](docs/completed-references/transaction-item-inline-tags.md)）
 - ✅ 偏好設定可一次隱藏首頁的左右導覽按鈕（上半月曆左右、下半日期左右），預設顯示，隱藏後仍可左右滑動切換，週／月切換鈕與新增交易按鈕不受影響。（紀錄：[home-nav-arrow-visibility.md](docs/completed-references/home-nav-arrow-visibility.md)）
 - ✅ 新增、複製或編輯交易儲存後，首頁會同步切到該筆交易日期，避免資料已建立但日列表停在舊日期。
 - ✅ 首頁月曆已支援左右滑動切換月份，且下方交易列表已支援左右滑動切換前後日。（紀錄：[home-week-calendar.md](docs/completed-references/home-week-calendar.md)）
