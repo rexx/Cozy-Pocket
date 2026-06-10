@@ -6,6 +6,7 @@
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。（計劃：[settings-status-types.md](docs/todo-references/settings-status-types.md)）
 - 🟡 改善全域 toast 元件，讓它能更穩定地承接稍長摘要，例如支援兩行換行或依訊息長度調整顯示時間。（計劃：[toast-resilience.md](docs/todo-references/toast-resilience.md)）
 - 🟢 補上通知行為的 UI 測試。（計劃：[notification-ui-tests.md](docs/todo-references/notification-ui-tests.md)）
+- ✅ 新增／編輯交易頁面的 Tag 建議項目已改依最後出現時間排序，最近使用的 tag 排在最前面；商家與項目名稱建議排序不變。（紀錄：[tag-suggestion-recency-sort.md](docs/completed-references/tag-suggestion-recency-sort.md)）
 - ✅ 點下搜尋按鈕進入搜尋畫面時會在同一個點擊事件內同步聚焦搜尋輸入框，iPhone PWA 上會一併彈出虛擬鍵盤。（紀錄：[search-page-auto-focus.md](docs/completed-references/search-page-auto-focus.md)）
 - ✅ 新增交易 modal 開啟時不再自動 focus 金額輸入框，避免在 iPhone PWA 上一開啟就彈出虛擬鍵盤；切到 AI tab 仍會自動 focus AI 輸入框。（紀錄：[add-transaction-no-auto-focus.md](docs/completed-references/add-transaction-no-auto-focus.md)）
 - ✅ 交易新增 / 修改 / 刪除成功的 swal toast 已從貼底 pill 改為畫面正中央的圓角方形 modal，外觀對齊 `confirmAction()` 確認對話框、不加背景遮罩，timer 結束自動消失。（紀錄：[alert-toast-center.md](docs/completed-references/alert-toast-center.md)）

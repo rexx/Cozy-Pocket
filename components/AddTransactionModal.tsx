@@ -785,7 +785,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const getRankedSuggestions = (
     items: SuggestionItem[],
     rawQuery: string,
-    excludedValues: Set<string>
+    excludedValues: Set<string>,
+    rankBy: 'frequency' | 'recency' = 'frequency'
   ) => {
     return items
       .filter((item) => {
@@ -797,6 +798,14 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       .sort((a, b) => {
         const textMatchDiff = getTextMatchRank(b.value, rawQuery) - getTextMatchRank(a.value, rawQuery);
         if (textMatchDiff !== 0) return textMatchDiff;
+
+        // Recency mode surfaces what the user has been logging lately,
+        // skipping category affinity (tags correlate weakly with categories).
+        if (rankBy === 'recency') {
+          if (b.lastUsedAt !== a.lastUsedAt) return b.lastUsedAt - a.lastUsedAt;
+          if (b.count !== a.count) return b.count - a.count;
+          return a.value.localeCompare(b.value);
+        }
 
         const subCategoryMatchA = !!subCategoryId && a.subCategoryIds.includes(subCategoryId);
         const subCategoryMatchB = !!subCategoryId && b.subCategoryIds.includes(subCategoryId);
@@ -831,8 +840,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const tagSuggestions = useMemo(() => {
     const excluded = new Set(tagList.map((tag) => tag.trim().toLowerCase()).filter(Boolean));
-    return getRankedSuggestions(suggestions.tags, tagInput, excluded);
-  }, [categoryId, subCategoryId, suggestions.tags, tagInput, tagList]);
+    return getRankedSuggestions(suggestions.tags, tagInput, excluded, 'recency');
+  }, [suggestions.tags, tagInput, tagList]);
 
   const SuggestionChips = ({
     items,
