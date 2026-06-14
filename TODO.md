@@ -2,6 +2,7 @@
 
 ## 通知與互動體驗
 
+- ✅ 偏好設定新增「Error Banner (Debug)」顯示／隱藏開關，控制畫面最上方錯誤訊息紅色區塊，預設隱藏；錯誤仍持續捕捉，開啟後可檢視累積的全域錯誤。（紀錄：[error-banner-toggle.md](docs/completed-references/error-banner-toggle.md)）
 - 🟡 抽出共用的通知文案與摘要組裝 helper，避免 toast 與頁內狀態訊息逐漸分歧。（計劃：[notification-message-helper.md](docs/todo-references/notification-message-helper.md)）
 - 🟡 擴充 `SettingsPage` 的 status type，不只保留 `success | error | idle`，讓離線提醒與預覽提醒可使用更清楚的 `info` 或 `warning` 語意。（計劃：[settings-status-types.md](docs/todo-references/settings-status-types.md)）
 - 🟡 改善全域 toast 元件，讓它能更穩定地承接稍長摘要，例如支援兩行換行或依訊息長度調整顯示時間。（計劃：[toast-resilience.md](docs/todo-references/toast-resilience.md)）

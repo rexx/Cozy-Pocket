@@ -128,7 +128,7 @@ this.version(1).stores({
 *   目前同步狀態包含：`pending`、`syncing`、`synced`、`error`。
 *   離線時新增／編輯／匯入資料仍會先落在 IndexedDB，並保持 `pending`，待恢復連線後補送。
 *   「同步狀態頁」中的交易時間會顯示完整日期與時間，方便跨天追查同步順序。
-*   同步失敗時，頂部錯誤列會顯示失敗交易 `id` 與錯誤摘要；「同步狀態頁」中的失敗交易會直接顯示 `lastSyncError` 詳細內容。
+*   同步失敗等錯誤會被持續捕捉；最上方的錯誤訊息紅色區塊（debug banner）預設隱藏，於偏好設定開啟後才會列出失敗交易 `id` 與錯誤摘要。無論開關狀態，「同步狀態頁」中的失敗交易都會直接顯示 `lastSyncError` 詳細內容。
 *   「同步狀態頁」預設會隱藏 `synced` 項目，讓使用者優先聚焦 `pending`、`syncing`、`error` 的資料；如有需要可在頁內切回顯示全部。
 *   「同步狀態頁」中的交易項目可直接點入既有編輯 modal，方便立即修正待同步或失敗資料。
 *   編輯交易時，畫面底部會顯示該筆交易的同步狀態；`pending` 可點擊左側時鐘圖示立即上傳，`error` 可點擊左側驚嘆號圖示重新上傳，`syncing` 與 `synced` 則維持狀態顯示。
@@ -145,6 +145,7 @@ this.version(1).stores({
 *   `首頁` 負責日期切換、每日交易列表，以及進入其他功能頁的入口。
 *   首頁上半部日曆支援週／月切換：月模式可左右滑動切換月份，週模式可左右滑動切換週次；下半部每日交易列表支援左右滑動切換前後日，與既有左右按鈕行為一致。
 *   首頁的左右導覽按鈕（上半日曆切週／月、下半交易列表切前後日）可在偏好設定一次隱藏，預設顯示；隱藏後左右滑動手勢仍可切換，週／月切換鈕與新增交易按鈕不受影響。
+*   最上方的錯誤訊息紅色區塊（debug banner，顯示捕捉到的 `window` 錯誤、未處理的 promise rejection 與各 CRUD／同步流程錯誤）可在偏好設定切換顯示／隱藏，預設隱藏；錯誤仍會在背景持續捕捉，開啟後即可檢視已累積的錯誤，並可按區塊內 `X` 清除。
 *   交易列表項目（`TransactionItem`，首頁、搜尋、統計、同步狀態共用）的 tag 以小型 pill 顯示在交易名稱右邊，不再附加於次要文字尾端；有 tag 時名稱最寬佔該列 65%（超過會截斷，保證 tag 可見），tag 則可使用剩餘空間、空間不足時才截斷；沒有 tag 時名稱照常使用整行寬度。
 *   `統計` 與 `資料與設定` 都是獨立頁面，不再是首頁上的小型浮層工具。
 *   共用頁面 header 使用與 PWA 外框一致的 `#1a1c2c`，並保留較短的上方留白，讓設定、同步狀態、搜尋、統計與交易 modal 在手機 PWA 上維持連續色面。
@@ -295,7 +296,7 @@ this.version(1).stores({
 *   `App.tsx` 以 `settings-preferences`、`settings-ai`、`settings-sync`、`settings-tags`、`settings-merchant`、`settings-import-export`、`settings-danger` 等 view 管理設定子頁導覽與 history state。
 *   `SettingsPage` 會依設定子頁顯示置中的頁面副標題，並用與入口圖示一致的背景 glow。設定子頁內容使用玻璃感功能子卡牌，不再額外包一層重複標題的外框卡牌。
 *   設定首頁與設定子頁標題／副標題共用 `components/settings/settingsSectionCopy.ts`，避免入口卡片與子頁文案分歧。
-*   `PreferencesSection` 會分成「Payment Method Display」、「Home Navigation Buttons」與「Currency Options」三張功能子卡牌；支付方式支援文字／圖示切換，首頁左右導覽按鈕支援顯示／隱藏切換（預設顯示），幣別清單預設直接展開。
+*   `PreferencesSection` 會分成「Payment Method Display」、「Home Navigation Buttons」、「Error Banner (Debug)」與「Currency Options」四張功能子卡牌；支付方式支援文字／圖示切換，首頁左右導覽按鈕支援顯示／隱藏切換（預設顯示），錯誤訊息紅色區塊支援顯示／隱藏切換（預設隱藏），幣別清單預設直接展開。
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
 *   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發與 status 訊息，避免子頁重複實作資料流程。

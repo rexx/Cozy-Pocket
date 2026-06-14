@@ -7,6 +7,9 @@ export const GEMINI_API_KEY_SETTING_KEY = 'geminiApiKey';
 export const HOME_NAV_ARROWS_VISIBLE_SETTING_KEY = 'homeNavArrowsVisible';
 export const DEFAULT_HOME_NAV_ARROWS_VISIBLE = true;
 
+export const ERROR_BANNER_VISIBLE_SETTING_KEY = 'errorBannerVisible';
+export const DEFAULT_ERROR_BANNER_VISIBLE = false;
+
 export const STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY = 'statsExcludedSubCategoryKeys';
 
 export const getPaymentMethodDisplayMode = (value: unknown): PaymentMethodDisplayMode => (
@@ -23,6 +26,12 @@ export const getGeminiApiKey = (value: unknown): string => (
 // legacy values) keeps them visible so the default stays "show".
 export const getHomeNavArrowsVisible = (value: unknown): boolean => (
   value === false ? false : DEFAULT_HOME_NAV_ARROWS_VISIBLE
+);
+
+// Only an explicit stored `true` shows the debug error banner; anything else
+// (unset, legacy values) keeps it hidden so the default stays "off".
+export const getErrorBannerVisible = (value: unknown): boolean => (
+  value === true ? true : DEFAULT_ERROR_BANNER_VISIBLE
 );
 
 const sanitizeSubCategoryExclusionKey = (value: unknown): string | null => {

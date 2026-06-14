@@ -21,7 +21,7 @@ import { getMonthTransactions, getStatsByCurrency } from './services/statsServic
 import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 import { showAutoDismissToast } from './services/dialogService';
-import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, getPaymentMethodDisplayMode, getHomeNavArrowsVisible } from './preferences';
+import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, ERROR_BANNER_VISIBLE_SETTING_KEY, getPaymentMethodDisplayMode, getHomeNavArrowsVisible, getErrorBannerVisible } from './preferences';
 
 type AppView =
   | 'home'
@@ -76,8 +76,8 @@ const getInitialCalendarViewMode = (): CalendarViewMode => {
   return storedValue === 'week' || storedValue === 'month' ? storedValue : 'month';
 };
 
-const ErrorDisplay: React.FC<{ errors: string[], onClear: () => void }> = ({ errors, onClear }) => {
-  if (errors.length === 0) return null;
+const ErrorDisplay: React.FC<{ enabled: boolean, errors: string[], onClear: () => void }> = ({ enabled, errors, onClear }) => {
+  if (!enabled || errors.length === 0) return null;
   return (
     <div className="fixed top-0 left-0 right-0 z-[9999] bg-red-600/95 text-white p-4 text-xs font-mono max-h-[40vh] overflow-y-auto shadow-2xl backdrop-blur-md">
       <div className="flex justify-between items-center mb-2 sticky top-0 bg-red-600 py-1">
@@ -204,6 +204,7 @@ const App: React.FC = () => {
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
   const [paymentMethodDisplayMode, setPaymentMethodDisplayMode] = useState<PaymentMethodDisplayMode>('text');
   const [homeNavArrowsVisible, setHomeNavArrowsVisible] = useState(true);
+  const [errorBannerVisible, setErrorBannerVisible] = useState(false);
   const [syncProgressUI, setSyncProgressUI] = useState<{
     visible: boolean;
     label: string;
@@ -261,6 +262,7 @@ const App: React.FC = () => {
         enabledCurrenciesSetting,
         paymentMethodDisplayModeSetting,
         homeNavArrowsVisibleSetting,
+        errorBannerVisibleSetting,
         syncApiUrlSetting,
         syncTokenSetting,
       ] = await Promise.all([
@@ -268,6 +270,7 @@ const App: React.FC = () => {
         db.settings.get('enabledCurrencies'),
         db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY),
         db.settings.get(HOME_NAV_ARROWS_VISIBLE_SETTING_KEY),
+        db.settings.get(ERROR_BANNER_VISIBLE_SETTING_KEY),
         db.settings.get('syncApiUrl'),
         db.settings.get('syncToken'),
       ]);
@@ -275,6 +278,7 @@ const App: React.FC = () => {
       setDefaultCurrency(getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies));
       setPaymentMethodDisplayMode(getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value));
       setHomeNavArrowsVisible(getHomeNavArrowsVisible(homeNavArrowsVisibleSetting?.value));
+      setErrorBannerVisible(getErrorBannerVisible(errorBannerVisibleSetting?.value));
       setIsSyncConfigured(Boolean((syncApiUrlSetting?.value || '').trim() && (syncTokenSetting?.value || '').trim()));
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `DB Load Error: ${err.message}`]);
@@ -371,21 +375,24 @@ const App: React.FC = () => {
             await db.transactions.bulkPut(normalized);
           }
         }
-        const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting, homeNavArrowsVisibleSetting] = await Promise.all([
+        const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting, homeNavArrowsVisibleSetting, errorBannerVisibleSetting] = await Promise.all([
           db.settings.get('defaultCurrency'),
           db.settings.get('enabledCurrencies'),
           db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY),
-          db.settings.get(HOME_NAV_ARROWS_VISIBLE_SETTING_KEY)
+          db.settings.get(HOME_NAV_ARROWS_VISIBLE_SETTING_KEY),
+          db.settings.get(ERROR_BANNER_VISIBLE_SETTING_KEY)
         ]);
         const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
         const safeDefaultCurrency = getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies);
         const safePaymentMethodDisplayMode = getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value);
         const safeHomeNavArrowsVisible = getHomeNavArrowsVisible(homeNavArrowsVisibleSetting?.value);
+        const safeErrorBannerVisible = getErrorBannerVisible(errorBannerVisibleSetting?.value);
         await db.settings.bulkPut([
           { key: 'enabledCurrencies', value: enabledCurrencies },
           { key: 'defaultCurrency', value: safeDefaultCurrency },
           { key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: safePaymentMethodDisplayMode },
-          { key: HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, value: safeHomeNavArrowsVisible }
+          { key: HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, value: safeHomeNavArrowsVisible },
+          { key: ERROR_BANNER_VISIBLE_SETTING_KEY, value: safeErrorBannerVisible }
         ]);
         await refreshData();
       } catch (err: any) {
@@ -1012,7 +1019,7 @@ const App: React.FC = () => {
   if (activeView === 'stats') {
     return (
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        <ErrorDisplay enabled={errorBannerVisible} errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
         <MonthlyStatsPage
           transactions={transactions}
@@ -1032,7 +1039,7 @@ const App: React.FC = () => {
   if (activeView === 'settings' || settingsSection) {
     return (
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        <ErrorDisplay enabled={errorBannerVisible} errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
         <SettingsPage
           section={settingsSection}
@@ -1054,6 +1061,8 @@ const App: React.FC = () => {
           onPaymentMethodDisplayModeChange={setPaymentMethodDisplayMode}
           homeNavArrowsVisible={homeNavArrowsVisible}
           onHomeNavArrowsVisibleChange={setHomeNavArrowsVisible}
+          errorBannerVisible={errorBannerVisible}
+          onErrorBannerVisibleChange={setErrorBannerVisible}
           tagSummaries={tagUsageSummaries}
           merchantSummaries={merchantUsageSummaries}
           onPreviewTagRename={previewTagRename}
@@ -1075,7 +1084,7 @@ const App: React.FC = () => {
   if (activeView === 'pull-reports') {
     return (
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        <ErrorDisplay enabled={errorBannerVisible} errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
         <PullReportsPage
           reports={pullReports}
@@ -1093,7 +1102,7 @@ const App: React.FC = () => {
   if (activeView === 'sync') {
     return (
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        <ErrorDisplay enabled={errorBannerVisible} errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
         <SyncStatusPage
           transactions={transactions}
@@ -1116,7 +1125,7 @@ const App: React.FC = () => {
   if (activeView === 'search') {
     return (
       <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-        <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+        <ErrorDisplay enabled={errorBannerVisible} errors={capturedErrors} onClear={clearErrors} />
         {toastMessage && <SuccessToast message={toastMessage} />}
         <SearchPage
           searchQuery={searchQuery}
@@ -1137,7 +1146,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full w-full bg-[#1a1c2c] overflow-hidden relative font-sans text-slate-200">
-      <ErrorDisplay errors={capturedErrors} onClear={clearErrors} />
+      <ErrorDisplay enabled={errorBannerVisible} errors={capturedErrors} onClear={clearErrors} />
       {toastMessage && <SuccessToast message={toastMessage} />}
       <HomePage
         selectedDate={selectedDate}
