@@ -131,7 +131,8 @@ const normalizeSuggestionValue = (value: string) => value.trim();
 
 const buildSuggestions = (
   transactions: Transaction[],
-  extractor: (tx: Transaction) => string[]
+  extractor: (tx: Transaction) => string[],
+  now: number
 ): SuggestionItem[] => {
   const map = new Map<string, SuggestionItem & {
     categoryIdSet: Set<string>;
@@ -144,17 +145,22 @@ const buildSuggestions = (
       const value = normalizeSuggestionValue(rawValue);
       if (!value) continue;
 
+      // Recency ranks by the latest time a value was actually used, so
+      // future-dated transactions must not count toward lastUsedAt.
+      // now and timestamps are normalized to epoch seconds before comparing.
+      const usedAt = toEpochSeconds(tx.timestamp) <= now ? tx.timestamp : 0;
+
       const existing = map.get(value);
       if (existing) {
         existing.count += 1;
-        existing.lastUsedAt = Math.max(existing.lastUsedAt, tx.timestamp);
+        existing.lastUsedAt = Math.max(existing.lastUsedAt, usedAt);
         if (tx.categoryId) existing.categoryIdSet.add(tx.categoryId);
         if (tx.subCategoryId) existing.subCategoryIdSet.add(tx.subCategoryId);
       } else {
         map.set(value, {
           value,
           count: 1,
-          lastUsedAt: tx.timestamp,
+          lastUsedAt: usedAt,
           categoryIds: tx.categoryId ? [tx.categoryId] : [],
           subCategoryIds: tx.subCategoryId ? [tx.subCategoryId] : [],
           categoryIdSet: new Set(tx.categoryId ? [tx.categoryId] : []),
@@ -178,12 +184,13 @@ const buildSuggestions = (
 };
 
 const buildSuggestionIndex = (transactions: Transaction[]): SuggestionIndex => {
+  const now = toEpochSeconds(Date.now());
   return {
-    merchants: buildSuggestions(transactions, (tx) => tx.merchant ? [tx.merchant] : []),
-    names: buildSuggestions(transactions, (tx) => tx.name ? [tx.name] : []),
+    merchants: buildSuggestions(transactions, (tx) => tx.merchant ? [tx.merchant] : [], now),
+    names: buildSuggestions(transactions, (tx) => tx.name ? [tx.name] : [], now),
     tags: buildSuggestions(transactions, (tx) => (
       splitTags(tx.tags)
-    )),
+    ), now),
   };
 };
 
