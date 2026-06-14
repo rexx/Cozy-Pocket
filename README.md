@@ -299,8 +299,10 @@ this.version(1).stores({
 *   `PreferencesSection` 會分成「Payment Method Display」、「Home Navigation Buttons」、「Error Banner (Debug)」與「Currency Options」四張功能子卡牌；支付方式支援文字／圖示切換，首頁左右導覽按鈕支援顯示／隱藏切換（預設顯示），錯誤訊息紅色區塊支援顯示／隱藏切換（預設隱藏），幣別清單預設直接展開。
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
-*   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出、同步觸發與 status 訊息，避免子頁重複實作資料流程。
-*   多數區段元件只負責 UI 與事件轉發，不直接操作資料庫或同步服務；`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。
+*   設定 container 仍集中管理 Dexie 讀寫、CSV 解析與匯入匯出、同步觸發等資料流程，並以 callback 提供給各設定子頁；不再保留共用的 status state 或底部統一的訊息渲染。
+*   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自以 `useState` 自管 inline status 訊息：偏好的幣別衝突、AI key 儲存、同步設定與年度雲端同步、匯入匯出、危險操作的成功／失敗都顯示在該子頁內，切換子頁時前一頁訊息隨子頁卸載而消失。
+*   設定子頁的 inline 回饋共用 `components/settings/SettingsFeedbackCard.tsx`（`SettingsFeedbackCard` 卡片 + 包裝 `SettingsStatus` 的 `SettingsStatusCard`），success／error／warning 對應綠／紅／黃樣式；`TagManagementSection` 與 `MerchantManagementSection` 的預覽卡與狀態卡也改用此共用元件。
+*   `SyncSection` 另外自管年度雲端同步 dialog 的開關、選取年份與送出 state（dialog markup 已移入該子頁）；`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。
 *   `TagManagementSection` 與 `MerchantManagementSection` 各自以 `useState` 持有選取的 tag／商家、新名稱輸入、預覽結果、送出狀態、相關交易與 inline status；container 只透過 props 傳入資料來源與 preview／rename／get-transactions／`onDataChange`／`onOpenSyncProgress` 等 callback，不再保留這兩條流程的 state 或 handler。
 *   這兩個更名子頁的選取與預覽 state 與「目前開啟的子頁」綁定；切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置為初始狀態（刻意行為）。
 *   匯入與匯出已整併在同一個 section 中；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。

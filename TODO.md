@@ -22,7 +22,7 @@
 
 - 🟡 拆解 `SettingsPage`：把 Tag / Merchant 更名 state 移進對應 Section、CSV 邏輯抽到 `services/csvService.ts`、Pull dialog 拉成獨立 component，讓 container 退回 routing/render switch 形狀。（計劃：[settings-page-decomposition.md](docs/todo-references/settings-page-decomposition.md)）
 - ✅ `TagManagementSection` 與 `MerchantManagementSection` 各自持有更名流程 state（選取、新名稱、預覽、送出、相關交易與 inline status），`SettingsPage` 只負責 routing 與 props 透傳；切換設定子頁再返回會重置選取與預覽。（紀錄：[section-owned-rename-state.md](docs/completed-references/section-owned-rename-state.md)）
-- 🟡 把 `SettingsPage` 共用的 `status` state 拆解到各 Section（偏好 / AI / 同步 / 匯入匯出 / 危險操作）自管，並抽出共用 `SettingsFeedbackCard`，移除 container 端 special-case 渲染。（計劃：[section-owned-status-state.md](docs/todo-references/section-owned-status-state.md)）
+- ✅ `SettingsPage` 共用的 `status` state 已拆解到各 Section（偏好 / AI / 同步 / 匯入匯出 / 危險操作）自管，並抽出共用 `SettingsFeedbackCard`；container 移除 `status`／`renderStatusMessage` 與 `section !== 'merchant'` special case，年度雲端同步 dialog 也移入 `SyncSection`。（紀錄：[section-owned-status-state.md](docs/completed-references/section-owned-status-state.md)）
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
 - ✅ 交易編輯頁面底部已顯示同步狀態，待同步與同步失敗交易可直接點左側狀態圖示觸發單筆上傳。（紀錄：[transaction-edit-sync-status-retry.md](docs/completed-references/transaction-edit-sync-status-retry.md)）

@@ -24,7 +24,7 @@
 
 - **加入 `onOpenSyncProgress`**（原清單未列）：同步部分失敗時的 inline status 帶有「查看同步狀態」action 按鈕，需要這個 callback 才能維持，否則該按鈕會消失。
 - **未加入 `onNotify`**（原清單有列）：更名流程從未呼叫 `onNotify`，加入會成為死 prop，故省略。
-- **保留底部 `renderStatusMessage` 的 `section !== 'merchant' && section !== 'tags'` 守衛**：移除會讓其他子頁殘留的 `SettingsPage.status` 洩漏到這兩個自管子頁底部。守衛由 [`section-owned-status-state.md`](../todo-references/section-owned-status-state.md)（Step 2）連同 `status` 一起拆。
+- **保留底部 `renderStatusMessage` 的 `section !== 'merchant' && section !== 'tags'` 守衛**：移除會讓其他子頁殘留的 `SettingsPage.status` 洩漏到這兩個自管子頁底部。此守衛已由 [`section-owned-status-state.md`](./section-owned-status-state.md)（Step 2）連同 `status` 與 `renderStatusMessage` 一起移除。
 
 ## 行為決定
 

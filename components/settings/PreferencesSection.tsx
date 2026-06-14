@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CreditCard, Eye, EyeOff, Type, type LucideIcon } from 'lucide-react';
 import { getCurrencyDisplay, SUPPORTED_CURRENCIES } from '../../constants';
 import { type PaymentMethodDisplayMode } from '../../types';
@@ -7,6 +7,8 @@ import SettingsSection, {
   sectionPanelClassName,
   sectionSelectClassName,
 } from './SettingsSection';
+import { idleStatus, type SettingsStatus } from './settingsStatus';
+import { SettingsStatusCard } from './SettingsFeedbackCard';
 
 interface PreferencesSectionProps {
   defaultCurrency: string;
@@ -19,6 +21,7 @@ interface PreferencesSectionProps {
   onPaymentMethodDisplayModeChange: (mode: PaymentMethodDisplayMode) => void;
   onHomeNavArrowsVisibleChange: (visible: boolean) => void;
   onErrorBannerVisibleChange: (visible: boolean) => void;
+  onNotify: (message: string) => void;
 }
 
 const PAYMENT_METHOD_DISPLAY_OPTIONS: Array<{
@@ -51,8 +54,37 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
   onPaymentMethodDisplayModeChange,
   onHomeNavArrowsVisibleChange,
   onErrorBannerVisibleChange,
+  onNotify,
 }) => {
+  const [status, setStatus] = useState<SettingsStatus>(idleStatus);
   const getCurrencyOptionLabel = (currency: string) => `${currency} (${getCurrencyDisplay(currency)})`;
+
+  const handleEnabledCurrencyToggle = (currency: string) => {
+    const isEnabled = enabledCurrencies.includes(currency);
+    if (isEnabled && enabledCurrencies.length === 1) {
+      const message = '至少要保留一個可用幣別';
+      setStatus({ type: 'error', message });
+      onNotify(message);
+      return;
+    }
+    setStatus(idleStatus);
+    onEnabledCurrencyToggle(currency);
+  };
+
+  const handlePaymentMethodDisplayModeChange = (mode: PaymentMethodDisplayMode) => {
+    setStatus(idleStatus);
+    onPaymentMethodDisplayModeChange(mode);
+  };
+
+  const handleHomeNavArrowsVisibleChange = (visible: boolean) => {
+    setStatus(idleStatus);
+    onHomeNavArrowsVisibleChange(visible);
+  };
+
+  const handleErrorBannerVisibleChange = (visible: boolean) => {
+    setStatus(idleStatus);
+    onErrorBannerVisibleChange(visible);
+  };
 
   return (
     <SettingsSection>
@@ -70,7 +102,7 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => onPaymentMethodDisplayModeChange(option.value)}
+                  onClick={() => handlePaymentMethodDisplayModeChange(option.value)}
                   aria-pressed={isActive}
                   className={`inline-flex h-10 items-center justify-center gap-2 rounded-[0.9rem] px-3 text-sm font-black transition-all ${
                     isActive
@@ -101,7 +133,7 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
                 <button
                   key={String(option.value)}
                   type="button"
-                  onClick={() => onHomeNavArrowsVisibleChange(option.value)}
+                  onClick={() => handleHomeNavArrowsVisibleChange(option.value)}
                   aria-pressed={isActive}
                   className={`inline-flex h-10 items-center justify-center gap-2 rounded-[0.9rem] px-3 text-sm font-black transition-all ${
                     isActive
@@ -132,7 +164,7 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
                 <button
                   key={String(option.value)}
                   type="button"
-                  onClick={() => onErrorBannerVisibleChange(option.value)}
+                  onClick={() => handleErrorBannerVisibleChange(option.value)}
                   aria-pressed={isActive}
                   className={`inline-flex h-10 items-center justify-center gap-2 rounded-[0.9rem] px-3 text-sm font-black transition-all ${
                     isActive
@@ -184,7 +216,7 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() => onEnabledCurrencyToggle(currency)}
+                    onChange={() => handleEnabledCurrencyToggle(currency)}
                     className="h-4 w-4 accent-cyan-400"
                   />
                   <span>{getCurrencyOptionLabel(currency)}</span>
@@ -195,6 +227,8 @@ const PreferencesSection: React.FC<PreferencesSectionProps> = ({
           <p className="text-xs text-slate-500">至少要保留一個幣別；未勾選的幣別不會出現在新增交易的循環切換中。</p>
         </div>
       </div>
+
+      <SettingsStatusCard status={status} />
     </SettingsSection>
   );
 };

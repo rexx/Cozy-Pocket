@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import { Transaction } from '../../types';
+import { confirmAction } from '../../services/dialogService';
 import SettingsSection, {
   sectionLabelClassName,
   sectionPanelClassName,
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
+import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
+import { SettingsStatusCard } from './SettingsFeedbackCard';
 
-interface ImportPreview {
+export interface ImportPreview {
   transactions: Transaction[];
   totalRows: number;
   validRows: number;
@@ -16,25 +19,147 @@ interface ImportPreview {
   duplicateInFileCount: number;
 }
 
+export interface ImportCommitResult {
+  skippedOffline: boolean;
+  failed: number;
+  total: number;
+  overwrittenCount: number;
+}
+
 interface ImportExportSectionProps {
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-  selectedImportFileName: string;
-  isParsingImportFile: boolean;
-  importPreview: ImportPreview | null;
-  onExportToCsv: () => void;
-  onImportFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onImportFromPreview: (mode: 'overwrite' | 'append') => void;
+  onExportToCsv: () => Promise<void>;
+  onParseImportFile: (file: File) => Promise<ImportPreview>;
+  onCommitImport: (transactions: Transaction[], mode: 'overwrite' | 'append') => Promise<ImportCommitResult>;
+  onOpenSyncProgress: () => void;
+  onNotify: (message: string) => void;
 }
 
 const ImportExportSection: React.FC<ImportExportSectionProps> = ({
-  fileInputRef,
-  selectedImportFileName,
-  isParsingImportFile,
-  importPreview,
   onExportToCsv,
-  onImportFileChange,
-  onImportFromPreview,
+  onParseImportFile,
+  onCommitImport,
+  onOpenSyncProgress,
+  onNotify,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<SettingsStatus>(idleStatus);
+  const [selectedImportFileName, setSelectedImportFileName] = useState('');
+  const [isParsingImportFile, setIsParsingImportFile] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const openSyncProgressAction: SettingsStatusAction = { label: '查看同步狀態', onClick: onOpenSyncProgress };
+
+  const handleExportToCsv = async () => {
+    try {
+      await onExportToCsv();
+      onNotify('匯出成功');
+      setStatus(idleStatus);
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `匯出失敗: ${err.message}` });
+    }
+  };
+
+  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setStatus(idleStatus);
+    setImportPreview(null);
+    setSelectedImportFileName(file?.name || '');
+    if (!file) return;
+
+    try {
+      setIsParsingImportFile(true);
+      const preview = await onParseImportFile(file);
+      setImportPreview(preview);
+      if (preview.validRows === 0) {
+        setStatus({ type: 'error', message: '預覽完成，但找不到可匯入的有效交易紀錄' });
+      } else {
+        setStatus(idleStatus);
+      }
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `檔案預覽失敗: ${err.message}` });
+    } finally {
+      setIsParsingImportFile(false);
+    }
+  };
+
+  const handleImportFromPreview = async (mode: 'overwrite' | 'append') => {
+    if (!importPreview || importPreview.validRows === 0) {
+      setStatus({ type: 'error', message: '請先選擇可匯入的 CSV 檔案並完成預覽' });
+      return;
+    }
+
+    if (mode === 'overwrite') {
+      const firstConfirm = await confirmAction({
+        title: '覆蓋匯入資料？',
+        text: `將覆蓋目前所有資料，並匯入 ${importPreview.validRows} 筆。確定要繼續嗎？`,
+        confirmButtonText: '繼續',
+        cancelButtonText: '取消',
+        tone: 'danger',
+      });
+      if (!firstConfirm) return;
+      const secondConfirm = await confirmAction({
+        title: '再次確認覆蓋匯入',
+        text: '此操作會先清空現有資料，且無法復原。確定要「完全覆蓋」嗎？',
+        confirmButtonText: '完全覆蓋',
+        cancelButtonText: '取消',
+        tone: 'danger',
+      });
+      if (!secondConfirm) return;
+    }
+
+    const hasDuplicateOverwriteRisk = (
+      (mode === 'append' && importPreview.duplicateWithExistingCount > 0) ||
+      importPreview.duplicateInFileCount > 0
+    );
+    if (hasDuplicateOverwriteRisk) {
+      const duplicateConfirm = await confirmAction({
+        title: '偵測到重複 ID',
+        text: `既有 ${importPreview.duplicateWithExistingCount} 筆、檔案內 ${importPreview.duplicateInFileCount} 筆，這些資料會被覆蓋。確定要匯入嗎？`,
+        confirmButtonText: '仍要匯入',
+        cancelButtonText: '取消',
+      });
+      if (!duplicateConfirm) return;
+    }
+    const finalConfirm = await confirmAction({
+      title: mode === 'overwrite' ? '執行覆寫匯入？' : '執行附加匯入？',
+      text: mode === 'overwrite'
+        ? `即將覆寫匯入 ${importPreview.validRows} 筆，確定執行？`
+        : `即將附加匯入 ${importPreview.validRows} 筆，確定執行？`,
+      confirmButtonText: '確認匯入',
+      cancelButtonText: '取消',
+      tone: mode === 'overwrite' ? 'danger' : 'default',
+    });
+    if (!finalConfirm) return;
+
+    try {
+      const { skippedOffline, failed, total, overwrittenCount } = await onCommitImport(importPreview.transactions, mode);
+      const importBaseMessage = (mode === 'append' && overwrittenCount > 0)
+        ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`
+        : `匯入成功 (${importPreview.validRows} 筆)`;
+      if (skippedOffline) {
+        onNotify(`匯入成功 (${importPreview.validRows} 筆)`);
+        setStatus({
+          type: 'success',
+          message: `${importBaseMessage}\n目前離線，待恢復連線後再同步`,
+        });
+      } else if (failed > 0) {
+        onNotify(`匯入完成，但有 ${failed} 筆同步失敗`);
+        setStatus({
+          type: 'error',
+          message: `${importBaseMessage}\n同步失敗 ${failed}/${total} 筆`,
+          action: openSyncProgressAction,
+        });
+      } else {
+        onNotify(importBaseMessage);
+        setStatus(idleStatus);
+      }
+      setImportPreview(null);
+      setSelectedImportFileName('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `匯入失敗: ${err.message}` });
+    }
+  };
+
   return (
     <SettingsSection>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -44,7 +169,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
             <p className="text-sm text-slate-300">將目前所有記帳紀錄匯出為 CSV。</p>
           </div>
           <div className="mt-auto">
-            <button type="button" onClick={onExportToCsv} className={`${sectionSecondaryButtonClassName} w-full`}>
+            <button type="button" onClick={() => void handleExportToCsv()} className={`${sectionSecondaryButtonClassName} w-full`}>
               <Download size={16} />
               匯出 CSV
             </button>
@@ -57,7 +182,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
             <p className="text-sm text-slate-300">選擇備份檔，先看預覽再決定如何匯入。</p>
           </div>
 
-          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={onImportFileChange} />
+          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => void handleImportFileChange(e)} />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -92,7 +217,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={() => onImportFromPreview('append')}
+                onClick={() => void handleImportFromPreview('append')}
                 className={sectionSecondaryButtonClassName}
               >
                 <Upload size={16} />
@@ -100,7 +225,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => onImportFromPreview('overwrite')}
+                onClick={() => void handleImportFromPreview('overwrite')}
                 className={sectionSecondaryButtonClassName}
               >
                 <Upload size={16} />
@@ -110,6 +235,8 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
           )}
         </div>
       </div>
+
+      <SettingsStatusCard status={status} />
     </SettingsSection>
   );
 };

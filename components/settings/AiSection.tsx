@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { KeyRound } from 'lucide-react';
 import SettingsSection, {
   sectionCyanButtonClassName,
@@ -6,13 +6,15 @@ import SettingsSection, {
   sectionLabelClassName,
   sectionPanelClassName,
 } from './SettingsSection';
+import { idleStatus, type SettingsStatus } from './settingsStatus';
+import { SettingsStatusCard } from './SettingsFeedbackCard';
 
 interface AiSectionProps {
   geminiApiKeyInput: string;
   hasGeminiApiKey: boolean;
   isOffline: boolean;
   onGeminiApiKeyInputChange: (value: string) => void;
-  onSaveGeminiApiKey: () => void;
+  onSaveGeminiApiKey: () => Promise<string>;
 }
 
 const AiSection: React.FC<AiSectionProps> = ({
@@ -22,6 +24,22 @@ const AiSection: React.FC<AiSectionProps> = ({
   onGeminiApiKeyInputChange,
   onSaveGeminiApiKey,
 }) => {
+  const [status, setStatus] = useState<SettingsStatus>(idleStatus);
+
+  const handleGeminiApiKeyInputChange = (value: string) => {
+    setStatus(idleStatus);
+    onGeminiApiKeyInputChange(value);
+  };
+
+  const handleSaveGeminiApiKey = async () => {
+    try {
+      const message = await onSaveGeminiApiKey();
+      setStatus({ type: 'success', message });
+    } catch (err: any) {
+      setStatus({ type: 'error', message: `AI 設定儲存失敗: ${err.message}` });
+    }
+  };
+
   return (
     <SettingsSection>
       <div className={sectionPanelClassName}>
@@ -31,13 +49,13 @@ const AiSection: React.FC<AiSectionProps> = ({
             <input
               type="password"
               value={geminiApiKeyInput}
-              onChange={(e) => onGeminiApiKeyInputChange(e.target.value)}
+              onChange={(e) => handleGeminiApiKeyInputChange(e.target.value)}
               placeholder="輸入 Gemini API key"
               className={sectionInputClassName}
             />
           </div>
           <div className="grid grid-cols-1 gap-3">
-            <button type="button" onClick={onSaveGeminiApiKey} className={sectionCyanButtonClassName}>
+            <button type="button" onClick={() => void handleSaveGeminiApiKey()} className={sectionCyanButtonClassName}>
               <KeyRound size={16} />
               儲存 AI 設定
             </button>
@@ -52,6 +70,7 @@ const AiSection: React.FC<AiSectionProps> = ({
           目前離線，AI 解析需要恢復網路後才能使用。
         </div>
       )}
+      <SettingsStatusCard status={status} />
     </SettingsSection>
   );
 };

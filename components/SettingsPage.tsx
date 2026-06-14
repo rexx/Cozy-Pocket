@@ -1,11 +1,9 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertOctagon,
-  AlertTriangle,
   ArrowLeft,
   ArrowUpDown,
-  CheckCircle2,
   ChevronRight,
   CloudUpload,
   Globe,
@@ -18,7 +16,7 @@ import { PaymentMethodDisplayMode, PullReport, Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
-import { SUPPORTED_CURRENCIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from '../constants';
+import { SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
 import { TagRenamePreview, TagUsageSummary } from '../services/tagService';
 import { MerchantRenamePreview, MerchantUsageSummary } from '../services/merchantService';
@@ -27,11 +25,9 @@ import AiSection from './settings/AiSection';
 import SyncSection from './settings/SyncSection';
 import TagManagementSection from './settings/TagManagementSection';
 import MerchantManagementSection from './settings/MerchantManagementSection';
-import ImportExportSection from './settings/ImportExportSection';
+import ImportExportSection, { type ImportCommitResult, type ImportPreview } from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
 import { SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
-import { idleStatus, type SettingsStatus } from './settings/settingsStatus';
-import { confirmAction } from '../services/dialogService';
 import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, ERROR_BANNER_VISIBLE_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
 export type SettingsSectionPage = keyof typeof SETTINGS_SECTION_COPY;
@@ -71,18 +67,6 @@ interface SettingsPageProps {
 }
 
 const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
-
-const HTML_ESCAPE_MAP: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-};
-
-const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch] || ch);
-const MOCK_SYNC_API_URL = 'mock://cloud-sync';
-const MOCK_SYNC_TOKEN = 'mock-token';
 
 const SECTION_GLOW_COLORS: Record<SettingsSectionPage | 'overview', string> = {
   overview: 'rgba(34,211,238,0.1)',
@@ -137,28 +121,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onGetMerchantTransactions,
   onMerchantTransactionClick,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<SettingsStatus>(idleStatus);
-  const openSyncProgressAction = { label: '查看同步狀態', onClick: onOpenSyncProgress };
   const [defaultCurrency, setDefaultCurrency] = useState('TWD');
   const [enabledCurrencies, setEnabledCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
   const [geminiApiKeyInput, setGeminiApiKeyInput] = useState('');
   const [hasGeminiApiKey, setHasGeminiApiKey] = useState(false);
   const [syncApiUrl, setSyncApiUrl] = useState('');
   const [syncToken, setSyncToken] = useState('');
-  const [selectedImportFileName, setSelectedImportFileName] = useState('');
-  const [isParsingImportFile, setIsParsingImportFile] = useState(false);
-  const [importPreview, setImportPreview] = useState<{
-    transactions: Transaction[];
-    totalRows: number;
-    validRows: number;
-    invalidRows: number;
-    duplicateWithExistingCount: number;
-    duplicateInFileCount: number;
-  } | null>(null);
-  const [isPullDialogOpen, setIsPullDialogOpen] = useState(false);
-  const [selectedPullYear, setSelectedPullYear] = useState('');
-  const [isPullSubmitting, setIsPullSubmitting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -179,19 +147,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     });
   }, []);
 
-  useEffect(() => {
-    if (pullYearOptions.length === 0) {
-      setSelectedPullYear('');
-      return;
-    }
-
-    setSelectedPullYear((current) => (
-      current && pullYearOptions.includes(current)
-        ? current
-        : pullYearOptions[0]
-    ));
-  }, [pullYearOptions]);
-
   const handleDefaultCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newVal = e.target.value;
     setDefaultCurrency(newVal);
@@ -201,12 +156,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handleEnabledCurrencyToggle = async (currency: string) => {
     const isEnabled = enabledCurrencies.includes(currency);
-    if (isEnabled && enabledCurrencies.length === 1) {
-      const message = '至少要保留一個可用幣別';
-      setStatus({ type: 'error', message });
-      onNotify(message);
-      return;
-    }
+    // Defensive invariant: never disable the last currency. The user-facing
+    // warning for this case lives in PreferencesSection.
+    if (isEnabled && enabledCurrencies.length === 1) return;
 
     const nextEnabledCurrencies = isEnabled
       ? enabledCurrencies.filter((item) => item !== currency)
@@ -215,7 +167,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
     setEnabledCurrencies(nextEnabledCurrencies);
     setDefaultCurrency(nextDefaultCurrency);
-    setStatus({ type: 'idle', message: '' });
 
     await db.settings.bulkPut([
       { key: 'enabledCurrencies', value: nextEnabledCurrencies },
@@ -225,184 +176,79 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   const handlePaymentMethodDisplayModeChange = async (mode: PaymentMethodDisplayMode) => {
-    setStatus({ type: 'idle', message: '' });
     onPaymentMethodDisplayModeChange(mode);
     await db.settings.put({ key: PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, value: mode });
     onDataChange();
   };
 
   const handleHomeNavArrowsVisibleChange = async (visible: boolean) => {
-    setStatus({ type: 'idle', message: '' });
     onHomeNavArrowsVisibleChange(visible);
     await db.settings.put({ key: HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, value: visible });
     onDataChange();
   };
 
   const handleErrorBannerVisibleChange = async (visible: boolean) => {
-    setStatus({ type: 'idle', message: '' });
     onErrorBannerVisibleChange(visible);
     await db.settings.put({ key: ERROR_BANNER_VISIBLE_SETTING_KEY, value: visible });
     onDataChange();
   };
 
-  const saveGeminiApiKey = async () => {
+  const saveGeminiApiKey = async (): Promise<string> => {
     const trimmedApiKey = geminiApiKeyInput.trim();
-    try {
-      if (trimmedApiKey) {
-        await db.settings.put({ key: GEMINI_API_KEY_SETTING_KEY, value: trimmedApiKey });
-      } else {
-        await db.settings.delete(GEMINI_API_KEY_SETTING_KEY);
-      }
-      setGeminiApiKeyInput(trimmedApiKey);
-      setHasGeminiApiKey(trimmedApiKey.length > 0);
-      const message = trimmedApiKey ? 'AI 設定已儲存' : 'AI 設定已清除';
-      setStatus({ type: 'success', message });
-      onNotify(message);
-      onDataChange();
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `AI 設定儲存失敗: ${err.message}` });
+    if (trimmedApiKey) {
+      await db.settings.put({ key: GEMINI_API_KEY_SETTING_KEY, value: trimmedApiKey });
+    } else {
+      await db.settings.delete(GEMINI_API_KEY_SETTING_KEY);
     }
+    setGeminiApiKeyInput(trimmedApiKey);
+    setHasGeminiApiKey(trimmedApiKey.length > 0);
+    const message = trimmedApiKey ? 'AI 設定已儲存' : 'AI 設定已清除';
+    onNotify(message);
+    onDataChange();
+    return message;
   };
 
-  const saveSyncConfig = async () => {
-    try {
-      await db.settings.bulkPut([
-        { key: 'syncApiUrl', value: syncApiUrl.trim() },
-        { key: 'syncToken', value: syncToken.trim() }
-      ]);
-      onDataChange();
-      const syncResult = await onTriggerSync('同步設定後立即同步');
-      if (syncResult.skippedOffline) {
-        onNotify('同步設定已儲存');
-        setStatus({
-          type: 'success',
-          message: '同步設定已儲存\n目前離線，待恢復連線後再同步',
-        });
-      } else if (syncResult.failed > 0) {
-        onNotify(`同步設定已儲存，但有 ${syncResult.failed} 筆同步失敗`);
-        setStatus({
-          type: 'error',
-          message: `同步設定已儲存\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
-          action: openSyncProgressAction,
-        });
-      } else {
-        onNotify('同步設定已儲存');
-        setStatus({ type: 'idle', message: '' });
-      }
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `同步設定儲存失敗: ${err.message}` });
-    }
+  const saveSyncConfig = async (): Promise<{ total: number; failed: number; skippedOffline: boolean }> => {
+    await db.settings.bulkPut([
+      { key: 'syncApiUrl', value: syncApiUrl.trim() },
+      { key: 'syncToken', value: syncToken.trim() }
+    ]);
+    onDataChange();
+    return onTriggerSync('同步設定後立即同步');
   };
 
-  const useMockSyncConfig = () => {
-    setSyncApiUrl(MOCK_SYNC_API_URL);
-    setSyncToken(MOCK_SYNC_TOKEN);
-    setStatus({
-      type: 'success',
-      message: '已填入 mock API 設定\n按「儲存同步設定」後即可使用本機 mock cloud 測試。',
-    });
-  };
+  const exportToCSV = async (): Promise<void> => {
+    const transactions = await db.transactions.toArray();
+    const csvContent = [
+      CSV_HEADERS.join(','),
+      ...transactions.map(t => [
+        t.id,
+        t.type,
+        t.amount,
+        t.currency || 'TWD',
+        t.categoryId,
+        t.subCategoryId || '',
+        t.name || '',
+        t.merchant || '',
+        t.note || '',
+        t.timestamp,
+        t.readableDateTime || formatReadableDateTime(t.timestamp),
+        t.paymentMethod,
+        t.tags || '',
+        t.updatedAt || '',
+        t.version || ''
+      ].map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
 
-  const openPullDialog = () => {
-    setStatus({ type: 'idle', message: '' });
-    setIsPullDialogOpen(true);
-  };
-
-  const closePullDialog = () => {
-    if (isPullSubmitting) return;
-    setIsPullDialogOpen(false);
-  };
-
-  const handlePullFromCloud = async () => {
-    if (!selectedPullYear) {
-      setStatus({ type: 'error', message: '請先選擇要同步的年份' });
-      return;
-    }
-
-    try {
-      setIsPullSubmitting(true);
-      setStatus({ type: 'idle', message: '' });
-      const { report } = await onPullFromCloud(selectedPullYear);
-      setIsPullDialogOpen(false);
-      onOpenPullReports(report.id);
-
-      if (report.status === 'failed') {
-        setStatus({
-          type: 'error',
-          message: `${report.year} 年年度雲端同步失敗\n${report.runError || '請稍後再試'}`,
-        });
-        return;
-      }
-
-      const summaryMessage = [
-        `雲端讀取 ${report.summary.fetched}`,
-        `雲端新增本機 ${report.summary.insertedFromCloud}`,
-        `雲端覆蓋本機 ${report.summary.updatedFromCloud}`,
-        `本機覆蓋雲端 ${report.summary.pushedLocalUpdateToCloud ?? 0}`,
-        `本機新增雲端 ${report.summary.insertedLocalOnlyToCloud ?? 0}`,
-        `未變更 ${report.summary.unchanged}`,
-        `失敗 ${report.summary.failed}`,
-      ].join(' / ');
-
-      if (report.status === 'partial') {
-        onNotify(`已完成 ${report.year} 年年度雲端同步，但有部分失敗`);
-        setStatus({
-          type: 'error',
-          message: `已完成 ${report.year} 年年度雲端同步，但有部分失敗\n${summaryMessage}`,
-        });
-        return;
-      }
-
-      onNotify(`已完成 ${report.year} 年年度雲端同步`);
-      setStatus({
-        type: 'success',
-        message: `已完成 ${report.year} 年年度雲端同步\n${summaryMessage}`,
-      });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: err.message || '年度雲端同步失敗' });
-    } finally {
-      setIsPullSubmitting(false);
-    }
-  };
-
-  const exportToCSV = async () => {
-    try {
-      const transactions = await db.transactions.toArray();
-      const csvContent = [
-        CSV_HEADERS.join(','),
-        ...transactions.map(t => [
-          t.id,
-          t.type,
-          t.amount,
-          t.currency || 'TWD',
-          t.categoryId,
-          t.subCategoryId || '',
-          t.name || '',
-          t.merchant || '',
-          t.note || '',
-          t.timestamp,
-          t.readableDateTime || formatReadableDateTime(t.timestamp),
-          t.paymentMethod,
-          t.tags || '',
-          t.updatedAt || '',
-          t.version || ''
-        ].map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
-      ].join('\n');
-
-      const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `cozy_pocket_backup_${format(new Date(), 'yyyyMMdd')}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      onNotify('匯出成功');
-      setStatus({ type: 'idle', message: '' });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `匯出失敗: ${err.message}` });
-    }
+    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `cozy_pocket_backup_${format(new Date(), 'yyyyMMdd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const splitCSVIntoRows = (text: string) => {
@@ -441,7 +287,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     return result;
   };
 
-  const parseTransactionsFromCSV = async (text: string) => {
+  const parseImportFile = async (file: File): Promise<ImportPreview> => {
+    const text = await file.text();
     if (!text) throw new Error('檔案內容為空');
     const lines = splitCSVIntoRows(text);
     if (lines.length < 2) throw new Error('檔案格式不正確或無資料');
@@ -490,219 +337,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     };
   };
 
-  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    setStatus({ type: 'idle', message: '' });
-    setImportPreview(null);
-    setSelectedImportFileName(file?.name || '');
-    if (!file) return;
-
-    try {
-      setIsParsingImportFile(true);
-      const text = await file.text();
-      const preview = await parseTransactionsFromCSV(text);
-      setImportPreview(preview);
-      if (preview.validRows === 0) {
-        setStatus({ type: 'error', message: '預覽完成，但找不到可匯入的有效交易紀錄' });
-      } else {
-        setStatus({ type: 'idle', message: '' });
-      }
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `檔案預覽失敗: ${err.message}` });
-    } finally {
-      setIsParsingImportFile(false);
+  const commitImport = async (
+    transactions: Transaction[],
+    mode: 'overwrite' | 'append'
+  ): Promise<ImportCommitResult> => {
+    let overwrittenCount = 0;
+    if (mode === 'append') {
+      const incomingIds = Array.from(new Set(transactions.map((tx) => tx.id)));
+      const existing = await db.transactions.bulkGet(incomingIds);
+      overwrittenCount = existing.filter(Boolean).length;
     }
+
+    if (mode === 'overwrite') await db.transactions.clear();
+    await db.transactions.bulkPut(transactions);
+    onDataChange();
+    const syncResult = await onTriggerSync('匯入後立即同步');
+    return { ...syncResult, overwrittenCount };
   };
 
-  const importFromPreview = async (mode: 'overwrite' | 'append') => {
-    if (!importPreview || importPreview.validRows === 0) {
-      setStatus({ type: 'error', message: '請先選擇可匯入的 CSV 檔案並完成預覽' });
-      return;
-    }
-
-    if (mode === 'overwrite') {
-      const firstConfirm = await confirmAction({
-        title: '覆蓋匯入資料？',
-        text: `將覆蓋目前所有資料，並匯入 ${importPreview.validRows} 筆。確定要繼續嗎？`,
-        confirmButtonText: '繼續',
-        cancelButtonText: '取消',
-        tone: 'danger',
-      });
-      if (!firstConfirm) return;
-      const secondConfirm = await confirmAction({
-        title: '再次確認覆蓋匯入',
-        text: '此操作會先清空現有資料，且無法復原。確定要「完全覆蓋」嗎？',
-        confirmButtonText: '完全覆蓋',
-        cancelButtonText: '取消',
-        tone: 'danger',
-      });
-      if (!secondConfirm) return;
-    }
-
-    const hasDuplicateOverwriteRisk = (
-      (mode === 'append' && importPreview.duplicateWithExistingCount > 0) ||
-      importPreview.duplicateInFileCount > 0
-    );
-    if (hasDuplicateOverwriteRisk) {
-      const duplicateConfirm = await confirmAction({
-        title: '偵測到重複 ID',
-        text: `既有 ${importPreview.duplicateWithExistingCount} 筆、檔案內 ${importPreview.duplicateInFileCount} 筆，這些資料會被覆蓋。確定要匯入嗎？`,
-        confirmButtonText: '仍要匯入',
-        cancelButtonText: '取消',
-      });
-      if (!duplicateConfirm) return;
-    }
-    const finalConfirm = await confirmAction({
-      title: mode === 'overwrite' ? '執行覆寫匯入？' : '執行附加匯入？',
-      text: mode === 'overwrite'
-        ? `即將覆寫匯入 ${importPreview.validRows} 筆，確定執行？`
-        : `即將附加匯入 ${importPreview.validRows} 筆，確定執行？`,
-      confirmButtonText: '確認匯入',
-      cancelButtonText: '取消',
-      tone: mode === 'overwrite' ? 'danger' : 'default',
-    });
-    if (!finalConfirm) return;
-
-    try {
-      let overwrittenCount = 0;
-      if (mode === 'append') {
-        const incomingIds = Array.from(new Set(importPreview.transactions.map((tx) => tx.id)));
-        const existing = await db.transactions.bulkGet(incomingIds);
-        overwrittenCount = existing.filter(Boolean).length;
-      }
-
-      if (mode === 'overwrite') await db.transactions.clear();
-      await db.transactions.bulkPut(importPreview.transactions);
-      onDataChange();
-      const syncResult = await onTriggerSync('匯入後立即同步');
-      const importBaseMessage = (mode === 'append' && overwrittenCount > 0)
-        ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`
-        : `匯入成功 (${importPreview.validRows} 筆)`;
-      if (syncResult.skippedOffline) {
-        onNotify(`匯入成功 (${importPreview.validRows} 筆)`);
-        setStatus({
-          type: 'success',
-          message: `${importBaseMessage}\n目前離線，待恢復連線後再同步`,
-        });
-      } else if (syncResult.failed > 0) {
-        onNotify(`匯入完成，但有 ${syncResult.failed} 筆同步失敗`);
-        setStatus({
-          type: 'error',
-          message: `${importBaseMessage}\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
-          action: openSyncProgressAction,
-        });
-      } else if (syncResult.total > 0) {
-        onNotify(importBaseMessage);
-        setStatus({ type: 'idle', message: '' });
-      } else {
-        onNotify(importBaseMessage);
-        setStatus({ type: 'idle', message: '' });
-      }
-      setImportPreview(null);
-      setSelectedImportFileName('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `匯入失敗: ${err.message}` });
-    }
-  };
-
-  const resetLocalData = async () => {
-    const confirmed = await confirmAction({
-      title: '重置本機資料？',
-      text: '這會清除 Local Storage 與 IndexedDB 的所有資料，且無法復原。',
-      confirmButtonText: '重置',
-      cancelButtonText: '取消',
-      tone: 'danger',
-    });
-    if (!confirmed) return;
-    try {
-      setStatus({ type: 'idle', message: '' });
-      localStorage.clear();
-      await db.delete();
-      setStatus({ type: 'success', message: '本機資料已清除，正在重新載入...' });
-      setTimeout(() => {
-        window.location.reload();
-      }, 400);
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `重置失敗: ${err.message}` });
-    }
-  };
-
-  const insertExamples = async () => {
-    const confirmed = await confirmAction({
-      title: '插入範例資料？',
-      text: '這會加入多筆預設範例交易，方便驗證畫面或 demo。',
-      confirmButtonText: '插入',
-      cancelButtonText: '取消',
-      tone: 'default',
-    });
-    if (!confirmed) return;
-
-    try {
-      const count = await onInsertExamples();
-      onDataChange();
-      onNotify(`已插入範例資料 (${count} 筆)`);
-      setStatus({ type: 'idle', message: '' });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `插入範例資料失敗: ${err.message}` });
-    }
-  };
-
-  const deleteExamples = async () => {
-    let candidates: Transaction[];
-    try {
-      candidates = await onPreviewDeleteExamples();
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `預覽範例資料失敗: ${err.message}` });
-      return;
-    }
-
-    if (candidates.length === 0) {
-      onNotify('目前沒有範例資料可刪除');
-      setStatus({ type: 'idle', message: '' });
-      return;
-    }
-
-    const previewItems = [...candidates]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .map((tx) => {
-        const label = tx.merchant?.trim() || tx.name?.trim() || '未命名';
-        const dateLabel = tx.readableDateTime?.trim()
-          || format(new Date(tx.timestamp * 1000), 'yyyy-MM-dd HH:mm');
-        const amountLabel = formatCurrencyAmount(tx.amount, tx.currency || 'TWD');
-        const sign = tx.type === '支出' ? '-' : '+';
-        return `<li class="flex justify-between gap-3"><span class="truncate text-slate-200">${escapeHtml(dateLabel)} · ${escapeHtml(label)}</span><span class="font-mono text-slate-300">${sign}${escapeHtml(amountLabel)}</span></li>`;
-      })
-      .join('');
-    const previewHtml = `
-      <div class="space-y-2 text-sm">
-        <p class="text-slate-300">將刪除 <span class="font-black text-white">${candidates.length}</span> 筆 id 以 <code class="rounded bg-white/10 px-1 py-0.5 text-xs">sample-tx-</code> 開頭的範例交易：</p>
-        <ul class="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-3">${previewItems}</ul>
-        <p class="text-xs text-slate-400">此操作只會刪除 id 具有範例資料 prefix 的交易，不會影響你自己建立的紀錄。</p>
-      </div>
-    `;
-
-    const confirmed = await confirmAction({
-      title: '刪除範例資料？',
-      html: previewHtml,
-      confirmButtonText: '刪除範例',
-      cancelButtonText: '取消',
-      tone: 'danger',
-    });
-    if (!confirmed) return;
-
-    try {
-      const removed = await onDeleteExamples(candidates.map((tx) => tx.id));
-      onDataChange();
-      if (removed === 0) {
-        onNotify('沒有可刪除的範例資料');
-      } else {
-        onNotify(`已刪除範例資料 (${removed} 筆)`);
-      }
-      setStatus({ type: 'idle', message: '' });
-    } catch (err: any) {
-      setStatus({ type: 'error', message: `刪除範例資料失敗: ${err.message}` });
-    }
+  const resetLocalData = async (): Promise<void> => {
+    localStorage.clear();
+    await db.delete();
   };
 
   const pageTitle = section ? SETTINGS_SECTION_COPY[section].title : '資料與設定';
@@ -754,7 +409,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       section: 'import-export',
       title: SETTINGS_SECTION_COPY['import-export'].title,
       description: SETTINGS_SECTION_COPY['import-export'].description,
-      meta: selectedImportFileName || 'CSV 備份與匯入',
+      meta: 'CSV 備份與匯入',
       icon: ArrowUpDown,
       accentClassName: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
     },
@@ -767,36 +422,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       accentClassName: 'border-red-400/20 bg-red-500/12 text-red-200',
     },
   ];
-
-  const renderStatusMessage = () => {
-    if (status.type === 'idle') return null;
-
-    const toneClassName = status.type === 'success'
-      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-      : 'border-red-500/20 bg-red-500/10 text-red-300';
-    const actionToneClassName = status.type === 'success'
-      ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25'
-      : 'border-red-400/30 bg-red-500/15 text-red-100 hover:bg-red-500/25';
-
-    return (
-      <div className={`flex flex-col gap-3 rounded-2xl border p-4 animate-slide-up sm:flex-row sm:items-center sm:justify-between ${toneClassName}`}>
-        <div className="flex items-center gap-3">
-          {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
-          <span className="text-sm font-bold whitespace-pre-line">{status.message}</span>
-        </div>
-        {status.action && (
-          <button
-            type="button"
-            onClick={status.action.onClick}
-            className={`inline-flex shrink-0 items-center justify-center gap-2 self-stretch rounded-2xl border px-4 py-2 text-xs font-black transition-colors sm:self-auto ${actionToneClassName}`}
-          >
-            <CloudUpload size={14} />
-            {status.action.label}
-          </button>
-        )}
-      </div>
-    );
-  };
 
   const renderOverview = () => (
     <>
@@ -846,6 +471,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onPaymentMethodDisplayModeChange={(mode) => void handlePaymentMethodDisplayModeChange(mode)}
             onHomeNavArrowsVisibleChange={(visible) => void handleHomeNavArrowsVisibleChange(visible)}
             onErrorBannerVisibleChange={(visible) => void handleErrorBannerVisibleChange(visible)}
+            onNotify={onNotify}
           />
         );
       case 'ai':
@@ -854,11 +480,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             geminiApiKeyInput={geminiApiKeyInput}
             hasGeminiApiKey={hasGeminiApiKey}
             isOffline={isOffline}
-            onGeminiApiKeyInputChange={(value) => {
-              setGeminiApiKeyInput(value);
-              setStatus({ type: 'idle', message: '' });
-            }}
-            onSaveGeminiApiKey={() => void saveGeminiApiKey()}
+            onGeminiApiKeyInputChange={setGeminiApiKeyInput}
+            onSaveGeminiApiKey={saveGeminiApiKey}
           />
         );
       case 'sync':
@@ -868,11 +491,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             syncToken={syncToken}
             setSyncApiUrl={setSyncApiUrl}
             setSyncToken={setSyncToken}
-            onSaveSyncConfig={() => void saveSyncConfig()}
+            onSaveSyncConfig={saveSyncConfig}
             onOpenSyncProgress={onOpenSyncProgress}
-            onOpenPullDialog={openPullDialog}
             onOpenPullReports={onOpenPullReports}
-            onUseMockSyncConfig={useMockSyncConfig}
+            onPullFromCloud={onPullFromCloud}
+            pullYearOptions={pullYearOptions}
+            onNotify={onNotify}
             isOffline={isOffline}
           />
         );
@@ -905,21 +529,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       case 'import-export':
         return (
           <ImportExportSection
-            fileInputRef={fileInputRef}
-            selectedImportFileName={selectedImportFileName}
-            isParsingImportFile={isParsingImportFile}
-            importPreview={importPreview}
-            onExportToCsv={() => void exportToCSV()}
-            onImportFileChange={(e) => void handleImportFileChange(e)}
-            onImportFromPreview={(mode) => void importFromPreview(mode)}
+            onExportToCsv={exportToCSV}
+            onParseImportFile={parseImportFile}
+            onCommitImport={commitImport}
+            onOpenSyncProgress={onOpenSyncProgress}
+            onNotify={onNotify}
           />
         );
       case 'danger':
         return (
           <DangerZoneSection
-            onResetLocalData={() => void resetLocalData()}
-            onInsertExamples={() => void insertExamples()}
-            onDeleteExamples={() => void deleteExamples()}
+            onResetLocalData={resetLocalData}
+            onInsertExamples={onInsertExamples}
+            onPreviewDeleteExamples={onPreviewDeleteExamples}
+            onDeleteExamples={onDeleteExamples}
+            onDataChange={onDataChange}
+            onNotify={onNotify}
           />
         );
       default:
@@ -948,58 +573,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             </p>
           )}
           {renderSection()}
-          {section !== 'merchant' && section !== 'tags' && renderStatusMessage()}
           <p className="pt-6 text-center text-[10px] font-bold uppercase tracking-[0.4em] text-gray-700 opacity-15">
             Cozy Pocket • Minimalism
           </p>
         </div>
       </div>
-
-      {isPullDialogOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 px-4">
-          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#171a29] p-6 shadow-2xl">
-            <h2 className="text-lg font-black text-white">年度雲端同步</h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-300">
-              一次只處理單一年份。系統會先讀取該年份雲端資料，再依 version 與 updatedAt 自動判斷要更新本機或回推雲端，並留下完整同步報告。
-            </p>
-
-            <div className="mt-5 space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                選擇年份
-              </label>
-              <select
-                value={selectedPullYear}
-                onChange={(e) => setSelectedPullYear(e.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-[#0f1321] px-3 py-3 text-sm font-bold text-white outline-none"
-              >
-                {pullYearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={closePullDialog}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black text-slate-100"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={() => void handlePullFromCloud()}
-                disabled={isPullSubmitting || !selectedPullYear}
-                className="rounded-2xl border border-cyan-400/25 bg-cyan-500/15 px-4 py-3 text-sm font-black text-cyan-200 disabled:opacity-40"
-              >
-                {isPullSubmitting ? '處理中...' : '開始同步'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

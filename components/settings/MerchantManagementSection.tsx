@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CloudUpload, Eye, LoaderCircle, PencilLine, Search, X } from 'lucide-react';
+import { CheckCircle2, Eye, LoaderCircle, PencilLine, Search, X } from 'lucide-react';
 import { PaymentMethodDisplayMode, Transaction } from '../../types';
 import { MerchantRenamePreview, MerchantUsageSummary, normalizeMerchantName } from '../../services/merchantService';
 import TransactionItem from '../TransactionItem';
@@ -12,22 +12,9 @@ import SettingsSection, {
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
 import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
+import SettingsFeedbackCard, { SettingsStatusCard } from './SettingsFeedbackCard';
 
 const MERCHANT_PAGE_SIZE = 200;
-
-type MerchantFeedbackTone = 'error' | 'success' | 'warning';
-
-const merchantFeedbackCardClassName: Record<MerchantFeedbackTone, string> = {
-  error: 'border-red-500/20 bg-red-500/10 text-red-200',
-  success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
-  warning: 'border-amber-400/20 bg-amber-500/10 text-slate-200',
-};
-
-const merchantFeedbackTitleClassName: Record<MerchantFeedbackTone, string> = {
-  error: 'text-red-200',
-  success: 'text-emerald-200',
-  warning: 'text-amber-300',
-};
 
 interface MerchantManagementSectionProps {
   merchantSummaries: MerchantUsageSummary[];
@@ -39,36 +26,6 @@ interface MerchantManagementSectionProps {
   onDataChange: () => void;
   onOpenSyncProgress: () => void;
 }
-
-const merchantFeedbackActionClassName: Record<MerchantFeedbackTone, string> = {
-  error: 'border-red-400/30 bg-red-500/15 text-red-100 hover:bg-red-500/25',
-  success: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25',
-  warning: 'border-amber-400/30 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25',
-};
-
-const MerchantFeedbackCard: React.FC<{
-  children: React.ReactNode;
-  title?: string;
-  tone: MerchantFeedbackTone;
-  action?: SettingsStatusAction;
-}> = ({ children, title, tone, action }) => (
-  <div className={`rounded-2xl border px-4 py-3 text-xs ${merchantFeedbackCardClassName[tone]}`}>
-    {title && <p className={`font-black ${merchantFeedbackTitleClassName[tone]}`}>{title}</p>}
-    <div className={title ? 'mt-1 space-y-1' : 'space-y-1'}>
-      {children}
-    </div>
-    {action && (
-      <button
-        type="button"
-        onClick={action.onClick}
-        className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2 text-xs font-black transition-colors sm:w-auto ${merchantFeedbackActionClassName[tone]}`}
-      >
-        <CloudUpload size={14} />
-        {action.label}
-      </button>
-    )}
-  </div>
-);
 
 const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   merchantSummaries,
@@ -263,11 +220,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
     }
   };
 
-  const statusMessage = status.type !== 'idle' ? (
-    <MerchantFeedbackCard tone={status.type} action={status.action}>
-      <p className="text-sm font-bold whitespace-pre-line">{status.message}</p>
-    </MerchantFeedbackCard>
-  ) : null;
+  const statusMessage = status.type !== 'idle' ? <SettingsStatusCard status={status} /> : null;
   const renameFeedbackMessage = !merchantRenamePreview && status.type !== 'idle' ? statusMessage : null;
   const resultStatusMessage = !selectedMerchantToRename && status.type !== 'idle'
     ? statusMessage
@@ -401,7 +354,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
               </div>
 
               {merchantRenamePreview && (
-                <MerchantFeedbackCard title="更名預覽" tone="warning">
+                <SettingsFeedbackCard title="更名預覽" tone="warning">
                   <p>{merchantRenamePreview.oldMerchant} → {merchantRenamePreview.newMerchant}</p>
                   <p className="text-emerald-300">預計影響：{merchantRenamePreview.affectedCount} 筆交易</p>
                   {merchantRenamePreview.normalizedInput !== renamedMerchantInput.trim() && (
@@ -412,7 +365,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
                       提醒：{merchantRenamePreview.newMerchant} 已存在；確認後會合併到既有商家，不會新增重複商家。
                     </p>
                   )}
-                </MerchantFeedbackCard>
+                </SettingsFeedbackCard>
               )}
               {renameFeedbackMessage}
 

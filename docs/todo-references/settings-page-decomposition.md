@@ -26,11 +26,11 @@
 
 `TagManagementSection` / `MerchantManagementSection` 已各自以 `useState` 持有 `selected*ToRename`、`renamed*Input`、`*RenamePreview`、`isPreviewLoading`、`isSubmitting`、`*Transactions`、`isTransactionsLoading` 與 inline status，連同失效檢查與載入相關交易的兩個 useEffect、四個 handler 一併移入；`SettingsPage` 對這兩條子頁只剩 props 透傳（資料來源 + preview／rename／get-transactions／`onDataChange`／`onOpenSyncProgress`）。切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置，已驗證為刻意行為。底部 `renderStatusMessage` 的 `section !== 'merchant' && section !== 'tags'` 守衛保留，由 Step 2 連同 `status` 一起拆。
 
-### 2. 把共用 status state 拆解到各 Section
+### 2. 把共用 status state 拆解到各 Section ✅ 已完成
 
-> 已拆出獨立 focused TODO：[`section-owned-status-state.md`](./section-owned-status-state.md)。
+> 完成紀錄：[`section-owned-status-state.md`](../completed-references/section-owned-status-state.md)。
 
-Step 1 處理完 Tag / Merchant 後，剩下的 `status` 寫入仍分布在偏好 / AI / 同步 / 匯入匯出 / 危險操作。實測 61 處 `setStatus` 全部跟單一 Section 的 handler 一對一耦合，沒有跨 Section 的共用情境，因此選擇直接讓各 Section 自管 status 而非另外抽 hook，並把 `MerchantFeedbackCard` 改成共用 `SettingsFeedbackCard`。`SettingsPage` 完成後移除 `status`、`renderStatusMessage` 與 `section !== 'merchant'` 的 special case。
+偏好 / AI / 同步 / 匯入匯出 / 危險操作各自以 `useState<SettingsStatus>` 自管 inline status，`MerchantFeedbackCard`／`TagFeedbackCard` 統一成共用 `components/settings/SettingsFeedbackCard.tsx`（含包裝 `SettingsStatus` 的 `SettingsStatusCard`）。`SettingsPage` 移除 `status`／`setStatus`／`renderStatusMessage` 與 `section !== 'merchant'` special case，資料層 handler 改成回傳結果的 callback（parse／commit／export／saveSync 等），由各 Section 依結果寫自己的 status。年度雲端同步 dialog 連同其 state 一併移入 `SyncSection` 暫管，待 Step 4 再進一步拉成獨立 `PullYearDialog`；CSV 解析與 db 寫入仍留在 container（Step 3）。
 
 排在 CSV / PullDialog 之前的原因：先把「容器只有 routing / render switch」的形狀做出來，再往各 Section 內部擠複雜邏輯（Step 3 / 4），review 比較容易讀。
 
