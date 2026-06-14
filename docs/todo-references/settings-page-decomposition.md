@@ -2,17 +2,17 @@
 
 ## 現況
 
-`components/SettingsPage.tsx` 在收編商家管理為設定子頁後已成長到約 1168 行，與 `App.tsx`、`AddTransactionModal.tsx`、`cloudSyncService.ts` 同列「known debt」量級。它同時承擔：
+Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `SettingsFeedbackCard`）已完成並上線。`components/SettingsPage.tsx` 已從收編商家管理後的約 1168 行降到約 585 行，container 目前只剩：
 
-- 設定首頁 / 七個設定子頁 routing 與 render switch
-- Currency / payment-method-display / Gemini API key / 同步設定 db 讀寫與儲存
-- Tag 更名與商家更名兩條完整流程的 state、effects、handlers
-- CSV 匯入解析、匯出、覆寫/附加流程
-- 年度雲端同步的 Pull dialog markup 與互動 state
-- 共用 status 訊息（成功 / 錯誤 / idle）與底部渲染
-- 重置本機資料與插入範例資料
+- 設定首頁 / 七個設定子頁的 routing、overview 卡片與 render switch
+- 跨子頁共用的資料 state：`defaultCurrency`、`enabledCurrencies`、`geminiApiKeyInput`／`hasGeminiApiKey`、`syncApiUrl`／`syncToken`，以及啟動時一次性載入這些設定的 `useEffect`
+- CSV 解析（`splitCSVIntoRows` / `parseCSVLine` / `parseImportFile`）、匯出（`exportToCSV`）、覆寫/附加提交（`commitImport`）等資料層 helper，以 callback 提供給 `ImportExportSection`
+- 偏好幣別 / 付款方式 / 首頁箭頭 / error banner / Gemini key / 同步設定的 db 寫入 handler，以 callback 提供給對應子頁
+- 重置本機資料（`resetLocalData`）callback
 
-每新增一個有更名／預覽流程的設定子頁，會多約 100 行（7 個 state + 2 個 useEffect + 4 個 handler + render 分支）。照此速度增加，下一個子頁會把檔案推到 1300 行以上。
+已不再由 container 持有的部分：Tag / Merchant 更名流程的所有 state 與 handler（→ 各自 Section）、共用 `status` state 與底部 `renderStatusMessage`（→ 各 Section 自管 + `SettingsFeedbackCard`）、年度雲端同步 Pull dialog 的 state 與 markup（→ `SyncSection`），`section !== 'merchant'` 之類的 special-case 渲染也已移除。
+
+剩下尚未拆的兩塊：Step 3（CSV 解析仍夾在 container，~120 行純資料邏輯）與 Step 4（Pull dialog 目前內嵌在 `SyncSection`，尚未拉成獨立 component）。
 
 ## 收斂目標
 
@@ -45,20 +45,21 @@
 
 預估去除：~150 行。
 
-### 4. 把年度雲端同步 Pull dialog 拉成獨立 component
+### 4. 把年度雲端同步 Pull dialog 從 `SyncSection` 拉成獨立 component
 
-`PullYearDialog` 對應目前 `isPullDialogOpen`、`selectedPullYear`、`isPullSubmitting` 三個 state 與一段 dialog markup。它跟 `SyncSection` 較相關，不該住在 `SettingsPage` 通用容器層。
+Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmitting` 三個 state、同步 `pullYearOptions` 的 useEffect、dialog markup 與 `handlePullFromCloud` 一併從 `SettingsPage` 移入 `SyncSection` 暫管。Step 4 是把這段再從 `SyncSection` 抽成獨立的 `components/settings/PullYearDialog.tsx`，讓 `SyncSection` 回到「同步設定表單 + 入口按鈕」的單純形狀。
 
 實作方向：
-- 新增 `components/settings/PullYearDialog.tsx`，自己管 open / submitting / 選年份 state。
-- `SyncSection` 控制是否顯示 dialog；report 結果回流由 `onPullFromCloud`（保留在 `App.tsx`）處理。
+- 新增 `components/settings/PullYearDialog.tsx`，自己管 open / submitting / 選年份 state（從 `SyncSection` 平移過去）。
+- `SyncSection` 只控制是否顯示 dialog；report 結果回流由 `onPullFromCloud`（保留在 `App.tsx`）處理。
+- dialog 自身的成功 / 部分失敗 / 失敗 status 可一併歸 `PullYearDialog`（仍用共用 `SettingsStatusCard`），或維持由 `SyncSection` 顯示。
 
-預估去除：~80 行。
+預估從 `SyncSection` 移出：~80 行。
 
 ## 與既有程式碼的關係
 
 - `App.tsx` 仍是資料 / 服務 / 同步 orchestrator，不會被本計劃拉胖。它只需要持續對外提供 `onPreviewTagRename` / `onRenameTag` / `onGetTagTransactions` / `onPreviewMerchantRename` / `onRenameMerchant` / `onGetMerchantTransactions` / `onTriggerSync` / `onPullFromCloud` 等 callback。
-- `MerchantManagementSection` / `TagManagementSection` 既有的 UI（`MerchantFeedbackCard`、preview 卡、相關交易列表）不需重作；只是把 state 從 props 改成內部 useState。
+- `MerchantManagementSection` / `TagManagementSection` 既有的 UI（共用 `SettingsFeedbackCard`、preview 卡、相關交易列表）不需重作；Step 1 / 2 已把 state 從 props 改成內部 useState 並改用共用卡片。
 - 各 Section 維持「不直接碰 db / cloudSyncService」的紀律，仍透過 callback 觸發資料層動作。
 
 ## 驗證計劃
@@ -69,7 +70,18 @@
 - 匯入：覆寫 / 附加 / 重複 ID 偵測 / 偵測到重複後的二次確認流程。
 - 年度雲端同步：成功 / 部分失敗 / 失敗的 status 訊息與報告跳轉。
 
-## 暫緩原因
+## 後續建議
 
-- 商家管理子頁化（`merchant-management-settings-subpage.md`）剛完成，先讓近期變動穩定再動 container 結構。
-- 拆解 Section state 會碰到所有 *Section 元件，建議分數個 PR，每個 PR 只動一個 Section 與對應 SettingsPage 配線，避免一次大型 review。
+- **下一步做 Step 3（CSV → service）**：收益最大（~120–150 行純資料邏輯離開 UI 層、可單元測試），且風險低——`ImportExportSection` 已自管 `importPreview` 與 status，只要把 `parseImportFile` / `commitImport` 內的 CSV 解析與 db 寫入搬到 `services/csvService.ts`，container 端的 `splitCSVIntoRows` / `parseCSVLine` / `parseImportFile` / `exportToCSV` 即可整段移除，`SettingsPage` 再瘦一截。
+- **Step 4（PullYearDialog）可獨立進行**：與 Step 3 無相依、規模較小（~80 行），主要是把已在 `SyncSection` 內的 dialog 平移到獨立 component；可排在 Step 3 之後或穿插。
+- **維持「一個 PR 一個 Section」的節奏**：每個 PR 只動一個 Section 與對應的 `SettingsPage` 配線，沿用 Step 1 / 2 的小步快跑 + `npm run build` + cmux 瀏覽器驗證流程，避免一次大型 review。
+- **完成 Step 3 / 4 後的預期**：`SettingsPage` 落在收斂目標的 ~500 行上下，只剩 routing / overview / render switch 與少量跨子頁資料 state；屆時本計劃整份移到 `docs/completed-references/`。
+- **開工前先 rebase 最新 main**：近期 main 有並行 commit（如 error-banner toggle）直接改過 `SettingsPage` / `PreferencesSection`，後續步驟動工前先對齊最新 main，縮小 container 層的衝突面。
+
+### 更遠的優化（超出本計劃範圍）
+
+完成 Step 3 / 4 後 container 仍會留著跨子頁的設定資料 state（`defaultCurrency`／`enabledCurrencies`／`geminiApiKeyInput`／`syncApiUrl`／`syncToken`）+ 載入 `useEffect`，以及偏好 / AI / 同步的 db 寫入 handler（`handleEnabledCurrencyToggle`、`saveGeminiApiKey`、`saveSyncConfig`…）。以下三點客觀上仍可再優化，但不屬於「SettingsPage 拆解」這份計劃（尤其第 3 點會碰 `App.tsx`，本計劃刻意把 App orchestrator 排除在外），列為未來 TODO 的線索：
+
+1. **把設定資料 state + db handler 抽成 hook**（如 `useSettingsData`）：container 再瘦一截、logic 可獨立測試，風險低。屬於 Step 1–4 同一條紀律（container／hook 管 db、Section 管 UI）的自然延伸。
+2. **讓 `PreferencesSection` / `AiSection` / `SyncSection` 也自管自己的持久化設定**（比照 Tag / Merchant 自管 rename state），container 變成幾乎純 routing。需先決定如何維持「Section 不直接碰 db」的紀律——改用 data-access hook 注入，或明確放寬該紀律，是個設計取捨。
+3. **消除 `App.tsx` ↔ `SettingsPage` 的設定 state 重複載入**：目前兩者各自從 `db.settings` 載入 currency / payment-method / home-nav / error-banner，是兩份 source of truth。抽一個 settings service / context 統一可去掉 dual-load，但會動到 `App.tsx`，屬於另一個更大的 refactor，宜獨立立項。
