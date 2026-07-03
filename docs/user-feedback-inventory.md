@@ -1,6 +1,6 @@
 # 使用者回饋與對話框盤點
 
-本文盤點目前 app 內所有主要使用者回饋機制，包含原本使用瀏覽器原生 `alert()` / `confirm()` 的地方、目前改用 `sweetalert2` 的確認對話框、toast、頁內 status、inline error、同步狀態與全域錯誤面板。範圍以 `modal-validation-swal2` worktree 為準，原始 `alert()` / `confirm()` 使用點則對照此 worktree 的 `HEAD`。
+本文盤點目前 app 內所有主要使用者回饋機制，包含原本使用瀏覽器原生 `alert()` / `confirm()` 的地方、目前改用 `sweetalert2` 的確認對話框、toast、頁內 status、inline error、同步狀態與全域錯誤面板。「原本 Alert / Confirm 使用點」一節為導入 app 內對話框前的歷史對照。
 
 ## 摘要
 

@@ -14,8 +14,8 @@
 - ✅ 交易新增 / 修改 / 刪除成功的 swal toast 已從貼底 pill 改為畫面正中央的圓角方形 modal，外觀對齊 `confirmAction()` 確認對話框、不加背景遮罩，timer 結束自動消失。（紀錄：[alert-toast-center.md](docs/completed-references/alert-toast-center.md)）
 - ✅ 設定頁在同步部分失敗時，頁內狀態訊息會附帶可直接前往同步狀態頁的「查看同步狀態」按鈕，覆蓋同步設定儲存、Tag 更名、商家更名、CSV 匯入四個場景。（紀錄：[sync-failure-status-link.md](docs/completed-references/sync-failure-status-link.md)）
 - ✅ 新增／編輯項目發生驗證錯誤時，錯誤卡會 shake、金額與類別紅框會 pulse，重複按儲存也會重新觸發。（紀錄：[transaction-validation-error-animation.md](docs/completed-references/transaction-validation-error-animation.md)）
-- ✅ `AddTransactionModal` 中阻擋式的 `alert()` 驗證已改為 modal 內嵌錯誤提示，並保留低調欄位標示。
-- ✅ `AddTransactionModal` 刪除確認、設定頁匯入／重置／插入範例資料確認已改用 `swal2` app 內對話框。
+- ✅ `AddTransactionModal` 中阻擋式的 `alert()` 驗證已改為 modal 內嵌錯誤提示，並保留低調欄位標示。（紀錄：[add-transaction-inline-validation.md](docs/completed-references/add-transaction-inline-validation.md)）
+- ✅ `AddTransactionModal` 刪除確認、設定頁匯入／重置／插入範例資料確認已改用 `swal2` app 內對話框。（紀錄：[app-confirm-dialogs.md](docs/completed-references/app-confirm-dialogs.md)）
 - ✅ 交易新增、修改、刪除成功已試用 `swal2` auto-dismiss toast。
 
 ## 導航與頁面架構
@@ -48,7 +48,7 @@
 
 - ✅ Tag 更名互動已對齊商家更名：預設只顯示預覽按鈕、預覽後才出現黃色預覽卡與確認按鈕、確認送出中顯示旋轉 icon，feedback card 樣式移除 ⚠️ icon、更名完成後直接選到新 tag 編輯畫面，與商家更名共用相同節奏。（紀錄：[tag-rename-confirm-alignment.md](docs/completed-references/tag-rename-confirm-alignment.md)）
 - ✅ 危險操作已新增刪除範例資料按鈕，依 `sample-tx-` id prefix 預覽並刪除由範例資料入口建立的交易，不影響使用者自行建立的紀錄。（紀錄：[delete-sample-data-button.md](docs/completed-references/delete-sample-data-button.md)）
-- ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（示意圖：[settings-header-color.jpg](docs/todo-references/settings-header-color.jpg)；紀錄：[settings-header-color.md](docs/completed-references/settings-header-color.md)）
+- ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（紀錄：[settings-header-color.md](docs/completed-references/settings-header-color.md)）
 
 ## 商家與資料維護
 

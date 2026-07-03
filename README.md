@@ -94,7 +94,14 @@ this.version(1).stores({
   transactions: '++id, timestamp, categoryId, type, currency',
   settings: 'key'
 });
+this.version(2).stores({
+  transactions: '++id, timestamp, categoryId, type, currency',
+  settings: 'key',
+  pullReports: 'id, createdAt, year, status',
+});
 ```
+
+目前 schema 為 v2，共三張表：`transactions`、`settings`、`pullReports`（年度雲端同步報告）。既有 version 定義不可修改，新欄位或新表一律以新 version 疊加（詳見 AGENTS.md）。
 
 ---
 
@@ -314,7 +321,7 @@ this.version(1).stores({
 ## 7. 如何運行
 1. `npm install`
 2. `npm run dev`
-3. 開啟 `http://localhost:5173/`
+3. 開啟 `http://localhost:5173/Cozy-Pocket/`（Vite `base` 固定為 `/Cozy-Pocket/`，根路徑不會載入 app）
 4. production build：`npm run build`
 
 若需要讓同網段裝置也能連線：
@@ -353,7 +360,7 @@ https://rexx.github.io/Cozy-Pocket/android-chrome-192x192.png
 App 內建重置按鈕：
 
 1. 右上角進入「資料與設定」
-2. 找到「重置本機資料」
+2. 進入「危險操作」設定子頁
 3. 點擊「清除本機資料並重置」
 
 此操作會執行：

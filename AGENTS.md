@@ -91,12 +91,11 @@ These three files are oversized and the developer knows it. **Refactor opportuni
 
 | File | Lines | Status |
 |---|---|---|
-| `App.tsx` | ~1150 | Contains CRUD + sync orchestration + merchant/tag rename. New full pages should NOT add to it — extract `*Page.tsx` instead. Decomposition tracked in `docs/todo-references/app-tsx-decomposition.md`. |
-| `AddTransactionModal.tsx` | ~1065 | Form state + AI parsing + validation in one file. |
+| `App.tsx` | ~1190 | Contains CRUD + sync orchestration + merchant/tag rename. New full pages should NOT add to it — extract `*Page.tsx` instead. Decomposition tracked in `docs/todo-references/app-tsx-decomposition.md`. |
+| `AddTransactionModal.tsx` | ~1265 | Form state + AI parsing + validation in one file. |
 | `cloudSyncService.ts` | ~1369 | Sync engine + mock backend in same file. Mock split is tracked debt. |
 
-**Planned moves** (in `docs/todo-references/`):
-- See `docs/todo-references/` for the full list of planned changes
+**Planned moves**: tracked per-plan in `docs/todo-references/`, with status flags (🔴🟡🟢) in `TODO.md`.
 
 ---
 
@@ -204,6 +203,7 @@ User-facing reset: 資料與設定 → 危險操作 → 「清除本機資料並
 - `docs/pwa-offline-implementation.md` — PWA / offline implementation notes
 - `docs/pwa-layout-gotchas.md` — iOS Safari standalone layout traps
 - `docs/google-apps-script-phase1.js` — backend implementation
+- `docs/user-feedback-inventory.md` — inventory of user-feedback mechanisms (dialogs / toasts / inline status) and which to use when
 - `docs/completed-references/` — design notes for shipped features
 - `docs/todo-references/` — design notes for planned/in-flight work
 - `TODO.md` — current todo list
