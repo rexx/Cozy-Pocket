@@ -87,13 +87,13 @@ Other PWA notes:
 
 ## Known debt (intentional, not bugs)
 
-These three files are oversized and the developer knows it. **Refactor opportunistically when touching them; do not force-break them as part of unrelated work.**
+These three files are oversized and the developer knows it. **Refactor opportunistically when touching them; do not force-break them as part of unrelated work.** (Line counts intentionally omitted — they drift; `wc -l` if you need the current number.)
 
-| File | Lines | Status |
+| File | Why it's heavy | Guidance |
 |---|---|---|
-| `App.tsx` | ~1190 | Contains CRUD + sync orchestration + merchant/tag rename. New full pages should NOT add to it — extract `*Page.tsx` instead. Decomposition tracked in `docs/todo-references/app-tsx-decomposition.md`. |
-| `AddTransactionModal.tsx` | ~1265 | Form state + AI parsing + validation in one file. |
-| `cloudSyncService.ts` | ~1369 | Sync engine + mock backend in same file. Mock split is tracked debt. |
+| `App.tsx` | The app's largest file: view routing + shared state + CRUD + sync orchestration + merchant/tag rename in one component. | New full pages must NOT add to it — extract `*Page.tsx` instead. Decomposition tracked in `docs/todo-references/app-tsx-decomposition.md`. |
+| `AddTransactionModal.tsx` | Form state + AI parsing + validation in one file. | Keep the mock/AI/validation paths intact when editing. |
+| `cloudSyncService.ts` | Sync engine + inline `mock://cloud-sync` backend in the same file. | Mock split is tracked debt; keep the mock path working. |
 
 **Planned moves**: tracked per-plan in `docs/todo-references/`, with status flags (🔴🟡🟢) in `TODO.md`.
 
@@ -127,10 +127,11 @@ These three files are oversized and the developer knows it. **Refactor opportuni
 
 ### Quality gates
 
-- **Sole automated check: `tsc --strict`** (runs as part of `npm run build`)
+- **Code gate: `tsc --strict`** (runs as part of `npm run build`)
+- **Docs gate: `npm run docs:check`** (`scripts/docs-check.mjs`) — validates markdown links resolve, completed references contain no plan-language, and every reference doc is linked from `TODO.md` / `CHANGELOG.md`. Run it after any docs change.
 - No tests (none. Zero. This is fine for the project's scope.)
 - No ESLint / Prettier / Biome
-- CI = build only (`.github/workflows/deploy.yml`), no test step
+- CI (`.github/workflows/deploy.yml`): a `docs-check` job runs `npm run docs:check`; the `build` job runs `npm run build` and is what gates deployment.
 
 When making data-correctness changes (CSV import/export, sync merge, AI parsing), prefer:
 - Small, reviewable diffs over batched refactors
@@ -139,11 +140,16 @@ When making data-correctness changes (CSV import/export, sync merge, AI parsing)
 
 ### Documentation discipline
 
-Two folders track design notes (in addition to inline comments):
-- `docs/completed-references/` — for features already shipped
-- `docs/todo-references/` — for planned / in-flight work
+The docs system has four moving parts. Know which one a fact belongs in:
 
-When you finish work that has a `todo-references/<name>.md` plan, move that file to `completed-references/` rather than deleting it.
+- `TODO.md` — **active work only** (🔴 high / 🟡 planned / 🟢 evaluated-and-deferred). Not a changelog.
+- `CHANGELOG.md` — **completed work**, grouped by the same sections as `TODO.md`. When an item ships, move its line here (keep the `docs/completed-references/` link); do not leave ✅ items piling up in `TODO.md`.
+- `docs/todo-references/<slug>.md` — the design note / plan for one planned or in-flight item, or a **deprioritized/rejected decision** (those stay here, marked 🟢 in `TODO.md` — they are not "completed", so they do not move to `completed-references/`).
+- `docs/completed-references/<slug>.md` — the design note for a shipped feature. **Treat these as immutable snapshots**: once written, don't update them as behavior evolves. Ongoing behavior changes go to the README §6 behavior spec (the living source of truth); the completed reference records what shipped at the time.
+
+When you finish work that has a `todo-references/<slug>.md` plan, `git mv` it to `completed-references/` and rewrite it from plan language into a completed record (see workflow step 5). A deprioritized item is the exception — it stays in `todo-references/`.
+
+**Run `npm run docs:check` after any docs change** — it catches broken links, plan-language left in completed references, and reference docs nothing links to.
 
 ### Implementation workflow
 
@@ -184,9 +190,10 @@ The standard end-to-end flow for non-trivial changes. Trivial fixes (typo, one-l
 **Wait for the user to invoke `/git-branch-cleanup` before starting this step.** The user's invocation is the signal that step 4 verification has been accepted and the feature is ready to land — until then, assume they may still iterate on the implementation. Once the skill fires, it owns the finalization sequence:
 
 - Stop the dev server (do this proactively before the skill runs if it's still streaming).
-- Update `README.md` (§6 behavior spec + operations cheat sheet), `TODO.md` (flip 🟡 → ✅, link target → `docs/completed-references/<slug>.md`), and any affected `docs/*.md`.
+- Update `README.md` (§6 behavior spec + operations cheat sheet) and any affected `docs/*.md`.
+- Move the item's line from `TODO.md` to `CHANGELOG.md` (under the matching section), with the link target flipped to `docs/completed-references/<slug>.md`.
 - `git mv docs/todo-references/<slug>.md docs/completed-references/<slug>.md`, then rewrite the body from plan language into a completed record: drop the worktree-setup paragraph, replace 測試計劃 → 驗證, use past-tense final-state wording.
-- Run a doc audit: grep the old slug across `README.md`, `TODO.md`, `docs/` and confirm no stale links; grep plan-only phrasing (實作計劃 / 測試計劃 / 會 / 將) in the moved completed reference.
+- Run the doc audit: `npm run docs:check` (links, plan-language, orphans), then grep the old slug across `README.md`, `TODO.md`, `CHANGELOG.md`, `docs/` to confirm no stale references remain.
 - Commit (HEREDOC commit message, subject + body explaining the why).
 - `git rebase main`; on conflicts, resolve manually, rerun `npm run build`, then `git rebase --continue`.
 - `git checkout main && git merge --ff-only <slug>` in the primary worktree.
@@ -204,9 +211,10 @@ User-facing reset: 資料與設定 → 危險操作 → 「清除本機資料並
 - `docs/pwa-layout-gotchas.md` — iOS Safari standalone layout traps
 - `docs/google-apps-script-phase1.js` — backend implementation
 - `docs/user-feedback-inventory.md` — inventory of user-feedback mechanisms (dialogs / toasts / inline status) and which to use when
-- `docs/completed-references/` — design notes for shipped features
-- `docs/todo-references/` — design notes for planned/in-flight work
-- `TODO.md` — current todo list
+- `docs/completed-references/` — design notes for shipped features (immutable snapshots)
+- `docs/todo-references/` — design notes for planned/in-flight work and deprioritized decisions
+- `TODO.md` — active work only (🔴🟡🟢)
+- `CHANGELOG.md` — completed work, grouped by section
 
 ---
 

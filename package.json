@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "docs:check": "node scripts/docs-check.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.37.0",
