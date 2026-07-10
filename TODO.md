@@ -24,6 +24,10 @@
 
 - 🟡 年度雲端同步後端待驗證：新版 GAS `action: "get"` 尚需部署，並以真實 Google Sheets 端到端驗證。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)；前端完成紀錄見 CHANGELOG）
 
+## 資料安全與 Guardrail
+
+- 🟡 建立資料風險分區 guardrail：AGENTS.md 紅區清單、同步 payload 型別上鎖、GAS 欄位索引派生、重置確認顯示未同步筆數、CSV 匯入驗證對齊 pull、紅區純函式最小單元測試。（計劃：[data-risk-guardrails.md](docs/todo-references/data-risk-guardrails.md)）
+
 ## Bundle / Chunk 優化待辦
 
 - 🔴 將非首頁 page 改為 `React.lazy`。（計劃：[lazy-load-non-home-pages.md](docs/todo-references/lazy-load-non-home-pages.md)）
