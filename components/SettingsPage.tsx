@@ -193,7 +193,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     onDataChange();
   };
 
-  const saveGeminiApiKey = async (): Promise<string> => {
+  const saveGeminiApiKey = async (): Promise<void> => {
     const trimmedApiKey = geminiApiKeyInput.trim();
     if (trimmedApiKey) {
       await db.settings.put({ key: GEMINI_API_KEY_SETTING_KEY, value: trimmedApiKey });
@@ -202,10 +202,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     }
     setGeminiApiKeyInput(trimmedApiKey);
     setHasGeminiApiKey(trimmedApiKey.length > 0);
-    const message = trimmedApiKey ? 'AI 設定已儲存' : 'AI 設定已清除';
-    onNotify(message);
+    onNotify(trimmedApiKey ? 'AI 設定已儲存' : 'AI 設定已清除');
     onDataChange();
-    return message;
   };
 
   const saveSyncConfig = async (): Promise<{ total: number; failed: number; skippedOffline: boolean }> => {
@@ -511,6 +509,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onTagTransactionClick={onTagTransactionClick}
             onDataChange={onDataChange}
             onOpenSyncProgress={onOpenSyncProgress}
+            onNotify={onNotify}
           />
         );
       case 'merchant':
@@ -524,6 +523,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             onMerchantTransactionClick={onMerchantTransactionClick}
             onDataChange={onDataChange}
             onOpenSyncProgress={onOpenSyncProgress}
+            onNotify={onNotify}
           />
         );
       case 'import-export':

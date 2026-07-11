@@ -136,13 +136,11 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
         ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`
         : `匯入成功 (${importPreview.validRows} 筆)`;
       if (skippedOffline) {
-        onNotify(`匯入成功 (${importPreview.validRows} 筆)`);
         setStatus({
           type: 'success',
           message: `${importBaseMessage}\n目前離線，待恢復連線後再同步`,
         });
       } else if (failed > 0) {
-        onNotify(`匯入完成，但有 ${failed} 筆同步失敗`);
         setStatus({
           type: 'error',
           message: `${importBaseMessage}\n同步失敗 ${failed}/${total} 筆`,

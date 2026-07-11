@@ -34,8 +34,8 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 *   使用者可從設定頁手動指定年份，執行年度雲端同步，並依 `version` / `updatedAt` 自動雙向 merge。
 *   每次年度雲端同步都會在本地保存完整報告，可回看變更紀錄與手動刪除報告。
 *   交易列表會顯示同步狀態點，且可從「同步狀態頁」查看待同步 / 同步中 / 已同步 / 失敗總覽。
-*   通知分工採用短 toast + 頁內詳細 status 的雙層設計：短成功摘要走 toast，長結果與部分失敗細節保留在頁內狀態區塊。
-*   需要使用者確認的危險操作使用 `sweetalert2` app 內對話框；交易新增、修改、刪除成功目前使用 `sweetalert2` auto-dismiss toast。
+*   通知分工採用短 toast + 頁內詳細 status 的雙層設計，且兩者互斥：全部成功時只顯示底部輕量 toast；離線待同步、部分同步失敗或需要後續行動（例如「查看同步狀態」按鈕）時，只顯示頁內狀態卡片，不重複跳 toast。
+*   需要使用者確認的危險操作使用 `sweetalert2` app 內對話框；交易新增、修改、刪除成功已改用底部輕量 toast，不再使用 `sweetalert2` 置中 auto-dismiss toast（`sweetalert2` 只保留互動確認對話框用途）。
 
 ### 3.1 Mock Sync API
 開發測試時可在「同步設定」點擊「使用 mock API」，系統會填入：
@@ -279,7 +279,7 @@ this.version(2).stores({
 *   輸入時會自動正規化 tag：去除前後空白，並移除前置 `#`。
 *   新名稱輸入變更後會清除既有預覽，黃色預覽卡與確認按鈕會同步消失，避免舊預覽套用到新輸入值。
 *   若新 tag 名稱已存在，預覽卡會先提醒；確認後會合併為同一個 tag，並自動去除重複 tag。
-*   預覽錯誤、合併警告與完成結果會顯示在與商家管理相同樣式的 feedback card 位置，依狀態使用紅色、黃色或綠色，不使用獨立警告 icon。
+*   預覽錯誤與合併警告會顯示在與商家管理相同樣式的 feedback card 位置，依狀態使用紅色或黃色，不使用獨立警告 icon；更名全部成功時只顯示底部 toast（含更新筆數），不再顯示綠色完成卡。
 *   更名送出中會顯示旋轉 loading icon；完成後表單會保留並直接選到新 tag 或合併目標 tag，相關交易列表會跟著重新載入。
 *   合併或更名後，該筆交易的 `tags` 會重新整理為標準空白分隔格式，並標記為 `pending` 以便後續同步。
 *   同步部分失敗時 feedback card 會附帶「查看同步狀態」按鈕，可直接跳到同步狀態頁，返回時回到 Tag 管理子頁。
@@ -290,7 +290,7 @@ this.version(2).stores({
 *   「商家管理」已整併為「資料與設定」內的設定子頁，從設定首頁的商家入口卡片進入，返回時回到設定首頁。
 *   商家清單支援即時搜尋，並預設每次顯示 200 個商家，可用「載入更多」展開後續項目；商家清單與相關交易列表高度最多佔視窗高度一半，超過時在各自列表內捲動。
 *   更名前需先執行預覽，確認受影響交易筆數；確認按鈕只會在有效預覽後顯示。
-*   預覽錯誤、預覽資訊、合併警告與完成結果會顯示在同一個 feedback card 位置，依狀態使用紅色、黃色或綠色樣式；新名稱輸入變更後會清除既有預覽與錯誤。
+*   預覽錯誤、預覽資訊與合併警告會顯示在同一個 feedback card 位置，依狀態使用紅色或黃色樣式；新名稱輸入變更後會清除既有預覽與錯誤；更名全部成功時只顯示底部 toast（含更新筆數），不再顯示綠色完成卡。
 *   若新商家名稱已存在，系統會先提醒；確認後會合併到既有商家，不會新增重複商家。
 *   商家更名會一次更新所有符合舊名稱的交易，並將這些交易標記為 `pending` 以便後續同步。
 *   更名送出中會顯示旋轉 loading icon；完成後表單會保留並直接選到新商家或合併目標商家。
@@ -307,9 +307,10 @@ this.version(2).stores({
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
 *   設定 container 仍集中管理 Dexie 讀寫、CSV 解析與匯入匯出、同步觸發等資料流程，並以 callback 提供給各設定子頁；不再保留共用的 status state 或底部統一的訊息渲染。
-*   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自以 `useState` 自管 inline status 訊息：偏好的幣別衝突、AI key 儲存、同步設定與年度雲端同步、匯入匯出、危險操作的成功／失敗都顯示在該子頁內，切換子頁時前一頁訊息隨子頁卸載而消失。
+*   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自視情況以 `useState` 自管 inline status 訊息：全部成功時只顯示底部輕量 toast（不重複顯示頁內卡片，`PreferencesSection` 因此完全不再持有 inline status state）；離線待同步、部分同步失敗或需要後續行動（例如查看同步狀態）時才顯示頁內 status 卡片；驗證錯誤與例外仍固定顯示頁內錯誤卡片。切換子頁時前一頁訊息隨子頁卸載而消失。
 *   設定子頁的 inline 回饋共用 `components/settings/SettingsFeedbackCard.tsx`（`SettingsFeedbackCard` 卡片 + 包裝 `SettingsStatus` 的 `SettingsStatusCard`），success／error／warning 對應綠／紅／黃樣式；`TagManagementSection` 與 `MerchantManagementSection` 的預覽卡與狀態卡也改用此共用元件。
 *   `SyncSection` 另外自管年度雲端同步 dialog 的開關、選取年份與送出 state（dialog markup 已移入該子頁）；`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。
+*   年度雲端同步完成後會導航到「同步紀錄」頁（`SyncSection` 隨即卸載），無論成功、部分失敗或失敗都改以底部 toast 呈現結果摘要，詳細報告內容改看同步紀錄頁本身；選擇年份前的驗證錯誤與同步前拋出例外仍在 `SyncSection` 內顯示頁內錯誤卡片。
 *   `TagManagementSection` 與 `MerchantManagementSection` 各自以 `useState` 持有選取的 tag／商家、新名稱輸入、預覽結果、送出狀態、相關交易與 inline status；container 只透過 props 傳入資料來源與 preview／rename／get-transactions／`onDataChange`／`onOpenSyncProgress` 等 callback，不再保留這兩條流程的 state 或 handler。
 *   這兩個更名子頁的選取與預覽 state 與「目前開啟的子頁」綁定；切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置為初始狀態（刻意行為）。
 *   匯入與匯出已整併在同一個 section 中；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。

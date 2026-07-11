@@ -5,12 +5,12 @@
 ## 摘要
 
 - 將 `sweetalert2` 改為動態載入。
-- 目標是把 `dialogService` 從主 bundle 移出，只在實際開啟 confirm dialog 或 toast 時載入。
+- `dialogService` 經 toast 系統統一後只剩 `confirmAction` 一個用途（見 unify-toast-system 計劃），目標是把它從主 bundle 移出，只在實際開啟 confirm dialog 時載入。
 
 ## 關鍵變更
 
 - 將 `services/dialogService.ts` 內的 `sweetalert2` 靜態 import 改為 `import('sweetalert2')`。
-- 保留既有 `confirmDialog` 與 toast API 介面，避免呼叫端跟著改動。
+- 保留既有 `confirmAction` API 介面，避免呼叫端跟著改動。
 - 評估是否需要在高頻操作前預載 dialog chunk，降低首次確認對話框延遲。
 
 ## 測試計劃
@@ -18,7 +18,6 @@
 - 執行 `npm run build`。
 - 確認 `sweetalert2` 不再進主 `index-*` chunk。
 - 手動驗證 `AddTransactionModal` 的刪除確認、`SettingsPage` 的匯入／重置／插入範例資料確認行為不變。
-- 手動驗證交易新增、修改、刪除成功 toast 仍可正常顯示並自動消失。
 
 ## 假設
 

@@ -11,7 +11,8 @@
 - ✅ Tag 建議的 recency 排序已排除未來日期交易：`lastUsedAt` 改為只取「不晚於現在」的交易最大 `timestamp`，只在未來用過的 tag 不再被推到最前。（紀錄：[tag-suggestion-recency-exclude-future.md](docs/completed-references/tag-suggestion-recency-exclude-future.md)）
 - ✅ 點下搜尋按鈕進入搜尋畫面時會在同一個點擊事件內同步聚焦搜尋輸入框，iPhone PWA 上會一併彈出虛擬鍵盤。（紀錄：[search-page-auto-focus.md](docs/completed-references/search-page-auto-focus.md)）
 - ✅ 新增交易 modal 開啟時不再自動 focus 金額輸入框，避免在 iPhone PWA 上一開啟就彈出虛擬鍵盤；切到 AI tab 仍會自動 focus AI 輸入框。（紀錄：[add-transaction-no-auto-focus.md](docs/completed-references/add-transaction-no-auto-focus.md)）
-- ✅ 交易新增 / 修改 / 刪除成功的 swal toast 已從貼底 pill 改為畫面正中央的圓角方形 modal，外觀對齊 `confirmAction()` 確認對話框、不加背景遮罩，timer 結束自動消失。（紀錄：[alert-toast-center.md](docs/completed-references/alert-toast-center.md)）
+- ✅ 交易新增 / 修改 / 刪除成功的 swal toast 曾從貼底 pill 改為畫面正中央的圓角方形 modal（紀錄：[alert-toast-center.md](docs/completed-references/alert-toast-center.md)）；此決策已被 toast 系統統一取代，改回底部輕量 toast（紀錄：[unify-toast-system.md](docs/completed-references/unify-toast-system.md)）。
+- ✅ 統一 toast 系統：瞬時回饋一律使用底部輕量 toast，`swal2` 只保留互動確認對話框，並移除設定頁與 toast 重複的 inline status。（紀錄：[unify-toast-system.md](docs/completed-references/unify-toast-system.md)）
 - ✅ 設定頁在同步部分失敗時，頁內狀態訊息會附帶可直接前往同步狀態頁的「查看同步狀態」按鈕，覆蓋同步設定儲存、Tag 更名、商家更名、CSV 匯入四個場景。（紀錄：[sync-failure-status-link.md](docs/completed-references/sync-failure-status-link.md)）
 - ✅ 新增／編輯項目發生驗證錯誤時，錯誤卡會 shake、金額與類別紅框會 pulse，重複按儲存也會重新觸發。（紀錄：[transaction-validation-error-animation.md](docs/completed-references/transaction-validation-error-animation.md)）
 - ✅ `AddTransactionModal` 中阻擋式的 `alert()` 驗證已改為 modal 內嵌錯誤提示，並保留低調欄位標示。（紀錄：[add-transaction-inline-validation.md](docs/completed-references/add-transaction-inline-validation.md)）

@@ -25,6 +25,7 @@ interface MerchantManagementSectionProps {
   onMerchantTransactionClick: (transaction: Transaction) => void;
   onDataChange: () => void;
   onOpenSyncProgress: () => void;
+  onNotify: (message: string) => void;
 }
 
 const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
@@ -36,6 +37,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
   onMerchantTransactionClick,
   onDataChange,
   onOpenSyncProgress,
+  onNotify,
 }) => {
   const [status, setStatus] = useState<SettingsStatus>(idleStatus);
   const [selectedMerchantToRename, setSelectedMerchantToRename] = useState('');
@@ -209,10 +211,8 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
         return;
       }
 
-      setStatus({
-        type: 'success',
-        message: `${actionMessage}，共更新 ${result.affectedCount} 筆`,
-      });
+      onNotify(`${actionMessage}，共更新 ${result.affectedCount} 筆`);
+      setStatus(idleStatus);
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || '商家更名失敗' });
     } finally {

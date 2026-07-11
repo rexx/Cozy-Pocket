@@ -10,12 +10,6 @@ interface ConfirmActionOptions {
   tone?: 'default' | 'danger';
 }
 
-interface AutoDismissToastOptions {
-  title: string;
-  icon?: SweetAlertIcon;
-  timer?: number;
-}
-
 const baseDialogOptions = {
   background: '#1f2235',
   color: '#e2e8f0',
@@ -65,29 +59,4 @@ export const confirmAction = async ({
   });
 
   return result.isConfirmed;
-};
-
-export const showAutoDismissToast = async ({
-  title,
-  icon = 'success',
-  timer = 1800,
-}: AutoDismissToastOptions): Promise<void> => {
-  await Swal.fire({
-    position: 'center',
-    icon,
-    title,
-    showConfirmButton: false,
-    timer,
-    timerProgressBar: true,
-    backdrop: false,
-    background: '#1f2235',
-    color: '#e2e8f0',
-    buttonsStyling: false,
-    scrollbarPadding: false,
-    customClass: {
-      popup: 'rounded-[28px] border border-white/10 bg-[#1f2235] px-2 pb-4 pt-3 shadow-2xl',
-      title: 'px-4 pt-3 text-base font-bold text-white',
-      timerProgressBar: 'bg-emerald-300',
-    },
-  });
 };

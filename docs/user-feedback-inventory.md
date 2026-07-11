@@ -16,8 +16,7 @@
 | 機制 | 實作位置 | 適用情境 | 是否適合改 swal |
 | --- | --- | --- | --- |
 | `confirmAction()` swal dialog | `services/dialogService.ts` | 危險操作、不可逆操作、需要繼續 / 取消的明確決策 | 已使用 |
-| `showAutoDismissToast()` swal toast | `services/dialogService.ts` | 用於新增 / 修改 / 刪除交易成功的短通知，外觀沿用 `confirmAction()` 的圓角方形 modal、置中顯示、無背景遮罩、1800ms 自動消失 | 已使用 |
-| 全域 toast | `App.tsx` 的 `SuccessToast` / `showToast()` | 短成功訊息、連線狀態、操作摘要 | 通常不適合 |
+| 全域 toast | `App.tsx` 的 `SuccessToast` / `showToast()` | 短成功訊息、連線狀態、操作摘要，含交易新增 / 修改 / 刪除成功 | 通常不適合 |
 | 頁內 status | `SettingsPage`（含 `MerchantManagementSection` 的 inline `MerchantFeedbackCard`） | 長訊息、部分成功、同步失敗、預覽提醒、表單流程錯誤 | 通常不適合 |
 | inline validation / inline error | `AddTransactionModal` | 可立即修正的表單錯誤、AI 解析錯誤、離線提示 | 不適合 |
 | 同步狀態頁 | `SyncStatusPage`、`TransactionItem` | 可回看、可追蹤的同步狀態與單筆錯誤詳情 | 不適合 |
@@ -65,18 +64,18 @@
 | 來源 | 文案類型 | 目的 | 建議 |
 | --- | --- | --- | --- |
 | 連線狀態變化 | `目前為離線模式...`、`已恢復連線...` | 告知連線狀態切換 | 維持 toast |
-| 新增交易 | `已儲存新紀錄` | 成功摘要 | 改用 swal auto-dismiss toast |
-| 修改交易 | `已儲存修改` | 成功摘要 | 改用 swal auto-dismiss toast |
-| 刪除交易 | `已刪除紀錄` | 成功摘要 | 改用 swal auto-dismiss toast |
-| 同步設定儲存 | `同步設定已儲存` 或同步失敗摘要 | 操作結果摘要 | 維持 toast，詳細內容留頁內 status |
+| 新增交易 | `已儲存新紀錄` | 成功摘要 | 維持 toast |
+| 修改交易 | `已儲存修改` | 成功摘要 | 維持 toast |
+| 刪除交易 | `已刪除紀錄` | 成功摘要 | 維持 toast |
+| 同步設定儲存 | `同步設定已儲存` | 全部成功摘要 | 維持 toast；離線待同步或部分同步失敗改只顯示頁內 status，不重複跳 toast |
 | 匯出 | `匯出成功` | 成功摘要 | 維持 toast |
-| 匯入 | `匯入成功 (...)` 或部分同步失敗摘要 | 操作結果摘要 | 維持 toast，詳細內容留頁內 status |
+| 匯入 | `匯入成功 (...)` | 全部成功摘要 | 維持 toast；離線待同步或部分同步失敗改只顯示頁內 status，不重複跳 toast |
 | 插入範例資料 | `已插入範例資料 (...)` | 成功摘要 | 維持 toast |
 | 刪除範例資料 | `已刪除範例資料 (...)` / `目前沒有範例資料可刪除` / `沒有可刪除的範例資料` | 成功摘要或無資料提示 | 維持 toast |
-| 商家 / Tag 更名 | 更名成功或同步部分失敗摘要 | 操作結果摘要 | 維持 toast，詳細內容留頁內 status |
-| 幣別設定防呆 | `至少要保留一個可用幣別` | 短錯誤提醒 | 可維持 status + toast，不建議 swal |
+| 商家 / Tag 更名 | 更名成功（含更新筆數） | 全部成功摘要 | 維持 toast；離線待同步或部分同步失敗改只顯示頁內 status，不重複跳 toast |
+| 幣別設定防呆 | `至少要保留一個可用幣別` | 短錯誤提醒 | 只維持 toast，不建議 swal |
 
-一般不建議把所有 toast 類訊息都改成 swal，因為它們不需要使用者做決策。交易新增 / 修改 / 刪除成功已正式走 `showAutoDismissToast()`，外觀對齊 `confirmAction()`（圓角方形 modal、置中、無背景遮罩、1800ms 自動消失）。
+一般不建議把所有 toast 類訊息都改成 swal，因為它們不需要使用者做決策。交易新增 / 修改 / 刪除成功使用底部輕量 toast（`showToast()`），不使用 `sweetalert2` 置中 auto-dismiss toast；`sweetalert2` 只保留給需要使用者「繼續 / 取消」決策的 `confirmAction()`。toast 與頁內 status 互斥，同一次操作只會呈現其中一種。
 
 ## 頁內 Status 盤點
 
@@ -84,7 +83,7 @@
 
 | 頁面 | 類型 | 典型情境 | 建議 |
 | --- | --- | --- | --- |
-| `SettingsPage` | `success` / `error` / `idle`（可選 `action`） | 同步設定儲存後離線、同步部分失敗、Tag 更名結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤；同步設定儲存、Tag 更名、商家更名、CSV 匯入若有 `failed > 0` 會附帶「查看同步狀態」按鈕 | 維持頁內 status |
+| `SettingsPage` | `success` / `error` / `idle`（可選 `action`） | 同步設定儲存後離線、同步部分失敗、Tag 更名離線或部分失敗結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤；同步設定儲存、Tag 更名、商家更名、CSV 匯入若有 `failed > 0` 會附帶「查看同步狀態」按鈕 | 維持頁內 status |
 | `MerchantManagementSection`（`SettingsPage` 子頁內 inline） | `success` / `error` / `idle` + feedback card tone（可選 `action`） | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗；商家更名部分失敗時 feedback card 會附帶「查看同步狀態」按鈕 | 維持頁內 feedback card |
 | `SyncStatusPage` | persistent list/detail | 待同步 / 同步中 / 失敗 / 已同步統計，單筆 `lastSyncError` 詳情 | 維持頁面呈現 |
 | `AddTransactionModal` | persistent item status | 編輯單筆交易時顯示該筆同步狀態，`pending` / `error` 可點左側圖示單筆上傳，`error` 會顯示 `lastSyncError` 摘要 | 維持 modal 內嵌狀態 |
@@ -121,8 +120,8 @@
 
 | 候選流程 | 目前機制 | 為什麼可考慮 swal | 建議優先度 |
 | --- | --- | --- | --- |
-| `MerchantManagementSection` 執行商家更名 | 預覽 + 頁內 feedback card | 會批次更新多筆交易；若新商家已存在，實際上會合併商家 | 中 |
-| `SettingsPage` 執行 Tag 更名 | 預覽 + 頁內 status | 會批次更新多筆交易；若新 tag 已存在，實際上會合併並去重 | 中 |
+| `MerchantManagementSection` 執行商家更名 | 預覽 + 頁內 feedback card（全部成功另走 toast） | 會批次更新多筆交易；若新商家已存在，實際上會合併商家 | 中 |
+| `TagManagementSection` 執行 Tag 更名 | 預覽 + 頁內 status（全部成功另走 toast） | 會批次更新多筆交易；若新 tag 已存在，實際上會合併並去重 | 中 |
 | 匯入 append 且偵測到重複 ID | 已有 swal default dialog | 會覆蓋同 ID 資料，目前使用 default tone | 低，若要更保守可改 `danger` |
 
 不建議改用 swal 的地方：
@@ -139,7 +138,7 @@
 
 - 表單驗證錯誤：使用頁內或 modal 內嵌錯誤，不新增 `window.alert()`。
 - 危險操作或不可逆操作：使用 `confirmAction()`，不新增 `window.confirm()`。
-- 成功訊息：使用非阻擋 toast；交易新增 / 修改 / 刪除成功目前走 `showAutoDismissToast()`，其他短摘要維持 app toast。
+- 成功訊息：使用非阻擋 toast；交易新增 / 修改 / 刪除成功與其他短摘要皆維持 app toast（`showToast()`），不使用 `sweetalert2` 置中 auto-dismiss toast。
 - 長訊息或可回看的操作結果：維持使用頁內 status 或專門頁面，不使用 dialog。
 - 只有需要使用者明確選擇「繼續 / 取消」的流程，才使用 confirmation dialog。
 - 若未來真的需要資訊型 blocking dialog，應新增共用 `showAlert()` helper，不直接呼叫 `Swal.fire()`。
@@ -155,7 +154,7 @@ git grep -n -E "alert\\(|confirm\\(" HEAD -- components App.tsx services docs TO
 查看目前實作後的 dialog / feedback 入口：
 
 ```sh
-rg -n "confirmAction|showAutoDismissToast|Swal\\.fire|showToast|onNotify|setStatus|capturedErrors|lastSyncError|validationErrors|aiError" App.tsx components services
+rg -n "confirmAction|Swal\\.fire|showToast|onNotify|setStatus|capturedErrors|lastSyncError|validationErrors|aiError" App.tsx components services
 ```
 
 查看目前是否仍有原生 runtime 呼叫：

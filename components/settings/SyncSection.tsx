@@ -64,13 +64,11 @@ const SyncSection: React.FC<SyncSectionProps> = ({
     try {
       const syncResult = await onSaveSyncConfig();
       if (syncResult.skippedOffline) {
-        onNotify('同步設定已儲存');
         setStatus({
           type: 'success',
           message: '同步設定已儲存\n目前離線，待恢復連線後再同步',
         });
       } else if (syncResult.failed > 0) {
-        onNotify(`同步設定已儲存，但有 ${syncResult.failed} 筆同步失敗`);
         setStatus({
           type: 'error',
           message: `同步設定已儲存\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
@@ -115,40 +113,17 @@ const SyncSection: React.FC<SyncSectionProps> = ({
       setStatus(idleStatus);
       const { report } = await onPullFromCloud(selectedPullYear);
       setIsPullDialogOpen(false);
+      // Navigating to PullReportsPage unmounts this section, so the outcome
+      // is surfaced via toast plus the focused report instead of inline status.
       onOpenPullReports(report.id);
 
       if (report.status === 'failed') {
-        setStatus({
-          type: 'error',
-          message: `${report.year} 年年度雲端同步失敗\n${report.runError || '請稍後再試'}`,
-        });
-        return;
-      }
-
-      const summaryMessage = [
-        `雲端讀取 ${report.summary.fetched}`,
-        `雲端新增本機 ${report.summary.insertedFromCloud}`,
-        `雲端覆蓋本機 ${report.summary.updatedFromCloud}`,
-        `本機覆蓋雲端 ${report.summary.pushedLocalUpdateToCloud ?? 0}`,
-        `本機新增雲端 ${report.summary.insertedLocalOnlyToCloud ?? 0}`,
-        `未變更 ${report.summary.unchanged}`,
-        `失敗 ${report.summary.failed}`,
-      ].join(' / ');
-
-      if (report.status === 'partial') {
+        onNotify(`${report.year} 年年度雲端同步失敗`);
+      } else if (report.status === 'partial') {
         onNotify(`已完成 ${report.year} 年年度雲端同步，但有部分失敗`);
-        setStatus({
-          type: 'error',
-          message: `已完成 ${report.year} 年年度雲端同步，但有部分失敗\n${summaryMessage}`,
-        });
-        return;
+      } else {
+        onNotify(`已完成 ${report.year} 年年度雲端同步`);
       }
-
-      onNotify(`已完成 ${report.year} 年年度雲端同步`);
-      setStatus({
-        type: 'success',
-        message: `已完成 ${report.year} 年年度雲端同步\n${summaryMessage}`,
-      });
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || '年度雲端同步失敗' });
     } finally {

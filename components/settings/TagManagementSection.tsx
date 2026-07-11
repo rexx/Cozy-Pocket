@@ -22,6 +22,7 @@ interface TagManagementSectionProps {
   onTagTransactionClick: (transaction: Transaction) => void;
   onDataChange: () => void;
   onOpenSyncProgress: () => void;
+  onNotify: (message: string) => void;
 }
 
 const TagManagementSection: React.FC<TagManagementSectionProps> = ({
@@ -33,6 +34,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
   onTagTransactionClick,
   onDataChange,
   onOpenSyncProgress,
+  onNotify,
 }) => {
   const [status, setStatus] = useState<SettingsStatus>(idleStatus);
   const [selectedTagToRename, setSelectedTagToRename] = useState('');
@@ -166,10 +168,8 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
         return;
       }
 
-      setStatus({
-        type: 'success',
-        message: `${renameSummary}，共更新 ${result.affectedCount} 筆`,
-      });
+      onNotify(`${renameSummary}，共更新 ${result.affectedCount} 筆`);
+      setStatus(idleStatus);
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || 'Tag 更名失敗' });
     } finally {

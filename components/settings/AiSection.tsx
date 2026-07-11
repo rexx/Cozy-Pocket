@@ -14,7 +14,7 @@ interface AiSectionProps {
   hasGeminiApiKey: boolean;
   isOffline: boolean;
   onGeminiApiKeyInputChange: (value: string) => void;
-  onSaveGeminiApiKey: () => Promise<string>;
+  onSaveGeminiApiKey: () => Promise<void>;
 }
 
 const AiSection: React.FC<AiSectionProps> = ({
@@ -33,8 +33,8 @@ const AiSection: React.FC<AiSectionProps> = ({
 
   const handleSaveGeminiApiKey = async () => {
     try {
-      const message = await onSaveGeminiApiKey();
-      setStatus({ type: 'success', message });
+      await onSaveGeminiApiKey();
+      setStatus(idleStatus);
     } catch (err: any) {
       setStatus({ type: 'error', message: `AI 設定儲存失敗: ${err.message}` });
     }

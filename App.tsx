@@ -15,12 +15,11 @@ import { CalendarViewMode, PaymentMethodDisplayMode, PullReport, SuggestionIndex
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { pullTransactionsFromCloud, SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
-import { buildMerchantRenamePreview, getMerchantUsageSummaries, getTransactionsByMerchant, normalizeMerchantName, renameMerchantInTransactions } from './services/merchantService';
+import { buildMerchantRenamePreview, getMerchantUsageSummaries, getTransactionsByMerchant, renameMerchantInTransactions } from './services/merchantService';
 import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
-import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, normalizeTag, renameTagInTransactions, splitTags } from './services/tagService';
+import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, renameTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
-import { showAutoDismissToast } from './services/dialogService';
 import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, ERROR_BANNER_VISIBLE_SETTING_KEY, getPaymentMethodDisplayMode, getHomeNavArrowsVisible, getErrorBannerVisible } from './preferences';
 
 type AppView =
@@ -642,7 +641,7 @@ const App: React.FC = () => {
         await db.transactions.add(transaction);
         setTransactions(prev => [transaction, ...prev]);
         selectTransactionDate(transaction);
-        void showAutoDismissToast({ title: '已儲存新紀錄' });
+        showToast('已儲存新紀錄');
 
       void (async () => {
         if (isOffline()) {
@@ -684,7 +683,7 @@ const App: React.FC = () => {
       setTransactions(prev => prev.map(t => t.id === updatedTx.id ? merged : t));
       selectTransactionDate(merged);
       setEditingTransaction(null);
-      void showAutoDismissToast({ title: '已儲存修改' });
+      showToast('已儲存修改');
 
       void (async () => {
         if (isOffline()) {
@@ -709,7 +708,7 @@ const App: React.FC = () => {
       await db.transactions.delete(id);
       setTransactions(prev => prev.filter(t => t.id !== id));
       setEditingTransaction(null);
-      void showAutoDismissToast({ title: '已刪除紀錄' });
+      showToast('已刪除紀錄');
     } catch (err: any) {
       setCapturedErrors(prev => [...prev, `Delete Error: ${err.message}`]);
     }
@@ -787,28 +786,18 @@ const App: React.FC = () => {
       const updatedById = new Map(transactionsToPersist.map((tx) => [tx.id, tx]));
       setTransactions((prev) => prev.map((tx) => updatedById.get(tx.id) || tx));
 
-      const renameSummary = preview.willMerge
-        ? `已將 ${preview.oldMerchant} 合併到 ${preview.newMerchant}`
-        : `已將 ${preview.oldMerchant} 更名為 ${preview.newMerchant}`;
-
       if (isOffline()) {
-        showToast(renameSummary);
         return { ...preview, skippedOffline: true };
       }
 
       const syncResult = await triggerPendingSync('商家更名後同步');
       await refreshData();
-      showToast(
-        syncResult.failed > 0
-          ? `商家更名完成，但有 ${syncResult.failed} 筆同步失敗`
-          : renameSummary
-      );
       return { ...preview, skippedOffline: false, syncResult };
     } catch (err: any) {
       setCapturedErrors((prev) => [...prev, `Merchant Rename Error: ${err.message}`]);
       throw err;
     }
-  }, [refreshData, showToast, transactions, triggerPendingSync]);
+  }, [refreshData, transactions, triggerPendingSync]);
 
   const renameTag = useCallback(async (oldTag: string, newTag: string) => {
     try {
@@ -832,28 +821,18 @@ const App: React.FC = () => {
       const updatedById = new Map(transactionsToPersist.map((tx) => [tx.id, tx]));
       setTransactions((prev) => prev.map((tx) => updatedById.get(tx.id) || tx));
 
-      const normalizedOldTag = normalizeTag(oldTag);
-      const normalizedNewTag = normalizeTag(newTag);
-      const renameSummary = `已將 #${normalizedOldTag} 更名為 #${normalizedNewTag}`;
-
       if (isOffline()) {
-        showToast(renameSummary);
         return { ...preview, skippedOffline: true };
       }
 
       const syncResult = await triggerPendingSync('tag 更名後同步');
       await refreshData();
-      showToast(
-        syncResult.failed > 0
-          ? `Tag 更名完成，但有 ${syncResult.failed} 筆同步失敗`
-          : renameSummary
-      );
       return { ...preview, skippedOffline: false, syncResult };
     } catch (err: any) {
       setCapturedErrors((prev) => [...prev, `Tag Rename Error: ${err.message}`]);
       throw err;
     }
-  }, [refreshData, showToast, transactions, triggerPendingSync]);
+  }, [refreshData, transactions, triggerPendingSync]);
 
   const handleEditItem = (tx: Transaction) => {
     if (duplicateReopenTimerRef.current !== null) {
