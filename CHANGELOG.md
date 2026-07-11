@@ -67,7 +67,7 @@
 
 ## 匯入與外部資料
 
-- ✅ 年度雲端同步前端已完成：入口、年份選擇、mock API、本地同步報告與報告 UI 已可測試。（紀錄：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)）
+- ✅ 年度雲端同步已完成並端到端驗證：前端入口、年份選擇、mock API、本地同步報告與報告 UI 皆可用；新版 GAS `action: "get"` 已部署，並以真實 Google Sheets 驗證 PUSH 與四種 PULL 分類；過程中發現並修正 `readableDateTime` 被 Sheets coerce 導致的假性同步 churn（conflict detection 排除該衍生欄位、pull 一律重算）。（紀錄：[manual-cloud-pull.md](docs/completed-references/manual-cloud-pull.md)）
 
 ## AI 功能
 

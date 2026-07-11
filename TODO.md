@@ -20,10 +20,6 @@
 - 🟡 評估是否將商家管理改為進頁後直接查 IndexedDB，而不是依賴 App 全量載入的 `transactions` state。（計劃：[merchant-management-indexeddb-source.md](docs/todo-references/merchant-management-indexeddb-source.md)）
 - 🟡 新增商家詳情頁，從商家管理進入後查看該商家的消費趨勢、常用類別、付款方式分布與最近交易。（計劃：[merchant-detail-page.md](docs/todo-references/merchant-detail-page.md)）
 
-## 匯入與外部資料
-
-- 🟡 年度雲端同步後端待驗證：新版 GAS `action: "get"` 尚需部署，並以真實 Google Sheets 端到端驗證。（計劃：[manual-cloud-pull.md](docs/todo-references/manual-cloud-pull.md)；前端完成紀錄見 CHANGELOG）
-
 ## 資料安全與 Guardrail
 
 - 🟡 建立資料風險分區 guardrail（Step 1–2 已完成：AGENTS.md 紅區清單、同步 payload 型別上鎖；Step 3–6 待辦：GAS 欄位索引派生、重置確認顯示未同步筆數、CSV 匯入驗證對齊 pull、紅區純函式最小單元測試）。（計劃：[data-risk-guardrails.md](docs/todo-references/data-risk-guardrails.md)）

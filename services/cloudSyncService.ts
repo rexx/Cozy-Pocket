@@ -197,8 +197,17 @@ const toPayloadItem = (tx: Transaction): SyncPayloadItem => ({
   version: Number(tx.version || 1),
 });
 
+// readableDateTime is a display-only field derived from timestamp. It is
+// timezone-dependent and the Sheets backend coerces it into a different string
+// on round-trip, so comparing it would flag unchanged records as conflicting.
+// Conflict detection stays driven by timestamp, which already encodes the datetime.
+const toComparablePayload = (tx: Transaction): Omit<SyncPayloadItem, 'readableDateTime'> => {
+  const { readableDateTime, ...rest } = toPayloadItem(tx);
+  return rest;
+};
+
 const hasSamePersistedPayload = (local: Transaction, cloud: Transaction): boolean => {
-  return JSON.stringify(toPayloadItem(local)) === JSON.stringify(toPayloadItem(cloud));
+  return JSON.stringify(toComparablePayload(local)) === JSON.stringify(toComparablePayload(cloud));
 };
 
 interface MockCloudState {
@@ -934,9 +943,9 @@ const normalizePullItem = (item: PullApiItem): Transaction => {
     merchant: typeof item.merchant === 'string' && item.merchant.trim() ? item.merchant : undefined,
     note: typeof item.note === 'string' && item.note.trim() ? item.note : undefined,
     timestamp,
-    readableDateTime: typeof item.readableDateTime === 'string' && item.readableDateTime.trim()
-      ? item.readableDateTime
-      : formatReadableDateTime(timestamp),
+    // Always re-derive from timestamp; the cloud value is coerced by Sheets into
+    // a non-canonical date string and must not be persisted locally.
+    readableDateTime: formatReadableDateTime(timestamp),
     paymentMethod,
     tags: typeof item.tags === 'string' && item.tags.trim() ? item.tags : undefined,
     updatedAt: Number.isFinite(updatedAtRaw) ? updatedAtRaw : toEpochMillis(timestamp),

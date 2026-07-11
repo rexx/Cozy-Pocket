@@ -371,6 +371,7 @@ this.version(1).stores({
   - 若年度雲端同步判定為本地較新，前端會把該筆列入本次回推清單，使用既有 `create` upsert 讓雲端收斂。
   - 若年度雲端同步判定為雲端較新，前端會直接覆蓋本地。
   - 若指定年份中只有本地有資料、雲端沒有，該筆也會列入回推清單。
+  - `readableDateTime` 是從 `timestamp` 衍生、且時區相依的顯示欄位，Google Sheets 會在 round-trip 時將其 coerce 成 Date 字串，因此**不納入**上述「持久化 payload」比對（比對仍由 `timestamp` 涵蓋日期時間）。年度雲端同步讀回雲端資料時，一律以 `formatReadableDateTime(timestamp)` 重算本地 `readableDateTime`，不採用雲端回傳值。
 
 #### 年度雲端同步情境表
 
@@ -387,6 +388,8 @@ this.version(1).stores({
 | 雲端資料格式不合法 | 不寫入本地，記錄錯誤 | `failed`（失敗） | 盡可能保存可用資訊 |
 | 本地寫入失敗 | 不完成該筆 merge，記錄錯誤 | `failed`（失敗） | 保存 before/after（若可取得） |
 | 回推雲端失敗 | 該筆回推失敗，保留本地同步錯誤 | `failed`（失敗） | 保存 before/after（若可取得） |
+
+> 表中「payload 相同/不同」的比對**排除 `readableDateTime`**：它是由 `timestamp` 衍生、時區相依、且會被 Sheets round-trip coerce 的顯示欄位，納入比對會造成同 revision 交易被誤判為 `content_mismatch`。
 
 ### 7.7.1 同步報告
 - 每次手動年度雲端同步都會在本地保存一筆完整報告，包含：
