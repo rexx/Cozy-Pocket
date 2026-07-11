@@ -4,7 +4,13 @@
 
 2026-07-03 對全 codebase 做了一次資料風險 review，結論是：本專案的資料安全模型是「local-first + 雲端 upsert-only 備份」——雲端（Google Sheets）永遠不會被程式刪列或清空、pull 也永遠不刪本地列，因此永久遺失風險集中在「尚未同步成功的本地資料」與少數靜默污染路徑。本計劃把 review 結論固化為三層 guardrail：文件層（AGENTS.md 紅區清單）、程式層（payload 型別上鎖、GAS 欄位索引派生、重置確認強化、CSV 匯入驗證對齊）、測試層（紅區純函式最小單元測試）。
 
-預計 worktree：`worktrees/data-risk-guardrails`。各 Step 彼此獨立、可分批 land，符合「小 diff、可 review」原則；若要拆成多個 worktree 分批進行也可行。
+各 Step 彼此獨立、可分批 land，符合「小 diff、可 review」原則。Steps 1–2 是純文件與純型別變更、無瀏覽器可驗證表面，已直接在 `main` 上完成；剩餘 Steps 3–6 動到 runtime / GAS / 相依套件，建議走 `worktrees/data-risk-guardrails`。
+
+## 進度
+
+- ✅ **Step 1（AGENTS.md 紅區清單）** — commit `ff57658`。
+- ✅ **Step 2（同步 payload 型別上鎖）** — commit `ff57658`。實作與原計劃唯一差異：`SyncPayloadItem` 用 `type` alias 而非 `interface`——interface 不能賦值給 `prepareMockPullFixture` 回傳的 `Record<string, unknown>`（TypeScript issue #15300），封閉物件型別的 `type` alias 則可，且明確回傳型別註記照樣對 `toPayloadItem` 物件字面量做 excess-property 檢查。已驗證：暫加 `syncStatus` 欄位時 tsc 報 `TS2353`。
+- ⬜ **Steps 3–6** 待辦（GAS 欄位索引派生、重置確認顯示未同步筆數、CSV 匯入驗證對齊、紅區純函式單元測試）。
 
 ## 風險分區結論（本計劃的依據）
 
@@ -46,7 +52,7 @@
 
 ### Step 2 — 程式層：同步 payload 型別上鎖
 
-- 在 `types.ts`（或 `cloudSyncService.ts` 內）定義 `SyncPayloadItem` interface：15 個具名欄位（id, type, amount, currency, categoryId, subCategoryId, name, merchant, note, timestamp, readableDateTime, paymentMethod, tags, updatedAt, version），明確不含 `syncStatus` / `lastSyncError`。
+- 在 `types.ts` 定義 `SyncPayloadItem`（`type` alias，理由見「進度」）：15 個具名欄位（id, type, amount, currency, categoryId, subCategoryId, name, merchant, note, timestamp, readableDateTime, paymentMethod, tags, updatedAt, version），明確不含 `syncStatus` / `lastSyncError`。
 - `toPayloadItem` 回傳型別改為 `SyncPayloadItem`。此後多傳、漏傳、改名欄位都會被 `tsc --strict` 攔下，把 R2 的錯誤形式從「靜默」變成「編譯失敗」。
 - 純型別變更，不改 runtime 行為，payload 內容不變。
 
@@ -80,8 +86,9 @@
 ```ts
 // types.ts — upload payload contract with the deployed GAS backend.
 // Field names are load-bearing: GAS reads them by name. syncStatus and
-// lastSyncError are local-only and must never appear here.
-export interface SyncPayloadItem {
+// lastSyncError are local-only and must never appear here. A type alias (not
+// an interface) so it stays assignable to the pull path's Record<string, unknown>.
+export type SyncPayloadItem = {
   id: string;
   type: TransactionType;
   amount: number;
@@ -97,10 +104,10 @@ export interface SyncPayloadItem {
   tags: string;
   updatedAt: number; // epoch milliseconds
   version: number;
-}
+};
 ```
 
-（欄位的 optional 與空字串預設以現行 `toPayloadItem` 實際輸出為準，實作時對照 181-197 行逐欄確認，不改變輸出內容。）
+（欄位的空字串預設以現行 `toPayloadItem` 實際輸出為準；Step 2 實作已逐欄對照確認，未改變輸出內容。）
 
 CSV 匯入驗證函式簽名（暫置 `SettingsPage.tsx`，將來隨 decomposition 移入 csvService）：
 

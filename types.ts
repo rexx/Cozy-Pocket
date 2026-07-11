@@ -38,6 +38,31 @@ export interface Transaction {
   lastSyncError?: string;
 }
 
+// Upload payload contract with the deployed Google Apps Script backend.
+// GAS reads these fields by name, so the names are load-bearing: a renamed or
+// dropped field silently writes blanks to the cloud backup. syncStatus and
+// lastSyncError are local-only and must never appear here. This is the explicit
+// return type of toPayloadItem so tsc rejects any field drift. It is a type
+// alias, not an interface, so it stays assignable to the pull path's
+// Record<string, unknown> item shape while still locking the field set.
+export type SyncPayloadItem = {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  currency: string;
+  categoryId: string;
+  subCategoryId: string;
+  name: string;
+  merchant: string;
+  note: string;
+  timestamp: number; // epoch seconds
+  readableDateTime: string;
+  paymentMethod: string;
+  tags: string;
+  updatedAt: number; // epoch milliseconds
+  version: number;
+};
+
 export type PullReportStatus = 'success' | 'partial' | 'failed';
 export type PullReportEntryAction =
   | 'insertedFromCloud'

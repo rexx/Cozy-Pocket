@@ -117,6 +117,26 @@ These three files are oversized and the developer knows it. **Refactor opportuni
 - **Sync payload shape** in `cloudSyncService.ts` — must stay compatible with the deployed Google Apps Script. `syncStatus` and `lastSyncError` are local-only and must NOT be uploaded.
 - **`mock://cloud-sync` code path** — keep working when editing sync logic.
 
+### Data-risk zones
+
+Classify every change with three questions: (1) does it write to the `transactions` table or the Google Sheet? (2) does it affect the sync merge decision (version / updatedAt / payload comparison)? (3) is it a guard for a destructive operation (confirm dialog, id-prefix filter, mock-vs-real routing)? All three "no" → green, edit freely.
+
+**Red zone — a mistake causes permanent loss, and the error is silent (no throw, build stays green, `tsc` cannot catch it; the damage surfaces only on the next sync/pull).** Change any of these only with a hand-reviewed diff and a manual `mock://cloud-sync` run exercising push / pull / conflict:
+
+- **R1 — sync merge decision.** `compareLocalAndCloud` and the pull merge `put` in `services/cloudSyncService.ts`. A wrong verdict overwrites unsynced local edits with cloud data. The tie-break where cloud wins on content mismatch at equal version+updatedAt is deliberate, not a bug.
+- **R2 — upload payload shape.** `toPayloadItem` in `services/cloudSyncService.ts`, typed by `SyncPayloadItem` in `types.ts`. GAS reads fields by name, so a renamed or dropped field silently writes blanks to the cloud backup. Keep the two in sync; `syncStatus` / `lastSyncError` must never be uploaded.
+- **R3 — GAS sheet I/O.** `docs/google-apps-script-phase1.js`: `SHEET_HEADERS` order, the column indices in `loadRecordMap` / `processGetItems`, and `resolveSyncDecision`. This script has no clear/deleteRow anywhere — that invariant is the floor of the whole safety model. Do not add one.
+- **R4 — Dexie schema.** Existing shipped `version()` stores in `db.ts`. New version + additive migration only; editing a shipped version corrupts local DBs.
+- **R5 — full-wipe guards.** `commitImport` overwrite mode and `resetLocalData` in `components/SettingsPage.tsx`, plus their confirm flows. These are the only two "clear everything" operations and the confirm dialogs are the sole guard. Reset also wipes the sync credentials, so a user cannot recover from cloud without re-entering them.
+- **R6 — transaction id + version.** Id generation and the version / updatedAt bump in `App.tsx`. Ids are the identity used for cross-device and cloud merge; a wrong id or a missed version bump causes silent overwrites.
+- **R7 — epoch-seconds invariant.** `toEpochSeconds` in `time.ts`. It gates every write path; a millisecond value leaking through syncs up to the cloud and poisons the backup, which has no self-heal.
+
+**Orange zone — corruption or pollution, but cloud-recoverable:** delete-path filters (e.g. the `sample-tx-` prefix), merge-type renames (willMerge is irreversible), CSV import validation, `prepareMockPullFixture` (writes the real Dexie table, isolated only by the `mock-demo-` prefix), sample-data-to-cloud pollution, `dialogService` confirm semantics.
+
+**Green zone — edit freely:** presentation components, read-only compute (`statsService`, `analyticsService`), preferences / localStorage, `networkService` (failing toward skip is fail-safe), Gemini parsing (only prefills a form, human confirms), pull-report display. Green ≠ ruleless — PWA layout has its own gotchas doc.
+
+**Last-resort recovery:** the cloud is Google Sheets, which keeps File → Version history. If a bad payload pollutes the sheet, that history is the only way back — local IndexedDB has no equivalent. Full zone rationale and the remaining guardrail steps: `docs/todo-references/data-risk-guardrails.md`.
+
 ### Coding style
 
 - **Code, comments, log strings: English / ASCII only.** UI-facing strings can be Chinese.

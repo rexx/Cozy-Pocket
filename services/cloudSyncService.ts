@@ -4,6 +4,7 @@ import {
   PullReportEntry,
   PullReportEntryReason,
   PullReportSummary,
+  SyncPayloadItem,
   Transaction,
 } from '../types';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
@@ -178,7 +179,7 @@ const getSyncConfig = async (): Promise<SyncConfig | null> => {
   return { apiUrl, token };
 };
 
-const toPayloadItem = (tx: Transaction) => ({
+const toPayloadItem = (tx: Transaction): SyncPayloadItem => ({
   id: tx.id,
   type: tx.type,
   amount: tx.amount,
@@ -195,8 +196,6 @@ const toPayloadItem = (tx: Transaction) => ({
   updatedAt: Number(tx.updatedAt || toEpochMillis(tx.timestamp) || Date.now()),
   version: Number(tx.version || 1),
 });
-
-type SyncPayloadItem = ReturnType<typeof toPayloadItem>;
 
 const hasSamePersistedPayload = (local: Transaction, cloud: Transaction): boolean => {
   return JSON.stringify(toPayloadItem(local)) === JSON.stringify(toPayloadItem(cloud));

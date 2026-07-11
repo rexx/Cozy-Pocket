@@ -26,7 +26,7 @@
 
 ## 資料安全與 Guardrail
 
-- 🟡 建立資料風險分區 guardrail：AGENTS.md 紅區清單、同步 payload 型別上鎖、GAS 欄位索引派生、重置確認顯示未同步筆數、CSV 匯入驗證對齊 pull、紅區純函式最小單元測試。（計劃：[data-risk-guardrails.md](docs/todo-references/data-risk-guardrails.md)）
+- 🟡 建立資料風險分區 guardrail（Step 1–2 已完成：AGENTS.md 紅區清單、同步 payload 型別上鎖；Step 3–6 待辦：GAS 欄位索引派生、重置確認顯示未同步筆數、CSV 匯入驗證對齊 pull、紅區純函式最小單元測試）。（計劃：[data-risk-guardrails.md](docs/todo-references/data-risk-guardrails.md)）
 
 ## Bundle / Chunk 優化待辦
 
