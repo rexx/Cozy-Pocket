@@ -15,10 +15,22 @@
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
 
-## 商家與資料維護
+## 統計與交易管理
 
+- 🟡 統計頁 Tag 篩選支援多選，交易須同時包含全部已選 tag 才納入統計；選擇 `Ipass`、`永豐` 時，只顯示同時具有兩者的交易。（計劃：[stats-multi-tag-filter.md](docs/todo-references/stats-multi-tag-filter.md)）
+- 🟡 統計頁新增預設開啟的「排除未來交易」選項，使用者可關閉以納入時間晚於現在的交易，並套用到所有統計與明細。（計劃：[stats-exclude-future-toggle.md](docs/todo-references/stats-exclude-future-toggle.md)）
+- 🟡 新增重複事件管理頁，集中查看、新增、編輯、停用與刪除週期性交易規則，並顯示下次執行時間。
+- 🟡 統計頁交易明細只顯示 `MM-dd` 月日，移除可見的年份與時間，將更多橫向空間留給交易名稱。（計劃：[stats-transaction-datetime-compact.md](docs/todo-references/stats-transaction-datetime-compact.md)）
+
+## Tag、商家與資料維護
+
+- 🟡 Tag 管理支援移除 tag，或將 `Ipass永豐` 拆成獨立的 `Ipass`、`永豐` 兩個 tag；寫回完整清單前去重。（計劃：[tag-remove-and-split.md](docs/todo-references/tag-remove-and-split.md)）
 - 🟡 評估是否將商家管理改為進頁後直接查 IndexedDB，而不是依賴 App 全量載入的 `transactions` state。（計劃：[merchant-management-indexeddb-source.md](docs/todo-references/merchant-management-indexeddb-source.md)）
 - 🟡 新增商家詳情頁，從商家管理進入後查看該商家的消費趨勢、常用類別、付款方式分布與最近交易。（計劃：[merchant-detail-page.md](docs/todo-references/merchant-detail-page.md)）
+
+## 匯入與外部資料
+
+- 🟡 整理 repo 外的 `migration-tool` 目錄，區分工具程式與個人資料，排除不應納入版控的內容，再建立獨立 private repo 推送。
 
 ## 資料安全與 Guardrail
 
