@@ -30,8 +30,8 @@
 
 目前相關檔案：
 
-- [vite.config.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/vite.config.ts)
-- [index.tsx](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/index.tsx)
+- [vite.config.ts](../vite.config.ts)
+- [index.tsx](../index.tsx)
 
 ### 2.2 不能依賴外部 CDN 才能顯示 UI
 
@@ -49,9 +49,9 @@
 
 目前相關檔案：
 
-- [index.html](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/index.html)
-- [styles.css](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/styles.css)
-- [package.json](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/package.json)
+- [index.html](../index.html)
+- [styles.css](../styles.css)
+- [package.json](../package.json)
 
 ### 2.3 Manifest、icons、base path 必須一致
 
@@ -75,9 +75,9 @@ https://rexx.github.io/Cozy-Pocket/
 
 目前相關檔案：
 
-- [vite.config.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/vite.config.ts)
-- [public/manifest.json](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/public/manifest.json)
-- [public/android-chrome-192x192.png](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/public/android-chrome-192x192.png)
+- [vite.config.ts](../vite.config.ts)
+- [public/manifest.json](../public/manifest.json)
+- [public/android-chrome-192x192.png](../public/android-chrome-192x192.png)
 
 ### 2.4 離線時要保留核心記帳流程，網路功能改降級
 
@@ -94,10 +94,10 @@ https://rexx.github.io/Cozy-Pocket/
 
 目前相關檔案：
 
-- [services/networkService.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/services/networkService.ts)
-- [services/cloudSyncService.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/services/cloudSyncService.ts)
-- [services/geminiService.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/services/geminiService.ts)
-- [App.tsx](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/App.tsx)
+- [services/networkService.ts](../services/networkService.ts)
+- [services/cloudSyncService.ts](../services/cloudSyncService.ts)
+- [services/geminiService.ts](../services/geminiService.ts)
+- [App.tsx](../App.tsx)
 
 ### 2.5 離線狀態要有 UI 提示，但不能擋住主流程
 
@@ -111,8 +111,8 @@ https://rexx.github.io/Cozy-Pocket/
 
 目前相關檔案：
 
-- [App.tsx](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/App.tsx)
-- [docs/pwa-layout-gotchas.md](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/docs/pwa-layout-gotchas.md)
+- [App.tsx](../App.tsx)
+- [docs/pwa-layout-gotchas.md](pwa-layout-gotchas.md)
 
 ### 2.6 Google Analytics 不能回到 blocking script 寫法
 
@@ -127,8 +127,8 @@ https://rexx.github.io/Cozy-Pocket/
 
 目前相關檔案：
 
-- [services/analyticsService.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/services/analyticsService.ts)
-- [index.tsx](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/index.tsx)
+- [services/analyticsService.ts](../services/analyticsService.ts)
+- [index.tsx](../index.tsx)
 
 ## 3. iOS 已知注意事項
 
@@ -163,7 +163,7 @@ https://rexx.github.io/Cozy-Pocket/
 
 詳細排版結論見：
 
-- [docs/pwa-layout-gotchas.md](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/docs/pwa-layout-gotchas.md)
+- [docs/pwa-layout-gotchas.md](pwa-layout-gotchas.md)
 
 ## 4. 驗證清單
 

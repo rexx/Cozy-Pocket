@@ -10,7 +10,7 @@
 ## 2. 目前本地資料模型（以程式碼為準）
 
 ### 2.1 TypeScript `Transaction`
-來源：[types.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/types.ts)
+來源：[types.ts](../types.ts)
 
 ```typescript
 export interface Transaction {
@@ -38,7 +38,7 @@ export interface Transaction {
 - 這兩個欄位目前不寫入 Google Sheets，也不包含在 API `items[]` payload 中。
 
 ### 2.2 Dexie 結構
-來源：[db.ts](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/db.ts)
+來源：[db.ts](../db.ts)
 
 ```typescript
 this.version(1).stores({
@@ -48,7 +48,7 @@ this.version(1).stores({
 ```
 
 ### 2.3 既有 `id` 實作
-來源：[App.tsx](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/App.tsx)
+來源：[App.tsx](../App.tsx)
 
 - 前端新增交易時以時間戳字串產生 `id`：`(Date.now() + attempts).toString()`。
 - 若遇到主鍵衝突會重試（最多 10 次）。
@@ -428,7 +428,7 @@ this.version(1).stores({
 ## 9. GAS 部署（Phase 1）
 1. 新建 Google Sheet。
 2. `Extensions -> Apps Script`。
-3. 貼上後端程式碼：[docs/google-apps-script-phase1.js](/Users/gtso/Downloads/ai-studio/cozy-pocket/Cozy-Pocket/docs/google-apps-script-phase1.js)。
+3. 貼上後端程式碼：[docs/google-apps-script-phase1.js](google-apps-script-phase1.js)。
 4. 設定 Script Property：
    - `Project Settings -> Script properties -> Add script property`
    - Key: `SYNC_TOKEN`
