@@ -85,6 +85,21 @@ Other PWA notes:
 - `vite.config.ts` `base` is hardcoded to `/Cozy-Pocket/`. The PWA manifest scope/start_url match. Forking and redeploying requires updating both.
 - Service worker uses `autoUpdate` — users get new code on next app open without prompt.
 
+## Sync endpoints — testing vs production
+
+Two Google Apps Script deployments are in use. The URLs differ only in the deployment id:
+
+| Sheet | Deployment id starts with |
+|---|---|
+| Testing | `AKfycbzU3ZXS` |
+| Production | `AKfycbwX4dBp` |
+
+Full URLs are deliberately absent from version control — this repo is public and the sync token is weak, so a published `exec` URL is a writable handle on the sheet. They live in `workdocs/gas-endpoints.md` (gitignored) and in each browser profile's Dexie `settings` table.
+
+**Before seeding fixture transactions in a browser**, check `syncApiUrl` in that origin's Dexie `settings` table. `mock://cloud-sync` is inert; either deployment id above is a real network write, and the app-boot pending sweep uploads on its own without a user action. GAS has no delete path (R3), so fixtures that reach the production sheet come back only by hand.
+
+IndexedDB is per-origin, so serving the dev build on a port that has never been used gives a fresh `CozyPocketDB` with no credentials — `getSyncConfig()` returns `null` and no upload path exists. That is cheaper and more reliable than remembering to check the URL.
+
 ## Known debt (intentional, not bugs)
 
 These three files are oversized and the developer knows it. **Refactor opportunistically when touching them; do not force-break them as part of unrelated work.** (Line counts intentionally omitted — they drift; `wc -l` if you need the current number.)
