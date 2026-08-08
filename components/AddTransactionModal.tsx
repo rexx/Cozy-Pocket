@@ -867,6 +867,13 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <button
               key={item.value}
               type="button"
+              // Keep focus on the companion input: a focus shift would fire its
+              // onBlur handler before this chip's click, and the tag input commits
+              // the typed fragment on blur. Cancelling pointerdown suppresses the
+              // compatibility mousedown on spec-compliant browsers; the mousedown
+              // guard covers engines that emit it anyway.
+              onPointerDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onSelect(item.value)}
               className={`max-w-full shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition-all active:scale-95 ${chipClassName}`}
               title={item.value}
@@ -1194,7 +1201,11 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
           <SuggestionChips
             items={tagSuggestions}
-            onSelect={(value) => setTagList((prev) => prev.includes(value) ? prev : [...prev, value])}
+            onSelect={(value) => {
+              setTagList((prev) => prev.includes(value) ? prev : [...prev, value]);
+              // Picking a suggestion replaces whatever fragment was typed.
+              setTagInput('');
+            }}
             formatValue={(value) => `#${value}`}
             tone="tag"
           />
