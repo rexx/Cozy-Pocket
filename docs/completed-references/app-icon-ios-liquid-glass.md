@@ -4,30 +4,11 @@ Cozy Pocket 加到 iPhone 主畫面後會取得 iOS 26 的 Liquid Glass 系統�
 
 ## 摘要
 
-- **觸發條件是 icon 的透明背景。** iOS 26 把不透明像素當成 icon 的前景層，自己補背景與立體光影。`apple-touch-icon.png` 因此不填不透明底。
-- **透明是必要條件，但不充分：圖形還必須夠細。** 主體內部一旦填滿就完全失去效果，與填色的 alpha 無關 —— 半透明 20% 與不透明深青色分別實測，結果相同。可見關鍵是非透明區域的覆蓋率，不是部分透明度本身。
-- **`"purpose": "maskable"` 不是觸發條件。** 對照樣本的 icon 目錄裡沒有 manifest 也沒有 maskable 宣告，照樣拿到效果。manifest 的 `purpose` 只剩安全區裁切的價值。
-- Liquid Glass 的官方路徑是 Icon Composer 產出的分層 `.icon` 加 Xcode 26 編譯，那是原生 App 專屬。PWA 只能交付單張點陣圖，無法宣告 foreground／background layer、depth 或 specular highlight，所以拿到的是系統對單張圖的自動推導，效果幅度是邊緣的立體處理而非可控的玻璃分層。
-- 不把玻璃、陰影、反射烘進 PNG —— 那會破壞 Light／Dark／Clear／Tinted 的系統適配，可能出現雙重高光。只交付乾淨平面圖形。
-- 本項目只改靜態資產與 manifest／build 設定，不碰任何交易資料路徑，屬於資料風險綠區。
+改版找出兩個觸發條件：圖檔必須是透明背景，而且主體不能填滿。兩者都由實機逐版比對確認，也推翻了「maskable purpose 才會觸發」與「任何部分透明度都會關掉效果」兩個先前的假說。
 
-## 覆蓋率判準
+這些是會長期約束 icon 設計的知識，不屬於單次改版的紀錄，因此獨立寫在 **[App icon 與 iOS 26 Liquid Glass](../app-icon-ios-liquid-glass.md)**；改圖前要讀的是那份。本檔只記錄這次改了什麼。
 
-判斷一張 icon 能不能拿到系統加工，看 `apple-touch-icon.png` 的全透明像素比例：
-
-| 圖形 | 全透明像素 | 玻璃 |
-|---|---|---|
-| 改版前（不透明滿版底） | 0% | ❌ |
-| 對照樣本（另一個 PWA 的線稿 icon） | 76.3% | ✅ |
-| 線稿，口袋內部填滿（半透明 20%） | 約 62% | ❌ |
-| 線稿，口袋內部填滿（不透明深青） | 62.2% | ❌ |
-| 最終版（線稿＋縫線＋錢幣＋星星） | 86.5% | ✅ |
-
-76% 與 86% 都有效、62% 失效。細描邊與虛線縫線的成本極低（縫線只佔 1.7%），可以自由使用；面狀填色不行。
-
-判斷透明度時**不能只看 `sips -g hasAlpha`** —— 有 alpha channel 不等於有透明像素，上述樣本都回報 `hasAlpha: yes`，實際差異只在像素值。
-
-另外，「任何部分透明度都會關掉效果」這個中途假說不成立：對照樣本本身就有 12.7% 的抗鋸齒半透明像素（76.3% 全透明加 11.0% 全不透明），照樣有效。
+本項目只改靜態資產與 manifest／build 設定，不碰任何交易資料路徑，屬於資料風險綠區。
 
 ## 關鍵變更
 
@@ -45,7 +26,8 @@ Cozy Pocket 加到 iPhone 主畫面後會取得 iOS 26 的 Liquid Glass 系統�
 - `package.json`：新增 `sharp` devDependency 與 `icons:generate` script。
 - `public/manifest.json`：兩個現有 icon 補 `"purpose": "any"`，新增 `icon-maskable-512.png` 一筆 `"purpose": "maskable"`。
 - `vite.config.ts`：`VitePWA.includeAssets` 加入 `icon-maskable-512.png`。
-- `README.md`：新增「App icon 產出流程」章節，記錄產出流程與「不要填滿主體」這條硬限制。
+- `README.md`：新增「App icon 產出流程」章節。
+- `docs/app-icon-ios-liquid-glass.md`：新增長青參考文件，收斂觸發條件、量測方式、已推翻的假說與實機驗證步驟。
 
 ## 產出設定
 
@@ -72,5 +54,5 @@ const OUTPUTS = [
 
 - `npm run icons:generate` 產出七個檔案，`npm run build` 與 `npm run docs:check` 皆通過。
 - iPhone 實機逐版比對，每次都先移除主畫面圖示再重新加入（iOS 會快取 web clip icon，不移除會看到舊圖而誤判）。最終版確認取得系統生成的背景與邊緣立體光影。
-- `apple-touch-icon.png` 的 alpha 分佈以 Python 3 stdlib 腳本量測，確認 86.5% 全透明、四角 alpha 為 0。
+- `apple-touch-icon.png` 的 alpha 分佈量測確認 86.5% 全透明、四角 alpha 為 0；`icons:generate` 之後把這個量測內建為每次產出的檢查。
 - 桌面瀏覽器 favicon 與 PWA 安裝提示圖示均無破圖。

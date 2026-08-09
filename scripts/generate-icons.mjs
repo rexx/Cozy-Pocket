@@ -39,6 +39,16 @@ const OUTPUTS = [
 // request it (bookmarks, some browser chrome).
 const ICO_SIZES = [16, 32, 48];
 
+// A tripwire, not a spec. iOS 26 only applies Liquid Glass to a mark thin enough
+// to leave most of the canvas transparent, but the real rule observed on device
+// is "do not fill enclosed areas" - this ratio is just the cheapest proxy for it.
+// 76.3% and 86.5% were observed to get the treatment, 62% not to; anything
+// between is unverified, so warn below the lowest ratio actually seen to work.
+// A small filled shape can clear this bar and still lose the effect.
+// See docs/app-icon-ios-liquid-glass.md.
+const MIN_TRANSPARENT_RATIO = 0.763;
+const COVERAGE_PROBE = 'apple-touch-icon.png';
+
 const SOURCE = 'icon.svg';
 
 function render({ size, flatten }) {
@@ -92,3 +102,29 @@ const icoImages = await Promise.all(
 
 await writeFile(path.join(publicDir, 'favicon.ico'), buildIco(icoImages));
 console.log(`${'favicon.ico'.padEnd(28)} ${ICO_SIZES.join('/')}px  ${BACKDROP}`);
+
+// An alpha channel alone proves nothing here - `sips -g hasAlpha` reports yes
+// for icons that have no transparent pixel at all - so count the actual values.
+const { data, info } = await sharp(path.join(publicDir, COVERAGE_PROBE))
+  .ensureAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true });
+
+let transparent = 0;
+for (let i = 0; i < data.length; i += info.channels) {
+  if (data[i + 3] === 0) transparent += 1;
+}
+
+const ratio = transparent / (info.width * info.height);
+const percent = (ratio * 100).toFixed(1);
+
+if (ratio < MIN_TRANSPARENT_RATIO) {
+  console.log(
+    `\nWARNING  ${COVERAGE_PROBE} is ${percent}% fully transparent, below the ${MIN_TRANSPARENT_RATIO * 100}% that was\n` +
+      `         observed to still get the iOS 26 Liquid Glass treatment. The mark is too solid:\n` +
+      `         remove a filled area or thin the strokes - shrinking it does not help much.\n` +
+      `         Verify on device before shipping. See docs/app-icon-ios-liquid-glass.md.`,
+  );
+} else {
+  console.log(`\n${COVERAGE_PROBE} is ${percent}% fully transparent - at or above the ratio observed to get Liquid Glass.`);
+}

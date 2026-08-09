@@ -355,20 +355,9 @@ https://rexx.github.io/Cozy-Pocket/android-chrome-192x192.png
 2. `npm run icons:generate`
 3. 把重新產出的檔案一起 commit（GitHub Pages 部署不會跑這個步驟）
 
-maskable 版不是另一份 SVG，同樣從 `icon.svg` 產出，所以造型只有一個地方要改。目前圖形最遠的角落落在 r=188，已經在 maskable 安全圓（r=204.8）內，不需要縮放；圖形若之後放大超過安全圓，才需要為這個輸出加上 inset。
+`favicon.ico` 與 maskable 版也都從同一份 SVG 產出，所以造型只有一個地方要改。產出時會印出 `apple-touch-icon.png` 的全透明像素比例並在過低時警告，那是 iOS 26 Liquid Glass 的觸發條件之一。
 
-`public/favicon.ico` 也在產出範圍內，內含 16／32／48 三種尺寸。`sharp` 不能寫 `.ico`，所以 script 自己組 ICO 目錄標頭再塞入 PNG payload，不需要額外依賴。
-
-兩個設計約束寫在 `scripts/generate-icons.mjs` 的 `OUTPUTS` 表裡：
-
-*   `apple-touch-icon.png` 與 Android 主畫面 icon **保留透明背景**。iOS 26 會把不透明像素當成 icon 的前景層、自己補背景與 Liquid Glass 光影；圖檔自帶不透明底等於放棄這個處理。
-*   favicon 與 maskable icon 則會壓上 `#1A1C2C` 底色 —— 瀏覽器分頁列與 Android adaptive icon 的裁切都沒有系統補的背景可用。
-
-改 `icon.svg` 時有一條實機量到的硬限制：**不要填滿口袋內部**。iOS 只對「大部分透明的畫布上的細線稿」做玻璃處理，一旦內部被填滿，效果就整個消失。這與填色透不透明無關 —— 半透明 20% 與不透明深青色分別實測，結果一樣。
-
-判斷方式看 `apple-touch-icon.png` 的全透明像素比例：目前的線稿約 86%，已知有效的另一個 PWA 是 76%，加了填色會掉到 62% 並失去效果。細線、虛線縫線與小色塊這類元素成本很低（縫線只吃掉 1.7%），可以安心加。
-
-同理，圖形本身也不能依賴背景：只用不透明的描邊與實心色塊撐起造型。
+**改 `icon.svg` 前先讀 [App icon 與 iOS 26 Liquid Glass](docs/app-icon-ios-liquid-glass.md)。** 有兩條會讓立體效果整個消失的硬限制（圖檔必須透明底、主體內部不能填滿），另外還有各輸出的背景策略、已經推翻不需要重跑的假說，以及實機驗證步驟（每次都要先移除主畫面圖示再重新加入）。
 
 1. 在首頁底部點擊本月摘要卡
 2. 在統計頁上方切換 `月份` 或 `年份`

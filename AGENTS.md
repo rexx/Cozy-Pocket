@@ -260,6 +260,7 @@ User-facing reset: 資料與設定 → 危險操作 → 「清除本機資料並
 - `docs/cloud-sync-specification.md` — full sync algorithm
 - `docs/pwa-offline-implementation.md` — PWA / offline implementation notes
 - `docs/pwa-layout-gotchas.md` — iOS Safari standalone layout traps
+- `docs/app-icon-ios-liquid-glass.md` — what makes iOS 26 apply Liquid Glass to the app icon, and the artwork constraints that follow. Read before touching `public/icon.svg`
 - `docs/google-apps-script-phase1.js` — backend implementation
 - `docs/user-feedback-inventory.md` — inventory of user-feedback mechanisms (dialogs / toasts / inline status) and which to use when
 - `docs/completed-references/` — design notes for shipped features (immutable snapshots)
