@@ -14,11 +14,7 @@ import {
   getStatsByCurrency,
   getYearTransactions,
 } from '../services/statsService';
-import {
-  buildSubCategoryExclusionKey,
-  readExcludedSubCategoryKeys,
-  writeExcludedSubCategoryKeys,
-} from '../preferences';
+import { buildSubCategoryExclusionKey } from '../preferences';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
 import { categoryIconMap } from './categoryIcons';
@@ -31,6 +27,8 @@ interface MonthlyStatsPageProps {
   initialDate: Date;
   defaultCurrency: string;
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
+  excludedSubCategoryKeys: string[];
+  onExcludedSubCategoryKeysChange: (keys: string[]) => void;
   onBack: () => void;
   onTransactionClick: (transaction: Transaction) => void;
 }
@@ -93,6 +91,8 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   initialDate,
   defaultCurrency,
   paymentMethodDisplayMode,
+  excludedSubCategoryKeys,
+  onExcludedSubCategoryKeysChange,
   onBack,
   onTransactionClick,
 }) => {
@@ -108,16 +108,12 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [expandedMerchantKey, setExpandedMerchantKey] = useState<string | null>(null);
   const [categoryBreakdownExpanded, setCategoryBreakdownExpanded] = useState<Record<string, boolean>>({});
   const [merchantBreakdownExpanded, setMerchantBreakdownExpanded] = useState<Record<string, boolean>>({});
-  const [excludedSubCategoryKeys, setExcludedSubCategoryKeys] = useState<string[]>(
-    () => readExcludedSubCategoryKeys()
-  );
 
   useEffect(() => {
     setSelectedDate(initialDate);
   }, [initialDate]);
 
   useEffect(() => {
-    writeExcludedSubCategoryKeys(excludedSubCategoryKeys);
     if (excludedSubCategoryKeys.length === 0) {
       setIsExcludedPanelOpen(false);
     }
@@ -130,17 +126,19 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 
   const toggleExcludeSubCategory = (categoryId: string, subCategoryId: string) => {
     const key = buildSubCategoryExclusionKey(categoryId, subCategoryId);
-    setExcludedSubCategoryKeys((prev) => (
-      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
-    ));
+    onExcludedSubCategoryKeysChange(
+      excludedSubCategoryKeys.includes(key)
+        ? excludedSubCategoryKeys.filter((item) => item !== key)
+        : [...excludedSubCategoryKeys, key]
+    );
   };
 
   const removeExcludedSubCategory = (key: string) => {
-    setExcludedSubCategoryKeys((prev) => prev.filter((item) => item !== key));
+    onExcludedSubCategoryKeysChange(excludedSubCategoryKeys.filter((item) => item !== key));
   };
 
   const clearAllExcludedSubCategories = () => {
-    setExcludedSubCategoryKeys([]);
+    onExcludedSubCategoryKeysChange([]);
   };
 
   const periodTransactions = useMemo(

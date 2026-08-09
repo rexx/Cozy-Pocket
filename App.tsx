@@ -20,7 +20,20 @@ import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
 import { buildTagReplacementPreview, getTagUsageSummaries, getTransactionsByTag, replaceTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
-import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, ERROR_BANNER_VISIBLE_SETTING_KEY, getPaymentMethodDisplayMode, getHomeNavArrowsVisible, getErrorBannerVisible } from './preferences';
+import {
+  PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY,
+  HOME_NAV_ARROWS_VISIBLE_SETTING_KEY,
+  ERROR_BANNER_VISIBLE_SETTING_KEY,
+  HOME_CALENDAR_VIEW_MODE_SETTING_KEY,
+  STATS_EXCLUDED_SUBCATEGORY_KEYS_SETTING_KEY,
+  DEFAULT_HOME_CALENDAR_VIEW_MODE,
+  getPaymentMethodDisplayMode,
+  getHomeNavArrowsVisible,
+  getErrorBannerVisible,
+  getHomeCalendarViewMode,
+  parseExcludedSubCategoryKeys,
+  migrateLegacyLocalStoragePreferences,
+} from './preferences';
 
 type AppView =
   | 'home'
@@ -62,18 +75,9 @@ const SETTINGS_VIEW_SECTION_MAP: Partial<Record<AppView, SettingsSectionPage>> =
   'settings-danger': 'danger',
 };
 
-const HOME_CALENDAR_VIEW_MODE_STORAGE_KEY = 'home-calendar-view-mode';
-
 const SAMPLE_TRANSACTION_ID_PREFIX = 'sample-tx-';
 
 const isSampleTransaction = (tx: Transaction): boolean => tx.id.startsWith(SAMPLE_TRANSACTION_ID_PREFIX);
-
-const getInitialCalendarViewMode = (): CalendarViewMode => {
-  if (typeof window === 'undefined') return 'month';
-
-  const storedValue = window.localStorage.getItem(HOME_CALENDAR_VIEW_MODE_STORAGE_KEY);
-  return storedValue === 'week' || storedValue === 'month' ? storedValue : 'month';
-};
 
 const ErrorDisplay: React.FC<{ enabled: boolean, errors: string[], onClear: () => void }> = ({ enabled, errors, onClear }) => {
   if (!enabled || errors.length === 0) return null;
@@ -197,7 +201,8 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('home');
   const [syncReturnView, setSyncReturnView] = useState<'home' | 'settings'>('home');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(getInitialCalendarViewMode);
+  const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(DEFAULT_HOME_CALENDAR_VIEW_MODE);
+  const [excludedSubCategoryKeys, setExcludedSubCategoryKeys] = useState<string[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pullReports, setPullReports] = useState<PullReport[]>([]);
   const [focusedPullReportId, setFocusedPullReportId] = useState('');
@@ -362,9 +367,19 @@ const App: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    window.localStorage.setItem(HOME_CALENDAR_VIEW_MODE_STORAGE_KEY, calendarViewMode);
-  }, [calendarViewMode]);
+  // Persisted from the change handlers rather than an effect on the value:
+  // an effect also fires on mount, which would race the boot read and write
+  // the default back over the stored preference.
+  const handleCalendarViewModeChange = useCallback((mode: CalendarViewMode) => {
+    setCalendarViewMode(mode);
+    void db.settings.put({ key: HOME_CALENDAR_VIEW_MODE_SETTING_KEY, value: mode });
+  }, []);
+
+  const handleExcludedSubCategoryKeysChange = useCallback((keys: string[]) => {
+    const normalized = parseExcludedSubCategoryKeys(keys);
+    setExcludedSubCategoryKeys(normalized);
+    void db.settings.put({ key: STATS_EXCLUDED_SUBCATEGORY_KEYS_SETTING_KEY, value: normalized });
+  }, []);
 
   useEffect(() => {
     const initData = async () => {
@@ -381,13 +396,29 @@ const App: React.FC = () => {
             await db.transactions.bulkPut(normalized);
           }
         }
-        const [defaultCurrencySetting, enabledCurrenciesSetting, paymentMethodDisplayModeSetting, homeNavArrowsVisibleSetting, errorBannerVisibleSetting] = await Promise.all([
+        await migrateLegacyLocalStoragePreferences();
+        const [
+          defaultCurrencySetting,
+          enabledCurrenciesSetting,
+          paymentMethodDisplayModeSetting,
+          homeNavArrowsVisibleSetting,
+          errorBannerVisibleSetting,
+          calendarViewModeSetting,
+          excludedSubCategoryKeysSetting,
+        ] = await Promise.all([
           db.settings.get('defaultCurrency'),
           db.settings.get('enabledCurrencies'),
           db.settings.get(PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY),
           db.settings.get(HOME_NAV_ARROWS_VISIBLE_SETTING_KEY),
-          db.settings.get(ERROR_BANNER_VISIBLE_SETTING_KEY)
+          db.settings.get(ERROR_BANNER_VISIBLE_SETTING_KEY),
+          db.settings.get(HOME_CALENDAR_VIEW_MODE_SETTING_KEY),
+          db.settings.get(STATS_EXCLUDED_SUBCATEGORY_KEYS_SETTING_KEY),
         ]);
+        // Applied here rather than in refreshData: both are owned by their
+        // change handlers afterwards, and a later re-read could land before a
+        // pending write and bounce the UI back to the previous value.
+        setCalendarViewMode(getHomeCalendarViewMode(calendarViewModeSetting?.value));
+        setExcludedSubCategoryKeys(parseExcludedSubCategoryKeys(excludedSubCategoryKeysSetting?.value));
         const enabledCurrencies = getEnabledCurrencies(enabledCurrenciesSetting?.value);
         const safeDefaultCurrency = getPreferredCurrency(defaultCurrencySetting?.value, enabledCurrencies);
         const safePaymentMethodDisplayMode = getPaymentMethodDisplayMode(paymentMethodDisplayModeSetting?.value);
@@ -1012,6 +1043,8 @@ const App: React.FC = () => {
           initialDate={selectedDate}
           defaultCurrency={defaultCurrency}
           paymentMethodDisplayMode={paymentMethodDisplayMode}
+          excludedSubCategoryKeys={excludedSubCategoryKeys}
+          onExcludedSubCategoryKeysChange={handleExcludedSubCategoryKeysChange}
           onBack={() => navigateBack('home')}
           onTransactionClick={handleEditItem}
         />
@@ -1147,7 +1180,7 @@ const App: React.FC = () => {
         showNavArrows={homeNavArrowsVisible}
         paymentMethodDisplayMode={paymentMethodDisplayMode}
         onDateSelect={setSelectedDate}
-        onCalendarViewModeChange={setCalendarViewMode}
+        onCalendarViewModeChange={handleCalendarViewModeChange}
         onPrevDay={() => setSelectedDate(addDays(selectedDate, -1))}
         onNextDay={() => setSelectedDate(addDays(selectedDate, 1))}
         onOpenSearch={openSearchPage}

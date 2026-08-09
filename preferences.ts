@@ -1,4 +1,5 @@
-import { type PaymentMethodDisplayMode } from './types';
+import { db, type AppSetting } from './db';
+import { type CalendarViewMode, type PaymentMethodDisplayMode } from './types';
 
 export const PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY = 'paymentMethodDisplayMode';
 export const DEFAULT_PAYMENT_METHOD_DISPLAY_MODE: PaymentMethodDisplayMode = 'text';
@@ -10,7 +11,16 @@ export const DEFAULT_HOME_NAV_ARROWS_VISIBLE = true;
 export const ERROR_BANNER_VISIBLE_SETTING_KEY = 'errorBannerVisible';
 export const DEFAULT_ERROR_BANNER_VISIBLE = false;
 
-export const STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY = 'statsExcludedSubCategoryKeys';
+export const STATS_EXCLUDED_SUBCATEGORY_KEYS_SETTING_KEY = 'statsExcludedSubCategoryKeys';
+
+export const HOME_CALENDAR_VIEW_MODE_SETTING_KEY = 'homeCalendarViewMode';
+export const DEFAULT_HOME_CALENDAR_VIEW_MODE: CalendarViewMode = 'month';
+
+// Both preferences used to live in localStorage, keyed as below. Installs that
+// predate the move still hold their values there, so boot migrates them into
+// the settings table once and drops the originals.
+const LEGACY_STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY = 'statsExcludedSubCategoryKeys';
+const LEGACY_HOME_CALENDAR_VIEW_MODE_STORAGE_KEY = 'home-calendar-view-mode';
 
 export const getPaymentMethodDisplayMode = (value: unknown): PaymentMethodDisplayMode => (
   value === 'text' || value === 'icon'
@@ -61,28 +71,60 @@ export const parseExcludedSubCategoryKeys = (raw: unknown): string[] => {
   return dedupeKeys(normalized);
 };
 
-export const readExcludedSubCategoryKeys = (): string[] => {
-  if (typeof window === 'undefined') return [];
+export const getHomeCalendarViewMode = (value: unknown): CalendarViewMode => (
+  value === 'week' || value === 'month' ? value : DEFAULT_HOME_CALENDAR_VIEW_MODE
+);
+
+const readLegacyLocalStorageValue = (key: string): string | null => {
+  if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY);
-    if (raw === null) return [];
-    return parseExcludedSubCategoryKeys(raw);
+    return window.localStorage.getItem(key);
   } catch {
-    return [];
+    return null;
   }
 };
 
-export const writeExcludedSubCategoryKeys = (keys: string[]): void => {
+const removeLegacyLocalStorageValue = (key: string): void => {
   if (typeof window === 'undefined') return;
   try {
-    const normalized = parseExcludedSubCategoryKeys(keys);
-    window.localStorage.setItem(
-      STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY,
-      JSON.stringify(normalized)
-    );
+    window.localStorage.removeItem(key);
   } catch {
-    // Swallow quota / serialization failures; statistics still work in memory.
+    // A failed cleanup is harmless: the settings table already won the read.
   }
+};
+
+// Runs before the boot settings read so a migrated value is what that read
+// sees. Existing settings rows always win, which keeps this idempotent and
+// stops a stale localStorage leftover from overwriting a newer preference.
+export const migrateLegacyLocalStoragePreferences = async (): Promise<void> => {
+  if (typeof window === 'undefined') return;
+
+  const [storedCalendarViewMode, storedExcludedKeys] = await Promise.all([
+    db.settings.get(HOME_CALENDAR_VIEW_MODE_SETTING_KEY),
+    db.settings.get(STATS_EXCLUDED_SUBCATEGORY_KEYS_SETTING_KEY),
+  ]);
+
+  const pending: AppSetting[] = [];
+
+  const legacyCalendarViewMode = readLegacyLocalStorageValue(LEGACY_HOME_CALENDAR_VIEW_MODE_STORAGE_KEY);
+  if (!storedCalendarViewMode && (legacyCalendarViewMode === 'week' || legacyCalendarViewMode === 'month')) {
+    pending.push({ key: HOME_CALENDAR_VIEW_MODE_SETTING_KEY, value: legacyCalendarViewMode });
+  }
+
+  const legacyExcludedKeys = readLegacyLocalStorageValue(LEGACY_STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY);
+  if (!storedExcludedKeys && legacyExcludedKeys !== null) {
+    const normalized = parseExcludedSubCategoryKeys(legacyExcludedKeys);
+    if (normalized.length > 0) {
+      pending.push({ key: STATS_EXCLUDED_SUBCATEGORY_KEYS_SETTING_KEY, value: normalized });
+    }
+  }
+
+  if (pending.length > 0) {
+    await db.settings.bulkPut(pending);
+  }
+
+  removeLegacyLocalStorageValue(LEGACY_HOME_CALENDAR_VIEW_MODE_STORAGE_KEY);
+  removeLegacyLocalStorageValue(LEGACY_STATS_EXCLUDED_SUBCATEGORY_KEYS_STORAGE_KEY);
 };
 
 export const buildSubCategoryExclusionKey = (
