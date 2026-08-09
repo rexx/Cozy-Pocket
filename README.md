@@ -251,7 +251,7 @@ this.version(2).stores({
 *   點擊類別列後會展開子類別摘要與該類別交易列表；交易項目沿用既有 `TransactionItem` 呈現，點擊後會直接進入原本的編輯流程。
 *   展開後的子類別摘要會顯示筆數、金額、佔比與沿用主類別顏色的 progress bar；佔比分母為展開類別的總額，不跨類別或幣別比較。
 *   每個子類別摘要列右側提供排除按鈕，按下後該子類別會從幣別總額、類別占比、子類別摘要、收入／支出展開明細與交易列表一起移除。
-*   排除清單以 `localStorage` key `statsExcludedSubCategoryKeys` 保存（內容為 JSON array，每筆為 `categoryId:subCategoryId`），切換期間／tag／支付方式不會清空；重新開啟統計頁時自動套用，並可透過篩選列上的「排除 N」按鈕展開摘要進行單筆取消或全部清除。
+*   排除清單以 Dexie `settings` 表的 `statsExcludedSubCategoryKeys` 保存（內容為 JSON array，每筆為 `categoryId:subCategoryId`），切換期間／tag／支付方式不會清空；重新開啟統計頁時自動套用，並可透過篩選列上的「排除 N」按鈕展開摘要進行單筆取消或全部清除。清單由 `App.tsx` 在開機時讀入並以 props 傳給 `MonthlyStatsPage`，因此進入統計頁的第一次 render 就已套用排除，不會先顯示未排除的金額再跳動。
 *   依類別彙整下方會顯示依商家彙整區塊，預設為收合狀態，標題列右側顯示商家數量徽章與展開／收合 chevron；點擊標題列才會渲染支出商家與收入商家群組，再次點擊可收合。每個幣別卡片的展開狀態彼此獨立；離開統計頁再回來會重置為收合。
 *   商家列依金額由高到低排序，金額相同時再依筆數、最近交易時間與商家名稱排序；不同幣別不會混算，同一商家在不同幣別會分別顯示。
 *   只有有商家名稱的交易會列入商家彙整，空商家交易仍計入幣別與類別總額但不會出現在商家清單。
@@ -330,9 +330,34 @@ this.version(2).stores({
 *   年度雲端同步完成後會導航到「同步紀錄」頁（`SyncSection` 隨即卸載），無論成功、部分失敗或失敗都改以底部 toast 呈現結果摘要，詳細報告內容改看同步紀錄頁本身；選擇年份前的驗證錯誤與同步前拋出例外仍在 `SyncSection` 內顯示頁內錯誤卡片。
 *   `TagManagementSection` 與 `MerchantManagementSection` 各自以 `useState` 持有選取的 tag／商家、新名稱輸入、預覽結果、送出狀態、相關交易與 inline status；container 只透過 props 傳入資料來源與 preview／replace 或 rename／get-transactions／`onDataChange`／`onOpenSyncProgress` 等 callback，不再保留這兩條流程的 state 或 handler。Tag 的兩個 callback 為 `onPreviewTagReplacement` 與 `onReplaceTag`，兩者都接受 replacement tag 陣列，空陣列即代表移除。
 *   這兩個更名子頁的選取與預覽 state 與「目前開啟的子頁」綁定；切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置為初始狀態（刻意行為）。
-*   匯入與匯出已整併在同一個 section 中；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。
+*   匯入與匯出已整併在同一個 section 中，共四張子卡牌：交易 CSV 匯出／匯入，以及設定 JSON 匯出／還原（見 6.13）；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。
+*   `ImportExportSection` 的設定備份／還原直接呼叫 `services/settingsBackupService.ts`，不經過 `SettingsPage` container；CSV 兩條流程仍由 container 提供 callback。
 *   設定首頁會顯示目前 tag 數量與商家數量；商家數量直接取自已載入交易計算的商家用量摘要（`MerchantUsageSummary`），不額外讀取 IndexedDB。
 *   商家管理已整併為 `SettingsPage` 的正式設定子頁，與 Tag 管理等其他子頁共用設定首頁卡片、子頁 routing 與返回行為。
+
+### 6.13 設定備份與還原
+
+**偏好的儲存位置**
+
+*   所有設定與偏好都存在 Dexie `settings` 表：`defaultCurrency`、`enabledCurrencies`、`paymentMethodDisplayMode`、`homeNavArrowsVisible`、`errorBannerVisible`、`homeCalendarViewMode`、`statsExcludedSubCategoryKeys`、`geminiApiKey`、`syncApiUrl`、`syncToken`。
+*   正常使用路徑不會往 `localStorage` 寫入任何設定。唯一還在使用 `localStorage` 的是 `mock://cloud-sync` 假後端的狀態 key（`cozy-pocket.mock-cloud-sync.v1`），以及危險操作的 `localStorage.clear()`。
+*   `homeCalendarViewMode` 與 `statsExcludedSubCategoryKeys` 原本存在 `localStorage`。`preferences.ts` 的 `migrateLegacyLocalStoragePreferences()` 會在開機讀設定前執行一次性遷移：`settings` 已有該 key 就跳過（既有值永遠優先），寫入成功後才刪除 `localStorage` 原值，中途失敗時原值仍在、下次開機重試。
+*   兩者的寫入都由 change handler 負責而非 `useEffect`：effect 會在 mount 時一併觸發，與開機讀取形成 race，把預設值寫回去蓋掉已存的偏好。
+
+**備份檔**
+
+*   交易與設定分成兩個檔案：交易走既有的 `cozy_pocket_backup_YYYYMMDD.csv`，設定走新的 `cozy_pocket_settings_YYYYMMDD.json`。
+*   JSON 結構為 `schemaVersion`（目前 1）、`exportedAt`（ISO 8601）、`dbVersion`（Dexie schema 版本）、`settings`（`{ key, value }` 陣列），另有選配的 `pullReports`。
+*   匯出時整張 `settings` 表 dump，不使用 key 白名單，日後新增的設定 key 會自動納入備份。
+*   `geminiApiKey`、`syncToken`、`pullReports` 為三個獨立勾選框，**預設皆不勾**。前兩者是明文金鑰，勾選任一項時面板會顯示明文金鑰警告；`pullReports` 是同步稽核歷史而非設定。
+
+**還原**
+
+*   選檔後先顯示預覽（匯出時間、設定項目數、同步紀錄筆數、是否含 Gemini key 與同步憑證），確認後才寫入。
+*   還原語意為 merge：`db.settings.bulkPut()` 只覆蓋檔案內有的 key，檔案沒帶的 key 保持現值，因此不含金鑰的備份不會清掉本機已設定的金鑰。
+*   檔案含同步憑證時，確認對話框會轉為 danger tone 並額外說明本機將改用備份中的雲端端點與 token。
+*   `schemaVersion` 比目前支援版本新時直接擋下，不嘗試套用；JSON 解析失敗、缺少 `schemaVersion`、或內容沒有任何可還原項目時，各自給出可讀的錯誤訊息且不寫入資料。格式不符的個別項目會被丟棄並計入預覽的「略過無效項目」。
+*   偏好在開機時讀入 React state，因此還原成功後會詢問是否立即重新載入；選擇稍後則以頁內 status 卡片提示需重新載入才會套用。
 
 ---
 

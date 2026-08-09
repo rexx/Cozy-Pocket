@@ -72,6 +72,7 @@
 
 ## 匯入與外部資料
 
+- ✅ 設定備份與還原（JSON）已完成：先把僅存於 localStorage 的兩個偏好（月曆檢視模式、統計排除子類別）以一次性遷移搬進 Dexie `settings`，讓所有設定集中在單一儲存層；「匯入匯出」再新增設定 JSON 的匯出與還原，與既有交易 CSV 併成兩檔備份模型。整張 `settings` 表 dump 因此日後新增的 key 自動納入備份，`geminiApiKey`／`syncToken`／`pullReports` 為預設不勾的選配項，還原採 merge 語意且先預覽後套用。（紀錄：[settings-backup.md](docs/completed-references/settings-backup.md)）
 - ✅ 年度雲端同步已完成並端到端驗證：前端入口、年份選擇、mock API、本地同步報告與報告 UI 皆可用；新版 GAS `action: "get"` 已部署，並以真實 Google Sheets 驗證 PUSH 與四種 PULL 分類；過程中發現並修正 `readableDateTime` 被 Sheets coerce 導致的假性同步 churn（conflict detection 排除該衍生欄位、pull 一律重算）。（紀錄：[manual-cloud-pull.md](docs/completed-references/manual-cloud-pull.md)）
 
 ## AI 功能

@@ -407,7 +407,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
       section: 'import-export',
       title: SETTINGS_SECTION_COPY['import-export'].title,
       description: SETTINGS_SECTION_COPY['import-export'].description,
-      meta: 'CSV 備份與匯入',
+      meta: '交易與設定備份',
       icon: ArrowUpDown,
       accentClassName: 'border-amber-400/20 bg-amber-500/12 text-amber-200',
     },

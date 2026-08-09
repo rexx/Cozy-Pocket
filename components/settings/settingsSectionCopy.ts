@@ -21,7 +21,7 @@ export const SETTINGS_SECTION_COPY = {
   },
   'import-export': {
     title: '匯入匯出',
-    description: '匯出備份，或從 CSV 匯入資料。',
+    description: '匯入匯出交易與設定的備份檔。',
   },
   danger: {
     title: '危險操作',
