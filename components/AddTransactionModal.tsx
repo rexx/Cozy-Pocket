@@ -13,6 +13,7 @@ import { PaymentMethod, SuggestionItem, SuggestionIndex, Transaction, Transactio
 import { format, isValid } from 'date-fns';
 import { db } from '../db';
 import { isOffline } from '../services/networkService';
+import { joinTags } from '../services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from '../time';
 import { categoryIconMap } from './categoryIcons';
 import PageHeader from './PageHeader';
@@ -648,7 +649,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       paymentMethod,
       timestamp,
       readableDateTime: formatReadableDateTime(timestamp),
-      tags: finalTagList.join(' ')
+      tags: joinTags(finalTagList)
     };
 
     if (isEditing && onUpdate && editingTransaction) {

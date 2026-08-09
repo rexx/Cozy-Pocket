@@ -24,7 +24,6 @@
 
 ## Tag、商家與資料維護
 
-- 🟡 Tag 管理支援移除 tag，或將 `Ipass永豐` 拆成獨立的 `Ipass`、`永豐` 兩個 tag；寫回完整清單前去重。（計劃：[tag-remove-and-split.md](docs/todo-references/tag-remove-and-split.md)）
 - 🟡 評估是否將商家管理改為進頁後直接查 IndexedDB，而不是依賴 App 全量載入的 `transactions` state。（計劃：[merchant-management-indexeddb-source.md](docs/todo-references/merchant-management-indexeddb-source.md)）
 - 🟡 新增商家詳情頁，從商家管理進入後查看該商家的消費趨勢、常用類別、付款方式分布與最近交易。（計劃：[merchant-detail-page.md](docs/todo-references/merchant-detail-page.md)）
 

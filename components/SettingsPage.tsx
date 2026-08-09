@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
 import { SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
-import { TagRenamePreview, TagUsageSummary } from '../services/tagService';
+import { TagReplacementPreview, TagUsageSummary } from '../services/tagService';
 import { MerchantRenamePreview, MerchantUsageSummary } from '../services/merchantService';
 import PreferencesSection from './settings/PreferencesSection';
 import AiSection from './settings/AiSection';
@@ -56,8 +56,8 @@ interface SettingsPageProps {
   onErrorBannerVisibleChange: (visible: boolean) => void;
   tagSummaries: TagUsageSummary[];
   merchantSummaries: MerchantUsageSummary[];
-  onPreviewTagRename: (oldTag: string, newTag: string) => Promise<TagRenamePreview>;
-  onRenameTag: (oldTag: string, newTag: string) => Promise<TagRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
+  onPreviewTagReplacement: (oldTag: string, replacementTags: string[]) => Promise<TagReplacementPreview>;
+  onReplaceTag: (oldTag: string, replacementTags: string[]) => Promise<TagReplacementPreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
   onGetTagTransactions: (tag: string) => Promise<Transaction[]>;
   onTagTransactionClick: (transaction: Transaction) => void;
   onPreviewMerchantRename: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview>;
@@ -112,8 +112,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onErrorBannerVisibleChange,
   tagSummaries,
   merchantSummaries,
-  onPreviewTagRename,
-  onRenameTag,
+  onPreviewTagReplacement,
+  onReplaceTag,
   onGetTagTransactions,
   onTagTransactionClick,
   onPreviewMerchantRename,
@@ -503,8 +503,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           <TagManagementSection
             tagSummaries={tagSummaries}
             paymentMethodDisplayMode={paymentMethodDisplayMode}
-            onPreviewTagRename={onPreviewTagRename}
-            onRenameTag={onRenameTag}
+            onPreviewTagReplacement={onPreviewTagReplacement}
+            onReplaceTag={onReplaceTag}
             onGetTagTransactions={onGetTagTransactions}
             onTagTransactionClick={onTagTransactionClick}
             onDataChange={onDataChange}

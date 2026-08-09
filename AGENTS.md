@@ -68,7 +68,7 @@ Full hierarchy and component mapping: README §6.5.
 
 - Transaction `id` is generated from `Date.now()` (millisecond string).
 - `timestamp` is **epoch seconds** (not ms) with seconds always `00` to enable precise minute-level ordering. `readableDateTime` is the human-readable mirror.
-- `tags` stored as **single space-separated string**, not array. Token-based exact match (no substring matching).
+- `tags` stored as **single space-separated string**, not array. Token-based exact match (no substring matching). Every write path serializes through `joinTags()` in `services/tagService.ts` — normalize, dedupe, sort by code point. Code point rather than `localeCompare` so the stored string is engine-independent across devices; keep new write paths on that helper.
 - `merchant` stored on each transaction, not in a separate table. Rename = batch update of all matching transactions.
 
 ## iPhone PWA — load-bearing rules

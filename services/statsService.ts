@@ -185,7 +185,8 @@ export const getMonthTags = (transactions: Transaction[]) => {
   transactions.forEach((tx) => {
     extractTransactionTags(tx).forEach((tag) => tagSet.add(tag));
   });
-  return Array.from(tagSet).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  // Code point order, matching joinTags and the Tag 管理 list.
+  return Array.from(tagSet).sort();
 };
 
 export const filterTransactionsByTag = (transactions: Transaction[], tag: string) => {

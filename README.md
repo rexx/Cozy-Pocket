@@ -103,6 +103,8 @@ this.version(2).stores({
 
 目前 schema 為 v2，共三張表：`transactions`、`settings`、`pullReports`（年度雲端同步報告）。既有 version 定義不可修改，新欄位或新表一律以新 version 疊加（詳見 AGENTS.md）。
 
+`tags` 是空白分隔的單一字串，tag 名稱本身不可含空白。新增／編輯交易與 Tag 管理兩條寫入路徑都以 `services/tagService.ts` 的 `joinTags()` 序列化：正規化、去除重複、依 code point 排序。排序刻意不使用 `localeCompare`，因為 code point 順序與執行引擎無關，不同裝置寫入同一組 tag 會產生完全相同的字串，同步的內容比對不會因排序差異誤判。既有資料不會回頭重排，只有被重新寫入的交易會套用新順序。
+
 ---
 
 ## 6. 核心邏輯說明
@@ -232,6 +234,7 @@ this.version(2).stores({
 *   統計頁支援 `月份` 與 `年份` 兩種模式，兩者共用同一套聚合邏輯與 UI。
 *   期間切換會同步影響幣別統計、Tag 清單、支付方式清單、收入／支出展開明細、類別彙整與商家彙整結果。
 *   `tags` 採空白分隔儲存；統計頁的 Tag 篩選使用精確 token 比對，不做模糊包含搜尋。
+*   統計頁的 Tag 篩選清單依 tag 名稱的 code point 順序排列，與 Tag 管理清單和 `tags` 欄位的儲存順序一致。
 
 ### 6.7 統計頁明細展開、類別與商家彙整
 *   每個幣別卡片會顯示收入與支出總額。
@@ -275,19 +278,25 @@ this.version(2).stores({
 ### 6.10 Tag 管理
 *   「資料與設定」改為獨立頁面，從首頁右上角進入，左上角返回首頁。
 *   「資料與設定」頁提供 Tag 管理區塊，可查看目前所有 tag 與各自使用筆數。
-*   尚未選擇 tag 前，只顯示 tag 清單；更名輸入區與操作按鈕會先隱藏。
+*   Tag 清單依使用筆數由多到少排序，同筆數時依 tag 名稱的 code point 順序排列，與 `tags` 欄位的儲存順序使用同一套比較規則。
+*   尚未選擇 tag 前，只顯示 tag 清單；輸入區與操作按鈕會先隱藏。
 *   選擇 tag 後，會在同一區塊列出該 tag 的所有交易，並可直接點進既有編輯流程。
-*   更名前需先執行預覽，確認受影響交易筆數；確認按鈕只會在有效預覽後顯示，預覽黃色卡與確認按鈕會一起出現在新名稱輸入下方。
-*   tag 更名採精確 token 比對，只會更新完整相同的 tag，不做模糊字串取代。
-*   預覽顯示的是「受影響交易筆數」，不是 tag token 次數。
-*   輸入時會自動正規化 tag：去除前後空白，並移除前置 `#`。
-*   新名稱輸入變更後會清除既有預覽，黃色預覽卡與確認按鈕會同步消失，避免舊預覽套用到新輸入值。
+*   Tag 管理支援三種操作，共用同一個 preview 與確認流程：更名（一個新 tag）、拆分（多個新 tag）、移除（不指定新 tag）。
+*   「新的 Tag」輸入框可用空白分隔多個 tag。輸入 `Ipass 永豐` 會解析成 `Ipass` 與 `永豐` 兩個獨立 tag token，不是名稱含空白的單一 tag；preview 會將它們顯示為個別 chip。
+*   移除入口是「預覽影響筆數」右側的方形垃圾桶按鈕，點下去直接產生移除 preview，不需要額外的確認步驟按鈕。
+*   preview 卡與確認按鈕只有一組，外觀依操作切換：更名／拆分為黃色卡加綠色確認鈕，移除為紅色卡加紅色確認鈕。移除的確認鈕文案會帶上目標 tag 名稱。
+*   移除 preview 會顯示受影響交易筆數、移除後不再有任何 tag 的交易筆數，以及「只移除 tag，不會刪除交易」的說明。
+*   所有操作都必須先預覽才會出現確認按鈕；預覽顯示的是「受影響交易筆數」，不是 tag token 次數。
+*   更名、拆分與移除都採精確 token 比對，只處理完整相同的 tag，不做模糊字串取代。
+*   輸入時會自動正規化 tag：去除前後空白，並移除前置 `#`。輸入內容正規化後為空（例如只輸入 `#`）會被擋下並提示輸入新的 tag 名稱，不會被當成移除。
+*   輸入框內容變更後會清除既有預覽，預覽卡與確認按鈕同步消失，避免舊預覽套用到新輸入值。
 *   若新 tag 名稱已存在，預覽卡會先提醒；確認後會合併為同一個 tag，並自動去除重複 tag。
-*   預覽錯誤與合併警告會顯示在與商家管理相同樣式的 feedback card 位置，依狀態使用紅色或黃色，不使用獨立警告 icon；更名全部成功時只顯示底部 toast（含更新筆數），不再顯示綠色完成卡。
-*   更名送出中會顯示旋轉 loading icon；完成後表單會保留並直接選到新 tag 或合併目標 tag，相關交易列表會跟著重新載入。
-*   合併或更名後，該筆交易的 `tags` 會重新整理為標準空白分隔格式，並標記為 `pending` 以便後續同步。
+*   預覽錯誤與合併警告會顯示在與商家管理相同樣式的 feedback card 位置，依狀態使用紅色或黃色，不使用獨立警告 icon；更名全部成功時只顯示底部 toast（含更新筆數），拆分與移除則在頁內保留結果訊息。
+*   送出中會顯示旋轉 loading icon，並在操作完成前保留整個 tag 詳情面板，避免本機寫入完成、同步尚未結束時面板提前收合。
+*   更名完成後會直接選到新 tag 或合併目標 tag，相關交易列表跟著重新載入；拆分與移除完成後會清除選取，並把畫面捲回區塊頂端顯示結果訊息。
+*   合併、更名、拆分或移除後，該筆交易的 `tags` 會由 `joinTags()` 重新序列化：正規化、去除重複，並依 code point 排序，最後標記為 `pending` 以便後續同步。移除最後一個 tag 的交易會保留下來，`tags` 寫成空字串。
 *   同步部分失敗時 feedback card 會附帶「查看同步狀態」按鈕，可直接跳到同步狀態頁，返回時回到 Tag 管理子頁。
-*   tag 名稱目前仍區分大小寫，例如 `food` 與 `Food` 會視為不同 tag。
+*   tag 名稱目前仍區分大小寫，例如 `food` 與 `Food` 會視為不同 tag，也不會互相去重。
 
 ### 6.11 商家管理
 *   商家名稱目前仍保存在每筆交易的 `merchant` 欄位中，商家更名會以批次更新交易的方式完成。
@@ -315,7 +324,7 @@ this.version(2).stores({
 *   設定子頁的 inline 回饋共用 `components/settings/SettingsFeedbackCard.tsx`（`SettingsFeedbackCard` 卡片 + 包裝 `SettingsStatus` 的 `SettingsStatusCard`），success／error／warning 對應綠／紅／黃樣式；`TagManagementSection` 與 `MerchantManagementSection` 的預覽卡與狀態卡也改用此共用元件。
 *   `SyncSection` 另外自管年度雲端同步 dialog 的開關、選取年份與送出 state（dialog markup 已移入該子頁）；`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。
 *   年度雲端同步完成後會導航到「同步紀錄」頁（`SyncSection` 隨即卸載），無論成功、部分失敗或失敗都改以底部 toast 呈現結果摘要，詳細報告內容改看同步紀錄頁本身；選擇年份前的驗證錯誤與同步前拋出例外仍在 `SyncSection` 內顯示頁內錯誤卡片。
-*   `TagManagementSection` 與 `MerchantManagementSection` 各自以 `useState` 持有選取的 tag／商家、新名稱輸入、預覽結果、送出狀態、相關交易與 inline status；container 只透過 props 傳入資料來源與 preview／rename／get-transactions／`onDataChange`／`onOpenSyncProgress` 等 callback，不再保留這兩條流程的 state 或 handler。
+*   `TagManagementSection` 與 `MerchantManagementSection` 各自以 `useState` 持有選取的 tag／商家、新名稱輸入、預覽結果、送出狀態、相關交易與 inline status；container 只透過 props 傳入資料來源與 preview／replace 或 rename／get-transactions／`onDataChange`／`onOpenSyncProgress` 等 callback，不再保留這兩條流程的 state 或 handler。Tag 的兩個 callback 為 `onPreviewTagReplacement` 與 `onReplaceTag`，兩者都接受 replacement tag 陣列，空陣列即代表移除。
 *   這兩個更名子頁的選取與預覽 state 與「目前開啟的子頁」綁定；切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置為初始狀態（刻意行為）。
 *   匯入與匯出已整併在同一個 section 中；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。
 *   設定首頁會顯示目前 tag 數量與商家數量；商家數量直接取自已載入交易計算的商家用量摘要（`MerchantUsageSummary`），不額外讀取 IndexedDB。

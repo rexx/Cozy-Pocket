@@ -51,6 +51,7 @@
 
 ## 商家與資料維護
 
+- ✅ Tag 管理已支援移除 tag，或將 `Ipass永豐` 拆成獨立的 `Ipass`、`永豐` 兩個 tag；移除入口為預覽鍵右側的垃圾桶按鈕，三種操作共用同一組預覽卡與確認鈕。每筆交易寫回前會對完整 tag 清單去重並依 code point 排序，新增／編輯交易的儲存路徑也共用同一個序列化器。（紀錄：[tag-remove-and-split.md](docs/completed-references/tag-remove-and-split.md)）
 - ✅ 新增／修改交易的 tag 建議點擊不再被輸入框 blur 搶先：chip 攔截 pointer/mouse down 保住輸入框 focus，選取建議時只加入點到的建議並清空未確認的輸入片段；Enter、空格分隔與失焦提交的既有路徑不變。（紀錄：[tag-suggestion-click-blur-race.md](docs/completed-references/tag-suggestion-click-blur-race.md)）
 - ✅ 商家管理已加入商家搜尋與每次 200 筆的「載入更多」，降低大量商家清單的初次渲染成本。（紀錄：[merchant-management-search-pagination.md](docs/completed-references/merchant-management-search-pagination.md)）
 - ✅ 商家名稱調整已補齊正規化驗證、合併提醒、共用 feedback card 與更名後直接選到新商家的 UI 狀態。（紀錄：[merchant-rename-validation.md](docs/completed-references/merchant-rename-validation.md)）

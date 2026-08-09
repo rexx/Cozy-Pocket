@@ -18,7 +18,7 @@ import { pullTransactionsFromCloud, SyncProgress, syncCreateItems, syncPendingTr
 import { buildMerchantRenamePreview, getMerchantUsageSummaries, getTransactionsByMerchant, renameMerchantInTransactions } from './services/merchantService';
 import { isOffline } from './services/networkService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
-import { buildTagRenamePreview, getTagUsageSummaries, getTransactionsByTag, renameTagInTransactions, splitTags } from './services/tagService';
+import { buildTagReplacementPreview, getTagUsageSummaries, getTransactionsByTag, replaceTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
 import { PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, ERROR_BANNER_VISIBLE_SETTING_KEY, getPaymentMethodDisplayMode, getHomeNavArrowsVisible, getErrorBannerVisible } from './preferences';
 
@@ -747,8 +747,8 @@ const App: React.FC = () => {
     setPrefilledTransaction(null);
   }, []);
 
-  const previewTagRename = useCallback(async (oldTag: string, newTag: string) => {
-    return buildTagRenamePreview(transactions, oldTag, newTag);
+  const previewTagReplacement = useCallback(async (oldTag: string, replacementTags: string[]) => {
+    return buildTagReplacementPreview(transactions, oldTag, replacementTags);
   }, [transactions]);
 
   const previewMerchantRename = useCallback(async (oldMerchant: string, newMerchant: string) => {
@@ -799,9 +799,9 @@ const App: React.FC = () => {
     }
   }, [refreshData, transactions, triggerPendingSync]);
 
-  const renameTag = useCallback(async (oldTag: string, newTag: string) => {
+  const replaceTag = useCallback(async (oldTag: string, replacementTags: string[]) => {
     try {
-      const { preview, updatedTransactions } = renameTagInTransactions(transactions, oldTag, newTag);
+      const { preview, updatedTransactions } = replaceTagInTransactions(transactions, oldTag, replacementTags);
 
       if (preview.affectedCount === 0 || updatedTransactions.length === 0) {
         throw new Error('找不到會受影響的交易');
@@ -825,11 +825,11 @@ const App: React.FC = () => {
         return { ...preview, skippedOffline: true };
       }
 
-      const syncResult = await triggerPendingSync('tag 更名後同步');
+      const syncResult = await triggerPendingSync('tag 異動後同步');
       await refreshData();
       return { ...preview, skippedOffline: false, syncResult };
     } catch (err: any) {
-      setCapturedErrors((prev) => [...prev, `Tag Rename Error: ${err.message}`]);
+      setCapturedErrors((prev) => [...prev, `Tag Replacement Error: ${err.message}`]);
       throw err;
     }
   }, [refreshData, transactions, triggerPendingSync]);
@@ -1051,8 +1051,8 @@ const App: React.FC = () => {
           onErrorBannerVisibleChange={setErrorBannerVisible}
           tagSummaries={tagUsageSummaries}
           merchantSummaries={merchantUsageSummaries}
-          onPreviewTagRename={previewTagRename}
-          onRenameTag={renameTag}
+          onPreviewTagReplacement={previewTagReplacement}
+          onReplaceTag={replaceTag}
           onGetTagTransactions={getTagTransactions}
           onTagTransactionClick={handleEditItem}
           onPreviewMerchantRename={previewMerchantRename}
