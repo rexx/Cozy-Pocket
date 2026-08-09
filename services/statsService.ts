@@ -189,8 +189,14 @@ export const getMonthTags = (transactions: Transaction[]) => {
   return Array.from(tagSet).sort();
 };
 
-export const filterTransactionsByTag = (transactions: Transaction[], tag: string) => {
-  const normalized = normalizeTag(tag);
-  if (!normalized) return transactions;
-  return transactions.filter((tx) => extractTransactionTags(tx).includes(normalized));
+// AND semantics: a transaction is kept only when it carries every selected tag.
+// Matching is exact token comparison, so "Ipass" never matches "Ipass永豐".
+export const filterTransactionsByTags = (transactions: Transaction[], tags: string[]) => {
+  const normalizedTags = tags.map(normalizeTag).filter(Boolean);
+  if (normalizedTags.length === 0) return transactions;
+
+  return transactions.filter((tx) => {
+    const transactionTags = new Set(extractTransactionTags(tx));
+    return normalizedTags.every((tag) => transactionTags.has(tag));
+  });
 };

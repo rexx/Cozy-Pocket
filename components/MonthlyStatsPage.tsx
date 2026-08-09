@@ -6,7 +6,7 @@ import { PaymentMethod, PaymentMethodDisplayMode, Transaction, TransactionType }
 import {
   CategoryStatsItem,
   MerchantStatsItem,
-  filterTransactionsByTag,
+  filterTransactionsByTags,
   getCategoryStats,
   getMerchantStats,
   getMonthTags,
@@ -98,7 +98,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 }) => {
   const [periodMode, setPeriodMode] = useState<StatsPeriodMode>('month');
   const [selectedDate, setSelectedDate] = useState(initialDate);
-  const [selectedTag, setSelectedTag] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | ''>('');
   const [sortMode, setSortMode] = useState<StatsSortMode>('latest');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -155,11 +155,15 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     [periodTransactions]
   );
 
+  // Drop only the tags the new period no longer offers; the still-valid part of
+  // the selection survives a month/year switch. Returning the previous array
+  // when nothing changed keeps the identity stable for downstream effects.
   useEffect(() => {
-    if (selectedTag && !periodTags.includes(selectedTag)) {
-      setSelectedTag('');
-    }
-  }, [periodTags, selectedTag]);
+    setSelectedTags((prev) => {
+      const next = prev.filter((tag) => periodTags.includes(tag));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [periodTags]);
 
   const periodPaymentMethods = useMemo(() => {
     const methodSet = new Set<PaymentMethod>();
@@ -181,10 +185,10 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     setExpandedSectionKey(null);
     setExpandedCategoryKey(null);
     setExpandedMerchantKey(null);
-  }, [selectedDate, selectedTag, selectedPaymentMethod, periodMode]);
+  }, [selectedDate, selectedTags, selectedPaymentMethod, periodMode]);
 
   const filteredTransactions = useMemo(
-    () => filterTransactionsByTag(periodTransactions, selectedTag).filter((tx) => {
+    () => filterTransactionsByTags(periodTransactions, selectedTags).filter((tx) => {
       if (selectedPaymentMethod && tx.paymentMethod !== selectedPaymentMethod) return false;
       if (excludedSubCategorySet.size > 0) {
         const exclusionKey = buildSubCategoryExclusionKey(
@@ -195,7 +199,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
       }
       return true;
     }),
-    [periodTransactions, selectedTag, selectedPaymentMethod, excludedSubCategorySet]
+    [periodTransactions, selectedTags, selectedPaymentMethod, excludedSubCategorySet]
   );
 
   const statsByCurrency = useMemo(
@@ -277,10 +281,17 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     : format(selectedDate, 'yyyy 年');
   const selectedSortLabel = sortMode === 'latest' ? '日期' : '金額';
   const hasExclusions = excludedSubCategoryKeys.length > 0;
-  const hasActiveFilters = Boolean(selectedTag || selectedPaymentMethod) || hasExclusions;
+  const hasActiveFilters = selectedTags.length > 0 || Boolean(selectedPaymentMethod) || hasExclusions;
+  // A single tag is short enough to spell out; more than one would overflow the
+  // badge at iPhone width, so it collapses to a count.
+  const selectedTagsLabel = selectedTags.length === 0
+    ? null
+    : selectedTags.length === 1
+      ? `#${selectedTags[0]}`
+      : `${selectedTags.length} 個 tag`;
   const activeFilterBadgeLabel = hasActiveFilters
     ? [
-        selectedTag ? `#${selectedTag}` : null,
+        selectedTagsLabel,
         selectedPaymentMethod || null,
         hasExclusions ? `排除 ${excludedSubCategoryKeys.length} 個子類別` : null,
       ].filter(Boolean).join(' · ')
@@ -291,6 +302,14 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
         ? addMonths(prev, direction)
         : addYears(prev, direction)
     ));
+  };
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) => (
+      prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]
+    ));
+  };
+  const clearSelectedTags = () => {
+    setSelectedTags([]);
   };
   const toggleSortMode = () => {
     setSortMode((prev) => (prev === 'latest' ? 'amount-desc' : 'latest'));
@@ -709,29 +728,35 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                   <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                     <button
                       type="button"
-                      onClick={() => setSelectedTag('')}
+                      onClick={clearSelectedTags}
+                      aria-pressed={selectedTags.length === 0}
                       className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
-                        selectedTag === ''
+                        selectedTags.length === 0
                           ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
                           : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
                       }`}
                     >
                       全部
                     </button>
-                    {periodTags.map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => setSelectedTag(tag)}
-                        className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
-                          selectedTag === tag
-                            ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
-                            : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        #{tag}
-                      </button>
-                    ))}
+                    {periodTags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag);
+
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleTag(tag)}
+                          aria-pressed={isSelected}
+                          className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                            isSelected
+                              ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                              : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          #{tag}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

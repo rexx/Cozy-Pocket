@@ -59,6 +59,7 @@
 
 ## 統計與分析
 
+- ✅ 統計頁 Tag 篩選已支援多選，採 AND 規則：交易必須同時具有全部已選 tag 才納入統計。選取 `Ipass` 與 `永豐` 時只保留兩者兼具的交易，`Ipass永豐` 這種相似 tag 不會被誤判。（紀錄：[stats-multi-tag-filter.md](docs/completed-references/stats-multi-tag-filter.md)）
 - ✅ 統計頁「依類別彙整」區塊已改為預設收合，點擊標題列才展開內容，維持單頁排版。（紀錄：[stats-collapsible-category.md](docs/completed-references/stats-collapsible-category.md)）
 - ✅ 統計頁的子類別摘要已加入沿用主類別顏色的 progress bar 與佔比，可在展開類別後快速比較子類別佔比。（紀錄：[stats-subcategory-progress-bars.md](docs/completed-references/stats-subcategory-progress-bars.md)）
 - ✅ 統計頁可從「依照類別分析」的子類別卡牌按下排除按鈕，將該子類別從統計與交易明細移除；已排除清單存於 local storage，並提供清除單一或全部排除條件。（紀錄：[stats-excluded-subcategories.md](docs/completed-references/stats-excluded-subcategories.md)）
