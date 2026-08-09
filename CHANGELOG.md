@@ -65,6 +65,7 @@
 - ✅ 統計頁「依照類別分析」的類別卡牌已移除類別名稱旁邊的「支出」／「收入」 pill badge，型別資訊改由上方群組標題單一來源呈現。（紀錄：[stats-category-type-badge-removal.md](docs/completed-references/stats-category-type-badge-removal.md)）
 - ✅ 統計頁已加入依類別彙整區塊，支援金額、筆數、子類別摘要與交易展開。（紀錄：[category-stats.md](docs/completed-references/category-stats.md)）
 - ✅ 統計頁已加入依商家彙整區塊，支援展開後查看商家交易列表，並可分幣別呈現常去商家與消費分布。（紀錄：[merchant-stats.md](docs/completed-references/merchant-stats.md)）
+- ✅ 統計頁交易明細的可見日期已縮短為 `MM-dd`，把橫向空間留給交易名稱；完整的 `yyyy-MM-dd HH:mm` 保留在 title 與 aria-label，其他共用 `TransactionItem` 的頁面維持原格式。（紀錄：[stats-transaction-datetime-compact.md](docs/completed-references/stats-transaction-datetime-compact.md)）
 - ✅ 統計卡片顯示多幣別時已改用統一圖示表示，不使用文字。
 
 ## 匯入與外部資料

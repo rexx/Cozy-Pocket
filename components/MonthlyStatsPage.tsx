@@ -402,6 +402,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                             onClick={onTransactionClick}
                             paymentMethodDisplayMode={paymentMethodDisplayMode}
                             showDateTime
+                            dateTimeDisplayMode="compact"
                           />
                         ))
                       ) : (
@@ -579,6 +580,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                               onClick={onTransactionClick}
                               paymentMethodDisplayMode={paymentMethodDisplayMode}
                               showDateTime
+                              dateTimeDisplayMode="compact"
                             />
                           ))
                         ) : (
@@ -889,6 +891,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                               onClick={onTransactionClick}
                               paymentMethodDisplayMode={paymentMethodDisplayMode}
                               showDateTime
+                              dateTimeDisplayMode="compact"
                             />
                           ))
                         ) : (
@@ -909,6 +912,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                               onClick={onTransactionClick}
                               paymentMethodDisplayMode={paymentMethodDisplayMode}
                               showDateTime
+                              dateTimeDisplayMode="compact"
                             />
                           ))
                         ) : (

@@ -8,10 +8,14 @@ import { toEpochMillis } from '../time';
 import { categoryIconMap } from './categoryIcons';
 import { getPaymentMethodIcon } from './paymentMethodIcons';
 
+/** `compact` trades the visible year and time for title width; the full value moves to title / aria-label. */
+type DateTimeDisplayMode = 'full' | 'compact';
+
 interface TransactionItemProps {
   transaction: Transaction;
   onClick?: (transaction: Transaction) => void;
   showDateTime?: boolean;
+  dateTimeDisplayMode?: DateTimeDisplayMode;
   paymentMethodDisplayMode?: PaymentMethodDisplayMode;
   shouldSuppressClick?: () => boolean;
 }
@@ -39,6 +43,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   onClick,
   showDateTime = false,
+  dateTimeDisplayMode = 'full',
   paymentMethodDisplayMode = 'text',
   shouldSuppressClick,
 }) => {
@@ -74,10 +79,12 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
   const displayAmount = isIncome ? transaction.amount : -transaction.amount;
   const formattedAmount = `${displayAmount < 0 ? '-' : ''}${formatCurrencyAmount(displayAmount, transaction.currency)}`;
 
-  const formattedTime = format(
-    new Date(toEpochMillis(transaction.timestamp)),
-    showDateTime ? 'yyyy-MM-dd HH:mm' : 'HH:mm'
-  );
+  const transactionDate = new Date(toEpochMillis(transaction.timestamp));
+  const fullDateTime = format(transactionDate, 'yyyy-MM-dd HH:mm');
+  const isCompactDate = showDateTime && dateTimeDisplayMode === 'compact';
+  const formattedTime = isCompactDate
+    ? format(transactionDate, 'MM-dd')
+    : showDateTime ? fullDateTime : format(transactionDate, 'HH:mm');
   const syncStatus = transaction.syncStatus || 'pending';
   const syncStatusUi = SYNC_STATUS_UI[syncStatus];
   const paymentMethodIcon = paymentMethodDisplayMode === 'icon'
@@ -113,7 +120,11 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
               aria-label={syncStatusUi.title}
               className={`inline-block w-1.5 h-1.5 rounded-full ${syncStatusUi.dotClassName}`}
             />
-            <span className="text-[10px] text-gray-600 font-bold tabular-nums">
+            <span
+              title={isCompactDate ? fullDateTime : undefined}
+              aria-label={isCompactDate ? fullDateTime : undefined}
+              className="text-[10px] text-gray-600 font-bold tabular-nums whitespace-nowrap"
+            >
               {formattedTime}
             </span>
           </div>
