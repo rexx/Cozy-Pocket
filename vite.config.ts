@@ -16,6 +16,7 @@ export default defineConfig({
         'apple-touch-icon.png',
         'android-chrome-192x192.png',
         'android-chrome-512x512.png',
+        'icon-maskable-512.png',
         'icon.svg',
       ],
       manifest: false,

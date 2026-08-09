@@ -1,32 +1,34 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 背景正方形 (無圓角) -->
-  <rect width="512" height="512" fill="#1A1C2C"/>
-  
-  <!-- 口袋主體造型 (底部圓潤，上方開口) -->
-  <path d="M140 160C140 148.954 148.954 140 160 140H352C363.046 140 372 148.954 372 160V260C372 326.274 318.274 380 252 380C190.141 380 140 329.859 140 268V160Z" fill="url(#pocket_grad)" fill-opacity="0.15" stroke="url(#pocket_grad)" stroke-width="24" stroke-linejoin="round"/>
-  
-  <!-- 口袋縫線裝飾 -->
-  <path d="M140 210H372" stroke="url(#pocket_grad)" stroke-width="8" stroke-dasharray="20 15" opacity="0.4"/>
-  
-  <!-- 錢幣意象 (圓形) -->
-  <circle cx="256" cy="240" r="60" fill="url(#coin_grad)" shadow="0 0 20px rgba(34,211,238,0.5)">
-  </circle>
+  <!--
+    Transparent background on purpose: iOS 26 treats the opaque pixels as the
+    foreground layer and generates its own backdrop and Liquid Glass lighting.
+    Outputs that need an opaque backdrop get it from scripts/generate-icons.mjs.
 
-  <!-- AI 閃爍星星 -->
-  <path d="M380 100L392 70L404 100L434 112L404 124L392 154L380 124L350 112L380 100Z" fill="#22D3EE">
-  </path>
-  
-  <path d="M110 320L120 300L130 320L150 330L130 340L120 360L110 340L90 330L110 320Z" fill="#0891B2">
-  </path>
+    The pocket interior stays unfilled. Filling it switches the iOS treatment
+    off - measured on device with both a translucent and a solid fill, so it is
+    the covered area that matters, not the fill's alpha. Only thin marks on a
+    largely transparent canvas get the glass pass.
 
-  <defs>
-    <linearGradient id="pocket_grad" x1="140" y1="140" x2="372" y2="380" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#22D3EE"/>
-      <stop offset="1" stop-color="#0E7490"/>
-    </linearGradient>
-    <linearGradient id="coin_grad" x1="196" y1="180" x2="316" y2="300" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#67E8F9"/>
-      <stop offset="1" stop-color="#22D3EE"/>
-    </linearGradient>
-  </defs>
+    stroke-width 24 of a 512 canvas is the weight that survives the iOS
+    treatment: the glass pass extrudes the stroke and adds a highlight along it,
+    so anything heavier reads as a fat blob on the home screen.
+  -->
+
+  <!-- Pocket: straight opening, rounded bottom. Slightly taller than wide (236x248),
+       because a bottom arc as wide as the opening reads as a bowl instead. -->
+  <path d="M138 154A22 22 0 0 1 160 132H352A22 22 0 0 1 374 154V262A118 118 0 0 1 138 262Z"
+        stroke="#22D3EE" stroke-width="24" stroke-linejoin="round"/>
+
+  <!-- Stitching below the opening. Heavier than a real seam would be, so it
+       survives the downscale to favicon sizes instead of turning into noise. -->
+  <path d="M150 190H362" stroke="#1FA8BE" stroke-width="11" stroke-linecap="round"
+        stroke-dasharray="14 20"/>
+
+  <!-- Coin: solid mass so the mark still reads at 16x16 -->
+  <circle cx="256" cy="258" r="46" fill="#22D3EE"/>
+
+  <!-- AI sparkles. Kept clear of the pocket's outer edge and of the tile corners,
+       which the iOS squircle mask crops. -->
+  <path d="M389 89L400 60L411 89L440 100L411 111L400 140L389 111L360 100Z" fill="#22D3EE"/>
+  <path d="M101 331L110 312L119 331L138 340L119 349L110 368L101 349L82 340Z" fill="#0891B2"/>
 </svg>
