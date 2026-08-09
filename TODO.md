@@ -32,6 +32,10 @@
 
 - 🟡 整理 repo 外的 `migration-tool` 目錄，區分工具程式與個人資料，排除不應納入版控的內容，再建立獨立 private repo 推送。
 
+## 外觀與 App icon
+
+- 🟡 App icon 造型二選一：維持現行「口袋裡有錢幣」，或換成 A（錢幣騎在袋口上）與 C3（字母 `C` 抱著錢幣）其中一案。兩案都已畫好並量過透明比例，Liquid Glass 觸發條件皆通過，所以這是純造型取捨，不換也是合理結論。（計劃：[app-icon-redesign-candidates.md](docs/todo-references/app-icon-redesign-candidates.md)）
+
 ## 資料安全與 Guardrail
 
 - 🟡 建立資料風險分區 guardrail（Step 1–2 已完成：AGENTS.md 紅區清單、同步 payload 型別上鎖；Step 3–6 待辦：GAS 欄位索引派生、重置確認顯示未同步筆數、CSV 匯入驗證對齊 pull、紅區純函式最小單元測試）。（計劃：[data-risk-guardrails.md](docs/todo-references/data-risk-guardrails.md)）
