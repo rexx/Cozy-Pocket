@@ -2,9 +2,11 @@
 name: cmux-browser-cozy-pocket
 description: >-
   Cozy Pocket-specific browser verification guidance layered on top of the
-  user-scope cmux-browser skill. Use after /start-local-server when testing this
-  repository's React PWA, SweetAlert2 flows, Chinese UI text, sample data, or
-  tag and merchant management in cmux.
+  user-scope cmux-browser skill. Use whenever verifying a change to this
+  repository's React PWA in cmux — invoke it on your own initiative once the
+  build is green (AGENTS.md step 4a), not only after /start-local-server.
+  Covers SweetAlert2 flows, Chinese UI text, sample data, and tag and merchant
+  management.
 ---
 
 # Cozy Pocket cmux browser verification
@@ -19,11 +21,15 @@ those instructions here.
 
 ## Start from the correct app
 
-- Wait for the user to invoke `/start-local-server` before starting browser
-  verification.
-- Use the Local URL emitted by the feature worktree's dev server. The expected
-  path is `/Cozy-Pocket/`; do not assume port `5173` when another port was
-  assigned.
+- Start this verification yourself once the build is green; do not wait for
+  `/start-local-server`. That command is for when the user wants to drive the
+  browser personally.
+- Serve the feature worktree on a port nothing else holds, checked with
+  `lsof -nP -iTCP:<port> -sTCP:LISTEN`. Parallel worktrees routinely occupy
+  `5173`, and a fresh port also yields a fresh per-origin `CozyPocketDB` with
+  no sync credentials, so fixtures cannot reach the real Google Sheet.
+- Use the Local URL the dev server emits. The expected path is `/Cozy-Pocket/`;
+  never assume the port.
 - If an edit does not appear, hard-reload or unregister the service worker
   before debugging the implementation.
 - Desktop browser verification supplements, but does not replace, final layout
@@ -40,7 +46,18 @@ those instructions here.
 - Prefer native cmux `click` actions for `PageHeader` icon buttons. Direct DOM
   `.click()` has failed on those controls in prior verification runs.
 - Confirmation prompts use SweetAlert2, not native browser dialogs. Wait for
-  `.swal2-popup`, then interact with `.swal2-confirm` or `.swal2-cancel`.
+  `.swal2-popup`, then interact with `.swal2-confirm` or `.swal2-cancel`. If a
+  popup stops responding, check for `swal2-hide` on it and `disabled` on
+  `.swal2-confirm` before suspecting `dialogService`: a cmux pane that is not
+  on screen stops running CSS animations, so `animationend` never fires and the
+  popup strands even though the action already registered. Bring the cmux
+  window to the foreground, or reload to clear it.
+- Do not use cmux to judge behavior that depends on suppressing a pointer or
+  mouse default action — suggestion chips that must keep the input focused,
+  drag handles, custom selection. `click` dispatches synthetic events, so
+  `preventDefault()` has nothing to cancel and focus moves anyway, making a
+  correct fix look broken. Route those to the user's Edge or iPhone pass and
+  say why, rather than reporting a failure.
 - Chinese labels are often nested across elements. If `wait --text` is
   unreliable, wait on a stable selector or use a DOM assertion against the
   specific control or status region.

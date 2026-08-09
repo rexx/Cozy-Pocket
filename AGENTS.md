@@ -209,14 +209,30 @@ The standard end-to-end flow for non-trivial changes. Trivial fixes (typo, one-l
   - Git: `git -C worktrees/<slug> <cmd>`.
   - npm: `npm --prefix worktrees/<slug> run <script>`.
 - Run `npm --prefix worktrees/<slug> run build` after each meaningful change. This is the sole automated gate (tsc strict + Vite production build).
-- **Do not commit before the user accepts the result in step 4.** A green build is necessary but not sufficient — the user's browser verification is part of the contract. The whole point of holding the commit is that step 4 is iterative: user finds something, code changes, HMR re-renders, user looks again. Committing after each round produces a churn of fix-up commits that nobody wants in `git log`. Keep the working tree dirty across the entire verify→tweak→re-verify loop; bundle everything into the single commit that step 5 produces.
+- **Do not commit before the user accepts the result in step 4b.** A green build and a clean cmux pass are both necessary but not sufficient — the user's own browser verification is part of the contract. The whole point of holding the commit is that step 4 is iterative: user finds something, code changes, HMR re-renders, user looks again. Committing after each round produces a churn of fix-up commits that nobody wants in `git log`. Keep the working tree dirty across the entire verify→tweak→re-verify loop; bundle everything into the single commit that step 5 produces.
 
 **4. Browser verification**
 
-- **Wait for the user to invoke `/start-local-server` before launching the dev server.** Do not auto-start the server after `npm run build` passes; pause and let the user decide when they want to verify in a browser. Once `/start-local-server` fires, follow the skill's steps:
-  - Start dev server: `npm --prefix worktrees/<slug> run dev -- --host` in the background. Without `--prefix` the server boots from `main` and the user will see stale code.
-  - Wait for the `Local:` URL via `until grep -q "Local:" <output-file>; do sleep 0.5; done` rather than fixed sleeps.
-  - Open `http://localhost:5173/Cozy-Pocket/` in Microsoft Edge (`open -a "Microsoft Edge" <url>`).
+Two layers, both required: the agent verifies in cmux on its own initiative, then the user accepts in a real browser. The first catches regressions before the user spends attention on them; the second covers what cmux structurally cannot reach.
+
+**4a. Agent self-verification in cmux — automatic, no prompt**
+
+- Run this yourself once `npm run build` is green. Do not wait for `/start-local-server`; that command is for when the user wants to drive the browser personally.
+- Start the dev server on a port nothing else holds — check with `lsof -nP -iTCP:<port> -sTCP:LISTEN` first, since parallel worktrees routinely occupy 5173: `npm --prefix worktrees/<slug> run dev -- --host --port <port>`. Without `--prefix` the server boots from `main` and you verify stale code.
+- A never-before-used port is also the cheapest safety guard available. IndexedDB is per-origin, so a fresh port means a fresh `CozyPocketDB` with no sync credentials; `getSyncConfig()` returns `null` and fixture data has no path to the real Google Sheet. See "Sync endpoints — testing vs production".
+- Wait for the `Local:` URL with `until grep -q "Local:" <output-file>; do sleep 0.5; done` rather than fixed sleeps, then follow the `cmux-browser-cozy-pocket` skill.
+- Report what cmux settled *and* what it could not, then hand to 4b. Never present a cmux pass as full verification.
+
+**What cmux can and cannot settle**
+
+- Settles: field values and component state, DOM geometry (`getBoundingClientRect`, `scrollWidth` vs `clientWidth`), element presence, rendered text, navigation, and `errors list`.
+- Cannot settle: anything depending on cancelling a pointer or mouse default action. `cmux browser click` dispatches synthetic events, so `preventDefault()` has no default action to cancel — focus still moves and `blur` still fires, which makes a *correct* fix look broken. Touch-specific event ordering and standalone PWA layout are equally out of reach.
+- When a result falls in that second category, say so explicitly and route it to 4b. Reporting it as a failure is wrong.
+- Confirm dialogs are SweetAlert2. If one stops responding, check for `swal2-hide` on the popup and `disabled` on `.swal2-confirm` before suspecting `dialogService`: a cmux pane that is not on screen stops running CSS animations, so `animationend` never fires and the popup strands even though the underlying action registered.
+
+**4b. User acceptance — still gated on the user**
+
+- Hand back with the cmux findings and whatever remains open. The user verifies in Microsoft Edge (`open -a "Microsoft Edge" <url>`) and, for anything layout- or touch-related, on the iPhone standalone PWA — the primary runtime, where desktop passes do not transfer.
 - When the user reports no visual change after an edit, the cause is almost always service-worker cache from a previous dev run. Tell them to hard-reload (`⌘+Shift+R`) or unregister the SW in DevTools → Application before debugging the code.
 - Iterate on user feedback with HMR; restart the server only when the project root changes (different worktree, dep change).
 
