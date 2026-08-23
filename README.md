@@ -393,9 +393,9 @@ https://rexx.github.io/Cozy-Pocket/android-chrome-192x192.png
 2. `npm run icons:generate`
 3. 把重新產出的檔案一起 commit（GitHub Pages 部署不會跑這個步驟）
 
-`favicon.ico` 與 maskable 版也都從同一份 SVG 產出，所以造型只有一個地方要改。產出時會印出兩個檢查：`apple-touch-icon.png` 的空腔內周長，以及 `icon-maskable-512.png` 的 ink 半徑有沒有超出 Android 的安全圓。兩者都是煙霧偵測器，不是規格。
+`favicon.ico` 與 maskable 版也都從同一份 SVG 產出，所以造型只有一個地方要改。產出時會印出兩個檢查：`icon-maskable-512.png` 的 ink 半徑有沒有超出 Android 的安全圓（這條是硬規格），以及 `apple-touch-icon.png` 的空腔內周長（這條是**指紋不是門檻**，只用來偵測造型有沒有偏離已在真機驗證過的那一版）。
 
-**改 `icon.svg` 前先讀 [App icon 與 iOS 26 Liquid Glass](docs/app-icon-ios-liquid-glass.md)。** 兩條硬限制：`apple-touch-icon.png` 必須是透明底，而且圖形圍住的透明區域不能太多太碎——實心造型最安全，線稿放大或把內部切成格狀都會讓效果消失。那份文件另外還有量法定義、各輸出的背景與縮放策略、已經推翻不需要重跑的假說，以及實機驗證步驟。
+**改 `icon.svg` 前先讀 [App icon 與 iOS 26 Liquid Glass](docs/app-icon-ios-liquid-glass.md)。** 重點只有一條：`apple-touch-icon.png` 必須是透明底，除此之外**沒有任何可以先算的判準能預測 iOS 26 會不會套用 Liquid Glass**——透明比例、留白、空腔面積、內周長、元件數、顏色全部試過並被真機推翻。所以改造型後一定要上機看（深色背景 = 有效，純白 = 失效）。那份文件記了所有死掉的假說，避免重跑。
 
 1. 在首頁底部點擊本月摘要卡
 2. 在統計頁上方切換 `月份` 或 `年份`

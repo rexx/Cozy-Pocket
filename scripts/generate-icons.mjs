@@ -48,19 +48,21 @@ const MASKABLE_PROBE = 'icon-maskable-512.png';
 // request it (bookmarks, some browser chrome).
 const ICO_SIZES = [16, 32, 48];
 
-// The best predictor found for whether iOS 26 applies Liquid Glass to a web clip
-// icon: the boundary length between the mark and the transparent regions it walls
-// off, measured in units of the canvas side. Enlarging a hollow mark lengthens
-// that boundary, and so does subdividing one cavity into many, which is why it
-// tracks both failure modes that a plain transparency ratio misses. Across
-// fifteen samples from three unrelated icons, 2.71 is the highest value still
-// observed to get the treatment and 3.20 the lowest observed to lose it - with
-// one sample passing at 3.24, so the boundary is a band rather than a line.
-// A solid mark walls off nothing, scores 0 and is the safest shape available.
+// No measurable property of the artwork is known to predict whether iOS 26
+// applies Liquid Glass to a web clip icon. Transparency ratio, edge margin,
+// enclosed area, enclosed-region count and this cavity perimeter each looked
+// monotone over a dozen-odd samples and each was then falsified on device - most
+// bluntly by two marks that both score 0 here, one of which gets the treatment
+// and one of which does not. Colour, the icon's markup and the serving page have
+// been ruled out too.
 //
-// A tripwire, not a spec: no mechanism explains the boundary, so read a pass as
-// "worth testing on device". See docs/app-icon-ios-liquid-glass.md.
-const MAX_CAVITY_PERIMETER = 2.71;
+// So this reports rather than judges. The number is a fingerprint of the shape:
+// matching the baseline means the artwork is the one already confirmed on device,
+// and any drift means the result is unknown again and has to be re-checked on a
+// phone. Update BASELINE only together with a fresh on-device confirmation.
+// See docs/app-icon-ios-liquid-glass.md.
+const BASELINE_CAVITY_PERIMETER = 2.63;
+const BASELINE_TOLERANCE = 0.02;
 const CAVITY_PROBE = 'apple-touch-icon.png';
 
 const SOURCE = 'icon.svg';
@@ -199,17 +201,17 @@ for (let p = 0; p < pixels; p += 1) {
 
 const perimeter = cavityEdge / side;
 
-if (perimeter > MAX_CAVITY_PERIMETER) {
+if (Math.abs(perimeter - BASELINE_CAVITY_PERIMETER) <= BASELINE_TOLERANCE) {
   console.log(
-    `\n${CAVITY_PROBE} cavity perimeter is ${perimeter.toFixed(2)} canvas widths, above the ${MAX_CAVITY_PERIMETER}\n` +
-      `         still observed to get the iOS 26 Liquid Glass treatment.\n\n` +
-      `WARNING  the mark walls off too much transparency. Filling an enclosed area drops this\n` +
-      `         straight to 0; shrinking the mark or merging subdivided cavities also helps.\n` +
-      `         Verify on device before shipping. See docs/app-icon-ios-liquid-glass.md.`,
+    `${CAVITY_PROBE} cavity perimeter is ${perimeter.toFixed(2)} canvas widths, matching the shape confirmed on device.`,
   );
 } else {
   console.log(
-    `${CAVITY_PROBE} cavity perimeter is ${perimeter.toFixed(2)} canvas widths - at or below the ${MAX_CAVITY_PERIMETER} observed to get Liquid Glass.`,
+    `\n${CAVITY_PROBE} cavity perimeter is ${perimeter.toFixed(2)} canvas widths, against a baseline of ${BASELINE_CAVITY_PERIMETER}.\n\n` +
+      `WARNING  the mark has changed, so whether iOS still applies Liquid Glass to it is unknown -\n` +
+      `         no property of the artwork predicts that. Add it to an iPhone home screen and check:\n` +
+      `         a system-generated dark backdrop means it worked, a white one means it did not.\n` +
+      `         Then update BASELINE_CAVITY_PERIMETER. See docs/app-icon-ios-liquid-glass.md.`,
   );
 }
 

@@ -12,12 +12,11 @@
     reads as a finished flat icon and gets no treatment at all. Outputs that need
     an opaque backdrop get it from scripts/generate-icons.mjs.
 
-    What decides the treatment is how much transparency the mark walls off:
-    the boundary between the mark and its enclosed cavities has to stay short.
-    This outline scores 2.63 canvas widths against the 2.71 still observed to
-    work, so enlarging it or subdividing its interior would both cost the effect.
-    Filling the pocket would score 0 and be the safest shape of all - it stays
-    open for the drawing, not for the treatment.
+    Beyond that, nothing measurable about the artwork predicts whether the
+    treatment lands - transparency ratio, margin, enclosed area, cavity
+    perimeter, component count and colour have each been tried and falsified on
+    device. This exact shape is confirmed to get it, so any change to the mark
+    puts the result back in the unknown and has to be re-checked on a phone.
     See docs/app-icon-ios-liquid-glass.md.
 
     stroke-width 24 of a 512 canvas is the weight that survives the iOS
