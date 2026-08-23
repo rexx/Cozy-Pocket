@@ -1,13 +1,24 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!--
-    Transparent background on purpose: iOS 26 treats the opaque pixels as the
-    foreground layer and generates its own backdrop and Liquid Glass lighting.
-    Outputs that need an opaque backdrop get it from scripts/generate-icons.mjs.
+    Keep this comment inside the root element. libvips sniffs for `<svg` within
+    roughly the first kilobyte, so a long preamble above the tag makes sharp
+    reject the file with "Input file contains unsupported image format" even
+    though the XML is perfectly valid - the error names neither the length nor
+    the offset.
 
-    The pocket interior stays unfilled. Filling it switches the iOS treatment
-    off - measured on device with both a translucent and a solid fill, so it is
-    the covered area that matters, not the fill's alpha. Only thin marks on a
-    largely transparent canvas get the glass pass.
+    Transparent background on purpose: a web clip cannot declare icon layers, so
+    iOS 26 derives them from alpha - opaque pixels become the foreground, and the
+    system generates its own backdrop and Liquid Glass lighting. An opaque image
+    reads as a finished flat icon and gets no treatment at all. Outputs that need
+    an opaque backdrop get it from scripts/generate-icons.mjs.
+
+    What decides the treatment is how much transparency the mark walls off:
+    the boundary between the mark and its enclosed cavities has to stay short.
+    This outline scores 2.63 canvas widths against the 2.71 still observed to
+    work, so enlarging it or subdividing its interior would both cost the effect.
+    Filling the pocket would score 0 and be the safest shape of all - it stays
+    open for the drawing, not for the treatment.
+    See docs/app-icon-ios-liquid-glass.md.
 
     stroke-width 24 of a 512 canvas is the weight that survives the iOS
     treatment: the glass pass extrudes the stroke and adds a highlight along it,

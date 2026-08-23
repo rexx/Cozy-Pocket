@@ -393,9 +393,9 @@ https://rexx.github.io/Cozy-Pocket/android-chrome-192x192.png
 2. `npm run icons:generate`
 3. 把重新產出的檔案一起 commit（GitHub Pages 部署不會跑這個步驟）
 
-`favicon.ico` 與 maskable 版也都從同一份 SVG 產出，所以造型只有一個地方要改。產出時會印出 `apple-touch-icon.png` 的全透明像素比例並在過低時警告，那是 iOS 26 Liquid Glass 的觸發條件之一。
+`favicon.ico` 與 maskable 版也都從同一份 SVG 產出，所以造型只有一個地方要改。產出時會印出兩個檢查：`apple-touch-icon.png` 的空腔內周長，以及 `icon-maskable-512.png` 的 ink 半徑有沒有超出 Android 的安全圓。兩者都是煙霧偵測器，不是規格。
 
-**改 `icon.svg` 前先讀 [App icon 與 iOS 26 Liquid Glass](docs/app-icon-ios-liquid-glass.md)。** 有兩條會讓立體效果整個消失的硬限制（圖檔必須透明底、主體內部不能填滿），另外還有各輸出的背景策略、已經推翻不需要重跑的假說，以及實機驗證步驟（每次都要先移除主畫面圖示再重新加入）。
+**改 `icon.svg` 前先讀 [App icon 與 iOS 26 Liquid Glass](docs/app-icon-ios-liquid-glass.md)。** 兩條硬限制：`apple-touch-icon.png` 必須是透明底，而且圖形圍住的透明區域不能太多太碎——實心造型最安全，線稿放大或把內部切成格狀都會讓效果消失。那份文件另外還有量法定義、各輸出的背景與縮放策略、已經推翻不需要重跑的假說，以及實機驗證步驟。
 
 1. 在首頁底部點擊本月摘要卡
 2. 在統計頁上方切換 `月份` 或 `年份`
