@@ -135,11 +135,27 @@ Liquid Glass 只能實機觀察，模擬器與桌面瀏覽器都無法代替。
 4. 比對 **Light／Dark／Clear／Tinted** 四種外觀。
 5. 分不清立體感是系統加的還是圖檔自己畫的時，切到 **Tinted**：分層圖示會重新渲染並保留深度，烘死在 PNG 裡的高光只會變成一坨單色。
 
+### 6.1 macOS 的「加入 Dock」不能代替 iPhone
+
+Safari 的「加入 Dock」會在 `~/Applications` 產生 web app bundle，看起來像是可以在本機直接讀到系統的決策輸出，不必再靠肉眼判讀主畫面。實測結果是**不行，那條 pipeline 與 iOS 無關**：
+
+- bundle 裡只有 `Contents/Resources/ApplicationIcon.icns`，是傳統 ICNS 容器，沒有 `Assets.car` 也沒有 `IconImageStack`，因此不帶任何分層資訊。
+- 拿一張已知在 iPhone 上**會**拿到處理的圖與一張已知**不會**的圖各做一次，兩個產出的 **alpha 通道逐位元組相同**（512×512 共 262144 個像素零差異）。遮罩與底色合成完全不看圖的內容，流程固定是「縮放 → 合成到白底 → squircle 遮罩 → 烘上投影」。
+- 在 iPhone 上會拿到 Liquid Glass 的那張圖，在這裡的產出是**全平的白底 squircle**。同一張 bitmap，相反的結果。
+- `Info.plist` 的 `LSMinimumSystemVersion` 是 `14.0`，bundle 格式自 macOS Sonoma 以來沒有變過。
+
+**macOS 完全沒有跑 iOS 那個判斷。** 桌面端的觀察不能外推到 iPhone，也不能拿來縮短驗證迴圈。
+
+順帶兩筆實測到的 Safari 行為，與判準無關但設定 icon 時用得上：
+
+- icon 解析順序是「頁面宣告的 `apple-touch-icon` → 根目錄 `/apple-touch-icon.png` → `/apple-touch-icon-precomposed.png`」，`favicon.ico` 是另一個獨立請求。
+- `Info.plist` 會以 `WKManifestIconKind` 記錄實際採用的來源，用 apple-touch-icon 時值為 `Touch`。
+
 ---
 
 ## 7. 已知限制
 
-- **PWA 沒有官方的分層路徑。** Apple 開發者論壇上關於 iOS 26 PWA 圖示外觀的提問至今沒有官方回覆，也沒有對應的 Safari 釋出說明。本文件的條件全部來自實機觀察，不是文件化的行為，iOS 改版後要重驗。
+- **PWA 沒有官方的分層路徑，Apple 也沒有留下任何相關說明。** `Adopting Liquid Glass` 技術總覽、HIG 的 App icons 與 Safari 26 的 WebKit 釋出說明裡，`web clip`、`web app`、`apple-touch-icon` 的出現次數都是 0；開發者論壇上關於 iOS 26 PWA 圖示外觀的提問至今沒有官方回覆。官方唯一沾到邊的一句是 `Irregularly shaped icons receive a system-provided background`，寫給原生分層圖示，既沒有定義何謂 irregular，也沒有給任何門檻。本文件的條件全部來自實機觀察，不是文件化的行為，iOS 改版後要重驗。
 - **沒有可以先算的判準（§3）。** 目前只知道透明底是必要條件，改造型後會不會被合成只能上機看。
 - **PWA 無法指定 Clear 外觀。**
 - **16×16 favicon 會失去細節。** 縫線在該尺寸看不見，星星縮成角落的亮點。
