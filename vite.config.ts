@@ -9,17 +9,12 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: [
-        'favicon.ico',
-        'favicon-16x16.png',
-        'favicon-32x32.png',
-        'apple-touch-icon.png',
-        'android-chrome-192x192.png',
-        'android-chrome-512x512.png',
-        'icon-maskable-512.png',
-        'icon.svg',
-      ],
+      // public/manifest.json is the single source of truth, so the plugin must
+      // not emit a competing one.
       manifest: false,
+      // No includeAssets: Vite already copies public/ into dist, where
+      // globPatterns below picks the icons up. Listing them again would put
+      // duplicate entries in the precache manifest.
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
         runtimeCaching: [
@@ -41,6 +36,9 @@ export default defineConfig({
       },
     }),
   ],
+  // Must stay aligned with id / start_url / scope in public/manifest.json and
+  // the icon paths in index.html. A mismatch installs fine but makes an offline
+  // cold start request a URL the service worker never cached.
   base: '/Cozy-Pocket/',
   build: {
     outDir: 'dist',

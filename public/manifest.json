@@ -1,7 +1,9 @@
 {
+  "id": "/Cozy-Pocket/",
   "name": "Cozy Pocket - Smart Expense Tracker",
   "short_name": "Cozy Pocket",
   "description": "A minimalist, aesthetic expense tracking app with a smart calendar view.",
+  "lang": "zh-TW",
   "start_url": "/Cozy-Pocket/",
   "scope": "/Cozy-Pocket/",
   "display": "standalone",

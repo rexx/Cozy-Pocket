@@ -155,7 +155,7 @@ const HomePage: React.FC<HomePageProps> = ({
             </button>
           </div>
         )}
-        <div className="absolute right-8 bottom-[calc(2rem+env(safe-area-inset-bottom))] z-40">
+        <div className="absolute right-8 bottom-8 z-40">
           <button onClick={onOpenAddTransaction} className="w-16 h-16 bg-cyan-500 text-black rounded-full flex items-center justify-center shadow-[0_8px_30px_rgba(34,211,238,0.4)] active:scale-90 transition-all hover:brightness-110">
             <Plus size={36} strokeWidth={2.5} />
           </button>
@@ -165,7 +165,7 @@ const HomePage: React.FC<HomePageProps> = ({
           style={{ touchAction: 'pan-y' }}
           {...swipeHandlers}
         >
-          <div className="mt-2 min-h-[calc(100%+1px)] space-y-1 pb-[calc(8.5rem+env(safe-area-inset-bottom))]">
+          <div className="mt-2 min-h-[calc(100%+1px)] space-y-1 pb-[8.5rem]">
             {dailyTransactions.length > 0 ? (
               dailyTransactions.map(tx => (
                 <TransactionItem

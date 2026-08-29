@@ -70,8 +70,10 @@ https://rexx.github.io/Cozy-Pocket/
 因此必須：
 
 - `vite.config.ts` 的 `base` 對齊 `/Cozy-Pocket/`
-- `manifest.json` 的 `start_url`、`scope` 對齊部署路徑
+- `manifest.json` 的 `id`、`start_url`、`scope` 對齊部署路徑
 - icon 直接由 `public/` 提供，部署後對應到 `/Cozy-Pocket/<filename>`
+
+`id` 是瀏覽器判斷「這是不是同一個已安裝 app」的依據。沒有明寫時會退回用 `start_url`，於是 `start_url` 一改，既有安裝就會被當成另一個 app。
 
 目前相關檔案：
 
@@ -208,7 +210,7 @@ https://rexx.github.io/Cozy-Pocket/
 
 如果未來又出現「完全關閉 app 後，離線重開失敗」，優先檢查：
 
-1. `manifest.json` 的 `start_url` / `scope`
+1. `manifest.json` 的 `id` / `start_url` / `scope`
 2. `vite.config.ts` 的 `base`
 3. `sw.js` 是否有 precache `index.html`
 4. navigation fallback 是否仍指向 app shell

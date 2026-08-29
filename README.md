@@ -261,10 +261,10 @@ this.version(2).stores({
 
 ### 6.8 PWA / iOS 離線模式
 *   專案現在會在 production build 產生 Service Worker，precache app shell、manifest 與 icon 資產。
-*   GitHub Pages 部署路徑固定為 `https://rexx.github.io/Cozy-Pocket/`，Vite `base` 與 manifest `scope/start_url` 已對齊此路徑。
+*   GitHub Pages 部署路徑固定為 `https://rexx.github.io/Cozy-Pocket/`，Vite `base` 與 manifest `id/scope/start_url` 已對齊此路徑。
 *   iOS Safari 首次上線開啟後，可透過「加入主畫面」安裝；之後離線仍可開啟 app 與操作本機資料。
 *   離線模式下可瀏覽、新增、編輯、刪除交易；雲端同步與 AI 解析暫停。
-*   iOS standalone PWA 目前**不要**使用 `viewport-fit=cover`，也**不需要** `env(safe-area-inset-*)`。
+*   iOS standalone PWA 目前**不要**使用 `viewport-fit=cover`，也**不需要** `env(safe-area-inset-*)`；版面用常數 padding，不用 `env()` 補償。
 *   離線實作與修改重點說明請見：[PWA Offline Implementation](docs/pwa-offline-implementation.md)
 *   詳細排版注意事項請見：[PWA Layout Gotchas](docs/pwa-layout-gotchas.md)
 

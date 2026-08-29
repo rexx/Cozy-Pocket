@@ -81,6 +81,10 @@
 - ✅ 等待 Gemini API 回應時已新增更明確的 SVG 外框流動動畫，讓使用者知道 AI 正在解析中。（紀錄：[gemini-loading-animation.md](docs/completed-references/gemini-loading-animation.md)）
 - ✅ 將目前已存在的 `Gemini` 相關功能打開並接到可用入口，補齊必要的設定、錯誤提示與使用者回饋。（紀錄：[gemini-entrypoint.md](docs/completed-references/gemini-entrypoint.md)）
 
+## PWA 與離線
+
+- ✅ 對齊 rexx app 群組的 PWA 設定基準：移除重複的 precache 項目（27 → 19，重複 8 → 0）、清掉與文件矛盾的 `env(safe-area-inset-*)` 用法、manifest 補 `id` 與 `lang`。（紀錄：[pwa-config-alignment.md](docs/completed-references/pwa-config-alignment.md)）
+
 ## App icon 與品牌資產
 
 - ✅ App icon 已取得 iOS 26 的 Liquid Glass 系統加工：`icon.svg` 改為透明底的純線稿（口袋輪廓、縫線、實心錢幣、兩顆 AI 星星），由新增的 `npm run icons:generate` 從單一 SVG 來源產出所有 PNG 與 `favicon.ico`，manifest 補上 `purpose` 與 maskable icon。實機確認觸發條件是透明背景，且主體內部不能填滿。（紀錄：[app-icon-ios-liquid-glass.md](docs/completed-references/app-icon-ios-liquid-glass.md)）
