@@ -30,6 +30,10 @@ import DangerZoneSection from './settings/DangerZoneSection';
 import { SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
 import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, ERROR_BANNER_VISIBLE_SETTING_KEY, getGeminiApiKey } from '../preferences';
 
+// __BUILD_TIME__ is baked in as UTC ISO; CI builds run in UTC, so render it in
+// the viewer's own timezone instead.
+const buildTime = format(new Date(__BUILD_TIME__), 'yyyy-MM-dd HH:mm');
+
 export type SettingsSectionPage = keyof typeof SETTINGS_SECTION_COPY;
 
 interface SettingsPageProps {
@@ -575,6 +579,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           {renderSection()}
           <p className="pt-6 text-center text-[10px] font-bold uppercase tracking-[0.4em] text-gray-700 opacity-15">
             Cozy Pocket • Minimalism
+          </p>
+          <p className="pt-2 text-center font-mono text-[11px] tracking-wide text-gray-700 opacity-15">
+            v{__APP_VERSION__} · {__BUILD_COMMIT__} · {buildTime}
           </p>
         </div>
       </div>

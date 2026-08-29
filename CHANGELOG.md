@@ -45,6 +45,8 @@
 
 ## 設定頁體驗
 
+- ✅ 設定頁（含所有設定子頁）底部顯示建置識別 `v<version> · <commit> · <build 時間>`，值在 build 時烤進 bundle，用來判斷 PWA 是否已換到新的 service worker。（紀錄：[settings-build-version.md](docs/completed-references/settings-build-version.md)）
+
 - ✅ Tag 更名互動已對齊商家更名：預設只顯示預覽按鈕、預覽後才出現黃色預覽卡與確認按鈕、確認送出中顯示旋轉 icon，feedback card 樣式移除 ⚠️ icon、更名完成後直接選到新 tag 編輯畫面，與商家更名共用相同節奏。（紀錄：[tag-rename-confirm-alignment.md](docs/completed-references/tag-rename-confirm-alignment.md)）
 - ✅ 危險操作已新增刪除範例資料按鈕，依 `sample-tx-` id prefix 預覽並刪除由範例資料入口建立的交易，不影響使用者自行建立的紀錄。（紀錄：[delete-sample-data-button.md](docs/completed-references/delete-sample-data-button.md)）
 - ✅ 共用頁面 header 已對齊 PWA 外框色，並縮減上方留白，讓設定頁與同步狀態等頁面在手機 PWA 上更連續。（紀錄：[settings-header-color.md](docs/completed-references/settings-header-color.md)）

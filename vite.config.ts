@@ -1,7 +1,24 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
+
+// CI checks out shallow, so GITHUB_SHA is the only reliable source there; the
+// git call covers local builds and 'unknown' covers a build from a tarball.
+const resolveBuildCommit = (): string => {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short=7 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'unknown';
+  }
+};
 
 export default defineConfig({
   plugins: [
@@ -39,6 +56,13 @@ export default defineConfig({
   // Must stay aligned with id / start_url / scope in public/manifest.json and
   // the icon paths in index.html. A mismatch installs fine but makes an offline
   // cold start request a URL the service worker never cached.
+  // Every build gets a fresh __BUILD_TIME__, so the main chunk hash always
+  // changes and the service worker precache revision always advances.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_COMMIT__: JSON.stringify(resolveBuildCommit()),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   base: '/Cozy-Pocket/',
   build: {
     outDir: 'dist',

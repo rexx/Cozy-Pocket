@@ -167,6 +167,7 @@ this.version(2).stores({
 *   `搜尋`：搜尋名稱、商家、備註、tag、類別與幣別，顯示搜尋結果並可直接編輯。
 *   `統計`：提供月份／年份切換、tag 與支付方式篩選、收入／支出明細展開、依類別彙整以及依商家彙整的金額與筆數分析。
 *   `資料與設定`：提供設定入口清單；偏好設定、AI 設定、同步設定、Tag 管理、商家管理、匯入匯出與危險操作會進入各自設定子頁。
+*   `資料與設定` 每一頁（含所有設定子頁）最底部固定顯示建置識別 `v<version> · <commit> · <build 時間>`，三個值都在 build 時烤進 bundle。樣式與上方的 `Cozy Pocket • Minimalism` 裝飾字一致，只是改用等寬字讓 commit hash 好認。
 *   `商家管理`（設定子頁）：提供可搜尋與逐批載入的商家清單、受影響交易預覽與商家更名操作。
 *   `同步狀態`：顯示待同步／同步中／已同步／失敗統計、交易清單、預設隱藏已同步項目的篩選、詳細錯誤、手動同步入口，以及可直接點入編輯的交易項目。
 *   `新增／編輯交易`：唯一保留的 overlay，會覆蓋在目前主頁面上，關閉後返回原頁；編輯模式底部會顯示單筆同步狀態與可用的單筆上傳操作。modal 開啟時不會自動 focus 金額輸入框，避免在 iPhone PWA 上一開啟就彈出虛擬鍵盤；使用者點擊欄位後再彈出。（切到 AI tab 時仍會自動 focus AI 輸入框，見 §6.2。）
@@ -265,6 +266,7 @@ this.version(2).stores({
 *   iOS Safari 首次上線開啟後，可透過「加入主畫面」安裝；之後離線仍可開啟 app 與操作本機資料。
 *   離線模式下可瀏覽、新增、編輯、刪除交易；雲端同步與 AI 解析暫停。
 *   iOS standalone PWA 目前**不要**使用 `viewport-fit=cover`，也**不需要** `env(safe-area-inset-*)`；版面用常數 padding，不用 `env()` 補償。
+*   Service worker 用 `autoUpdate`，換版時沒有任何提示。要確認 PWA 是否已換到新的 build，看「資料與設定」頁最底部的建置識別——其中的 commit 與 build 時間每次部署都會變。
 *   離線實作與修改重點說明請見：[PWA Offline Implementation](docs/pwa-offline-implementation.md)
 *   詳細排版注意事項請見：[PWA Layout Gotchas](docs/pwa-layout-gotchas.md)
 
