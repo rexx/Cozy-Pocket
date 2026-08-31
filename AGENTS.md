@@ -39,6 +39,7 @@ User action → React state + Dexie write → background sync to GAS → Google 
 - `components/*Page.tsx` — full pages
 - `components/*Modal.tsx` — overlays (only `AddTransactionModal` currently)
 - `components/settings/*Section.tsx` — settings subpages
+- `components/stats/*.tsx` — chart components owned by the stats page
 
 **Pages (5)**: 首頁 / 搜尋 / 統計 / 資料與設定 / 同步狀態
 **Settings subpages (7)** (under 資料與設定): 偏好設定 / AI 設定 / 同步設定 / Tag 管理 / 商家管理 / 匯入匯出 / 危險操作

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { addMonths, addYears, format } from 'date-fns';
+import { addMonths, addYears, format, subMonths } from 'date-fns';
 import { ArrowDownUp, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, EyeOff, Filter, MoreHorizontal, Store, X } from 'lucide-react';
 import { CATEGORIES, formatCurrencyAmount } from '../constants';
 import { PaymentMethod, PaymentMethodDisplayMode, Transaction, TransactionType } from '../types';
@@ -12,15 +12,20 @@ import {
   getMonthTags,
   getMonthTransactions,
   getStatsByCurrency,
+  getTrendWindowTransactions,
   getYearTransactions,
 } from '../services/statsService';
 import { buildSubCategoryExclusionKey } from '../preferences';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
 import { categoryIconMap } from './categoryIcons';
+import MonthlyTrendChart from './stats/MonthlyTrendChart';
 
 type StatsPeriodMode = 'month' | 'year';
 type StatsSortMode = 'latest' | 'amount-desc';
+type StatsViewMode = 'summary' | 'trend';
+
+const TREND_MONTH_COUNT = 12;
 
 interface MonthlyStatsPageProps {
   transactions: Transaction[];
@@ -96,6 +101,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   onBack,
   onTransactionClick,
 }) => {
+  const [viewMode, setViewMode] = useState<StatsViewMode>('summary');
   const [periodMode, setPeriodMode] = useState<StatsPeriodMode>('month');
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -141,11 +147,19 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     onExcludedSubCategoryKeysChange([]);
   };
 
+  // Trend mode widens the scope to a rolling window; every filter below then
+  // applies to whichever scope is active, so switching tabs never silently
+  // changes what the tag and payment-method choices mean.
   const periodTransactions = useMemo(
-    () => (periodMode === 'month'
-      ? getMonthTransactions(transactions, selectedDate)
-      : getYearTransactions(transactions, selectedDate)),
-    [transactions, selectedDate, periodMode]
+    () => {
+      if (viewMode === 'trend') {
+        return getTrendWindowTransactions(transactions, selectedDate, TREND_MONTH_COUNT);
+      }
+      return periodMode === 'month'
+        ? getMonthTransactions(transactions, selectedDate)
+        : getYearTransactions(transactions, selectedDate);
+    },
+    [transactions, selectedDate, periodMode, viewMode]
   );
 
   const periodTags = useMemo(
@@ -183,7 +197,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     setExpandedSectionKey(null);
     setExpandedCategoryKey(null);
     setExpandedMerchantKey(null);
-  }, [selectedDate, selectedTags, selectedPaymentMethod, periodMode]);
+  }, [selectedDate, selectedTags, selectedPaymentMethod, periodMode, viewMode]);
 
   const filteredTransactions = useMemo(
     () => filterTransactionsByTags(periodTransactions, selectedTags).filter((tx) => {
@@ -274,9 +288,17 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const getMerchantKey = (item: MerchantStatsItem) => (
     `${item.currency}:${item.type}:${item.merchant.toLocaleLowerCase()}`
   );
-  const periodLabel = periodMode === 'month'
+  const isTrendView = viewMode === 'trend';
+  // The trend window always steps a month at a time, so the year granularity
+  // only exists in the summary view.
+  const isMonthStep = isTrendView || periodMode === 'month';
+  const periodLabel = isMonthStep
     ? format(selectedDate, 'yyyy 年 MM 月')
     : format(selectedDate, 'yyyy 年');
+  const trendRangeLabel = `${format(subMonths(selectedDate, TREND_MONTH_COUNT - 1), 'yyyy/M')} – ${format(selectedDate, 'yyyy/M')}`;
+  const periodScopeLabel = isTrendView
+    ? `近 ${TREND_MONTH_COUNT} 個月`
+    : periodMode === 'month' ? '這個月份' : '這個年份';
   const selectedSortLabel = sortMode === 'latest' ? '日期' : '金額';
   const hasExclusions = excludedSubCategoryKeys.length > 0;
   const hasActiveFilters = selectedTags.length > 0 || Boolean(selectedPaymentMethod) || hasExclusions;
@@ -296,7 +318,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     : '全部交易';
   const movePeriod = (direction: -1 | 1) => {
     setSelectedDate((prev) => (
-      periodMode === 'month'
+      isMonthStep
         ? addMonths(prev, direction)
         : addYears(prev, direction)
     ));
@@ -632,7 +654,27 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
       <div className="flex-1 overflow-y-auto">
         <div className="border-b border-white/5 px-5 py-4">
           <div className="rounded-2xl border border-white/10 bg-[#24273c]/80 p-3 shadow-lg">
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#1f2334]/80 p-1">
+            <div className="mb-2 grid grid-cols-2 gap-2 rounded-xl bg-[#1f2334]/80 p-1">
+              {[
+                { id: 'summary', label: '總覽' },
+                { id: 'trend', label: '趨勢' },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setViewMode(option.id as StatsViewMode)}
+                  className={`rounded-[0.9rem] px-3 py-2 text-sm font-black transition-all ${
+                    viewMode === option.id
+                      ? 'bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            <div className={`grid grid-cols-2 gap-2 rounded-xl bg-[#1f2334]/80 p-1 ${isTrendView ? 'hidden' : ''}`}>
               {[
                 { id: 'month', label: '月份' },
                 { id: 'year', label: '年份' },
@@ -658,17 +700,24 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
               <button
                 onClick={() => movePeriod(-1)}
                 className={monthNavButtonClassName}
-                aria-label={periodMode === 'month' ? '切換到上個月' : '切換到上一年'}
-                title={periodMode === 'month' ? '上個月' : '上一年'}
+                aria-label={isMonthStep ? '切換到上個月' : '切換到上一年'}
+                title={isMonthStep ? '上個月' : '上一年'}
               >
                 <ChevronLeft size={18} />
               </button>
-              <p className="text-center text-xl font-black tracking-tight text-white">{periodLabel}</p>
+              <div className="min-w-0 text-center">
+                <p className="text-xl font-black tracking-tight text-white">{periodLabel}</p>
+                {isTrendView && (
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
+                    {trendRangeLabel}
+                  </p>
+                )}
+              </div>
               <button
                 onClick={() => movePeriod(1)}
                 className={monthNavButtonClassName}
-                aria-label={periodMode === 'month' ? '切換到下個月' : '切換到下一年'}
-                title={periodMode === 'month' ? '下個月' : '下一年'}
+                aria-label={isMonthStep ? '切換到下個月' : '切換到下一年'}
+                title={isMonthStep ? '下個月' : '下一年'}
               >
                 <ChevronRight size={18} />
               </button>
@@ -705,7 +754,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
               </button>
             </div>
 
-            <div className="flex items-center">
+            <div className={`items-center ${isTrendView ? 'hidden' : 'flex'}`}>
               <button
                 type="button"
                 onClick={toggleSortMode}
@@ -862,6 +911,15 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                       </div>
                     </div>
 
+                    {isTrendView ? (
+                      <MonthlyTrendChart
+                        transactions={filteredTransactions}
+                        currency={currency}
+                        endDate={selectedDate}
+                        monthCount={TREND_MONTH_COUNT}
+                      />
+                    ) : (
+                      <>
                     <div className="grid grid-cols-1 gap-3">
                       {hasIncome && (
                         <button
@@ -1019,6 +1077,8 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                         )}
                       </div>
                     )}
+                      </>
+                    )}
                   </section>
                 );
               })}
@@ -1030,8 +1090,8 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
               </div>
               <p className="mt-6 text-lg font-bold text-gray-300">
                 {hasActiveFilters
-                  ? `目前篩選在這個${periodMode === 'month' ? '月份' : '年份'}沒有資料`
-                  : `這個${periodMode === 'month' ? '月份' : '年份'}還沒有任何紀錄`}
+                  ? `目前篩選在${periodScopeLabel}沒有資料`
+                  : `${periodScopeLabel}還沒有任何紀錄`}
               </p>
               <p className="mt-3 text-sm text-gray-500">
                 目前摘要顯示為 {formatCurrencyAmount(0, defaultCurrency, { withSpace: true })}。

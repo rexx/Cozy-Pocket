@@ -1,6 +1,6 @@
-import { endOfMonth, endOfYear } from 'date-fns';
+import { endOfMonth, endOfYear, startOfMonth, subMonths } from 'date-fns';
 import { Transaction, TransactionType } from '../types';
-import { toEpochSeconds } from '../time';
+import { toEpochMillis, toEpochSeconds } from '../time';
 import { extractTransactionTags, normalizeTag } from './tagService';
 import { normalizeMerchantName } from './merchantService';
 
@@ -178,6 +178,98 @@ export const getYearTransactions = (transactions: Transaction[], date: Date) => 
   const start = toEpochSeconds(new Date(date.getFullYear(), 0, 1).getTime());
   const end = toEpochSeconds(endOfYear(date).getTime());
   return transactions.filter((tx) => tx.timestamp >= start && tx.timestamp <= end);
+};
+
+export interface MonthlyTrendCategoryPoint {
+  categoryId: string;
+  total: number;
+  count: number;
+}
+
+export interface MonthlyTrendBucket {
+  year: number;
+  month: number; // 0-indexed, matching Date
+  total: number;
+  categories: MonthlyTrendCategoryPoint[];
+}
+
+export interface MonthlyTrendOptions {
+  endDate: Date;
+  monthCount: number;
+  currency: string;
+  type: TransactionType;
+}
+
+const getMonthBucketKey = (year: number, month: number) => `${year}-${month}`;
+
+export const getTrendWindowTransactions = (
+  transactions: Transaction[],
+  endDate: Date,
+  monthCount: number
+) => {
+  const start = toEpochSeconds(startOfMonth(subMonths(endDate, monthCount - 1)).getTime());
+  const end = toEpochSeconds(endOfMonth(endDate).getTime());
+  return transactions.filter((tx) => tx.timestamp >= start && tx.timestamp <= end);
+};
+
+// Every month in the window gets a bucket, empty ones included. Dropping a
+// silent month would compress the x axis and read as "that month does not
+// exist" rather than "nothing was spent".
+export const getMonthlyTrend = (
+  transactions: Transaction[],
+  options: MonthlyTrendOptions
+): MonthlyTrendBucket[] => {
+  const { endDate, monthCount, currency, type } = options;
+  const buckets: MonthlyTrendBucket[] = [];
+  const bucketByKey = new Map<string, MonthlyTrendBucket>();
+  const categoryMapByKey = new Map<string, Map<string, MonthlyTrendCategoryPoint>>();
+
+  for (let offset = monthCount - 1; offset >= 0; offset -= 1) {
+    const monthStart = subMonths(startOfMonth(endDate), offset);
+    const year = monthStart.getFullYear();
+    const month = monthStart.getMonth();
+    const bucket: MonthlyTrendBucket = { year, month, total: 0, categories: [] };
+    const key = getMonthBucketKey(year, month);
+
+    buckets.push(bucket);
+    bucketByKey.set(key, bucket);
+    categoryMapByKey.set(key, new Map<string, MonthlyTrendCategoryPoint>());
+  }
+
+  transactions.forEach((tx) => {
+    if (tx.type !== type) return;
+    if ((tx.currency || 'TWD') !== currency) return;
+
+    const txDate = new Date(toEpochMillis(tx.timestamp));
+    const key = getMonthBucketKey(txDate.getFullYear(), txDate.getMonth());
+    const bucket = bucketByKey.get(key);
+    const categoryMap = categoryMapByKey.get(key);
+    if (!bucket || !categoryMap) return;
+
+    const categoryId = tx.categoryId || '';
+    const amount = Math.abs(tx.amount);
+    let point = categoryMap.get(categoryId);
+
+    if (!point) {
+      point = { categoryId, total: 0, count: 0 };
+      categoryMap.set(categoryId, point);
+    }
+
+    point.total += amount;
+    point.count += 1;
+    bucket.total += amount;
+  });
+
+  buckets.forEach((bucket) => {
+    const categoryMap = categoryMapByKey.get(getMonthBucketKey(bucket.year, bucket.month));
+    if (!categoryMap) return;
+    bucket.categories = Array.from(categoryMap.values()).sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total;
+      return a.categoryId.localeCompare(b.categoryId);
+    });
+  });
+
+  return buckets;
 };
 
 export const getMonthTags = (transactions: Transaction[]) => {
