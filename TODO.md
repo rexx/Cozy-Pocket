@@ -17,6 +17,7 @@
 
 ## 統計與交易管理
 
+- 🟡 趨勢圖圖例改造：讀數列表加「顯示所有類別」切換，並決定底部「類別 · 可多選」chip 列的去留。（計劃：[stats-trend-legend.md](docs/todo-references/stats-trend-legend.md)）
 - 🟡 統計頁新增預設開啟的「排除未來交易」選項，使用者可關閉以納入時間晚於現在的交易，並套用到所有統計與明細。（計劃：[stats-exclude-future-toggle.md](docs/todo-references/stats-exclude-future-toggle.md)）
 - 🟡 新增重複事件管理頁，集中查看、新增、編輯、停用與刪除週期性交易規則，並顯示下次執行時間。
 - 🟡 把使用者提供的真實交易資料匯入本機 dev server，檢視真實資料下交易列表項目的實際呈現（名稱與商家長度分布、tag 數量、副標題資訊密度），再據此設計 `TransactionItem` 的版面調整方向；範例資料的長度分布不足以代表真實使用情境。計劃書待檢視後補上。

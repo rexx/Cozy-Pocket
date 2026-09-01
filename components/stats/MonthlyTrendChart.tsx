@@ -375,9 +375,12 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
         </svg>
       ) : (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.025] px-4 py-8 text-center text-xs font-bold text-gray-500">
-          {allCategoriesHidden
-            ? '沒有選取任何類別'
-            : hasAnyData ? '目前選取的類別沒有資料' : `近 ${monthCount} 個月沒有${trendType}紀錄`}
+          {/* Absence of data has to be ruled out first: with nothing in the window
+              both the ordered and the visible category lists are empty, so an
+              all-hidden test alone would blame the reader for an empty chart. */}
+          {!hasAnyData
+            ? `近 ${monthCount} 個月沒有${trendType}紀錄`
+            : allCategoriesHidden ? '沒有選取任何類別' : '目前選取的類別沒有資料'}
         </div>
       )}
 

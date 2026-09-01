@@ -61,6 +61,7 @@
 
 ## 統計與分析
 
+- ✅ 統計頁篩選面板新增「類別」多選篩選，與既有的 Tag、支付方式並列，採 OR 規則且只列出目前期間出現過的類別；切換期間時仍有效的選取會保留。一併修正趨勢圖空狀態文案的判斷順序，讓「完全沒有資料」不再誤報成「沒有選取任何類別」。（紀錄：[stats-category-filter.md](docs/completed-references/stats-category-filter.md)）
 - ✅ 統計頁新增「趨勢」分頁，以近 12 個月滾動視窗的堆疊長條圖呈現每月收支組成，可切換收支、依類別多選篩選並以「全選／取消全選」兩下隔離單一類別；沒有交易的月份保留欄位畫成 0。圖表為手刻 SVG，未引入圖表套件。（紀錄：[stats-monthly-trend-chart.md](docs/completed-references/stats-monthly-trend-chart.md)）
 - ✅ 統計頁 Tag 篩選已支援多選，採 AND 規則：交易必須同時具有全部已選 tag 才納入統計。選取 `Ipass` 與 `永豐` 時只保留兩者兼具的交易，`Ipass永豐` 這種相似 tag 不會被誤判。（紀錄：[stats-multi-tag-filter.md](docs/completed-references/stats-multi-tag-filter.md)）
 - ✅ 統計頁「依類別彙整」區塊已改為預設收合，點擊標題列才展開內容，維持單頁排版。（紀錄：[stats-collapsible-category.md](docs/completed-references/stats-collapsible-category.md)）

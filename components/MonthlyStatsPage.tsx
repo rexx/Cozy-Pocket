@@ -85,6 +85,18 @@ const getExclusionDisplayLabel = (key: string) => {
   return `${categoryName} / ${subCategoryName}`;
 };
 
+const CATEGORY_ORDER_BY_ID = new Map(CATEGORIES.map((category, index) => [category.id, index]));
+
+// Keeps the filter chips in the app's canonical category order (expense first,
+// then income). Ids outside the catalog, including the empty id that renders as
+// the uncategorized label, sort last.
+const compareCategoryIdsByCatalogOrder = (a: string, b: string) => {
+  const orderA = CATEGORY_ORDER_BY_ID.get(a) ?? Number.MAX_SAFE_INTEGER;
+  const orderB = CATEGORY_ORDER_BY_ID.get(b) ?? Number.MAX_SAFE_INTEGER;
+  if (orderA !== orderB) return orderA - orderB;
+  return getCategoryName(a).localeCompare(getCategoryName(b), 'zh-Hant');
+};
+
 const compareCategoryStatsItems = (a: CategoryStatsItem, b: CategoryStatsItem) => {
   if (b.total !== a.total) return b.total - a.total;
   if (b.count !== a.count) return b.count - a.count;
@@ -106,6 +118,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | ''>('');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [sortMode, setSortMode] = useState<StatsSortMode>('latest');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isExcludedPanelOpen, setIsExcludedPanelOpen] = useState(false);
@@ -193,15 +206,41 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     }
   }, [periodPaymentMethods, selectedPaymentMethod]);
 
+  // Only categories the period actually contains get a chip; the full CATEGORIES
+  // table would fill the row with options that can never match anything.
+  const periodCategoryIds = useMemo(() => {
+    const categoryIdSet = new Set<string>();
+    periodTransactions.forEach((tx) => {
+      categoryIdSet.add(tx.categoryId || '');
+    });
+    return Array.from(categoryIdSet).sort(compareCategoryIdsByCatalogOrder);
+  }, [periodTransactions]);
+
+  // Same survival rule as tags: drop only what the new period stopped offering.
+  useEffect(() => {
+    setSelectedCategoryIds((prev) => {
+      const next = prev.filter((categoryId) => periodCategoryIds.includes(categoryId));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [periodCategoryIds]);
+
+  const selectedCategoryIdSet = useMemo(
+    () => new Set(selectedCategoryIds),
+    [selectedCategoryIds]
+  );
+
   useEffect(() => {
     setExpandedSectionKey(null);
     setExpandedCategoryKey(null);
     setExpandedMerchantKey(null);
-  }, [selectedDate, selectedTags, selectedPaymentMethod, periodMode, viewMode]);
+  }, [selectedDate, selectedTags, selectedPaymentMethod, selectedCategoryIds, periodMode, viewMode]);
 
   const filteredTransactions = useMemo(
     () => filterTransactionsByTags(periodTransactions, selectedTags).filter((tx) => {
       if (selectedPaymentMethod && tx.paymentMethod !== selectedPaymentMethod) return false;
+      if (selectedCategoryIdSet.size > 0 && !selectedCategoryIdSet.has(tx.categoryId || '')) {
+        return false;
+      }
       if (excludedSubCategorySet.size > 0) {
         const exclusionKey = buildSubCategoryExclusionKey(
           tx.categoryId || '',
@@ -211,7 +250,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
       }
       return true;
     }),
-    [periodTransactions, selectedTags, selectedPaymentMethod, excludedSubCategorySet]
+    [periodTransactions, selectedTags, selectedPaymentMethod, selectedCategoryIdSet, excludedSubCategorySet]
   );
 
   const statsByCurrency = useMemo(
@@ -301,7 +340,10 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     : periodMode === 'month' ? '這個月份' : '這個年份';
   const selectedSortLabel = sortMode === 'latest' ? '日期' : '金額';
   const hasExclusions = excludedSubCategoryKeys.length > 0;
-  const hasActiveFilters = selectedTags.length > 0 || Boolean(selectedPaymentMethod) || hasExclusions;
+  const hasActiveFilters = selectedTags.length > 0
+    || Boolean(selectedPaymentMethod)
+    || selectedCategoryIds.length > 0
+    || hasExclusions;
   // A single tag is short enough to spell out; more than one would overflow the
   // badge at iPhone width, so it collapses to a count.
   const selectedTagsLabel = selectedTags.length === 0
@@ -309,10 +351,18 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     : selectedTags.length === 1
       ? `#${selectedTags[0]}`
       : `${selectedTags.length} 個 tag`;
+  // Category names are long enough that two spelled out would overflow the badge
+  // at iPhone width, so the same collapse rule as tags applies.
+  const selectedCategoriesLabel = selectedCategoryIds.length === 0
+    ? null
+    : selectedCategoryIds.length === 1
+      ? getCategoryName(selectedCategoryIds[0])
+      : `${selectedCategoryIds.length} 個類別`;
   const activeFilterBadgeLabel = hasActiveFilters
     ? [
         selectedTagsLabel,
         selectedPaymentMethod || null,
+        selectedCategoriesLabel,
         hasExclusions ? `排除 ${excludedSubCategoryKeys.length} 個子類別` : null,
       ].filter(Boolean).join(' · ')
     : '全部交易';
@@ -330,6 +380,16 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   };
   const clearSelectedTags = () => {
     setSelectedTags([]);
+  };
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategoryIds((prev) => (
+      prev.includes(categoryId)
+        ? prev.filter((item) => item !== categoryId)
+        : [...prev, categoryId]
+    ));
+  };
+  const clearSelectedCategories = () => {
+    setSelectedCategoryIds([]);
   };
   const toggleSortMode = () => {
     setSortMode((prev) => (prev === 'latest' ? 'amount-desc' : 'latest'));
@@ -835,6 +895,43 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                         {paymentMethod}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">類別</p>
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button
+                      type="button"
+                      onClick={clearSelectedCategories}
+                      aria-pressed={selectedCategoryIds.length === 0}
+                      className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                        selectedCategoryIds.length === 0
+                          ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                          : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      全部
+                    </button>
+                    {periodCategoryIds.map((categoryId) => {
+                      const isSelected = selectedCategoryIds.includes(categoryId);
+
+                      return (
+                        <button
+                          key={categoryId || 'uncategorized'}
+                          type="button"
+                          onClick={() => toggleCategory(categoryId)}
+                          aria-pressed={isSelected}
+                          className={`shrink-0 rounded-full border px-3 py-2 text-xs font-black transition-all ${
+                            isSelected
+                              ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                              : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {getCategoryName(categoryId)}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
