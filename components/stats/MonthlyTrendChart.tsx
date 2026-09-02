@@ -76,7 +76,7 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
   monthCount,
 }) => {
   const [trendType, setTrendType] = useState<TransactionType>('支出');
-  const [hiddenCategoryIds, setHiddenCategoryIds] = useState<string[]>([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const [focusIndex, setFocusIndex] = useState(monthCount - 1);
 
   const buckets = useMemo(
@@ -84,102 +84,98 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
     [transactions, endDate, monthCount, currency, trendType]
   );
 
-  // Category totals across the whole window drive both the stack order and the
-  // chip order, so a colour band keeps the same slot in every bar. Re-sorting
-  // per month would make a band jump up and down between neighbouring bars,
-  // which is the one thing a stacked chart cannot survive.
-  const orderedCategoryIds = useMemo(() => {
+  // One walk produces both the stack order and the per-category window totals.
+  // The order is by window total descending so a colour band keeps the same
+  // slot in every bar. Re-sorting per month would make a band jump up and down
+  // between neighbouring bars, which is the one thing a stacked chart cannot
+  // survive.
+  const { orderedCategoryIds, categoryTotals } = useMemo(() => {
     const totals = new Map<string, number>();
     buckets.forEach((bucket) => {
       bucket.categories.forEach((point) => {
         totals.set(point.categoryId, (totals.get(point.categoryId) || 0) + point.total);
       });
     });
-    return Array.from(totals.entries())
+    const ordered = Array.from(totals.entries())
       .sort((a, b) => {
         if (b[1] !== a[1]) return b[1] - a[1];
         return a[0].localeCompare(b[0]);
       })
       .map(([categoryId]) => categoryId);
-  }, [buckets]);
 
-  const categoryTotals = useMemo(() => {
-    const totals = new Map<string, number>();
-    buckets.forEach((bucket) => {
-      bucket.categories.forEach((point) => {
-        totals.set(point.categoryId, (totals.get(point.categoryId) || 0) + point.total);
-      });
-    });
-    return totals;
+    return { orderedCategoryIds: ordered, categoryTotals: totals };
   }, [buckets]);
-
-  // Hiding survives month navigation but not a type switch, because the income
-  // and expense category sets do not overlap.
-  useEffect(() => {
-    setHiddenCategoryIds([]);
-  }, [trendType, currency]);
 
   useEffect(() => {
     setFocusIndex(monthCount - 1);
   }, [endDate, monthCount, trendType, currency]);
 
-  const hiddenSet = useMemo(() => new Set(hiddenCategoryIds), [hiddenCategoryIds]);
-  const visibleCategoryIds = useMemo(
-    () => orderedCategoryIds.filter((categoryId) => !hiddenSet.has(categoryId)),
-    [orderedCategoryIds, hiddenSet]
-  );
-
-  const visibleTotals = useMemo(
-    () => buckets.map((bucket) => (
-      bucket.categories.reduce(
-        (sum, point) => (hiddenSet.has(point.categoryId) ? sum : sum + point.total),
-        0
-      )
-    )),
-    [buckets, hiddenSet]
-  );
+  const monthlyTotals = useMemo(() => buckets.map((bucket) => bucket.total), [buckets]);
 
   const isIncome = trendType === '收入';
   const accentTextClassName = isIncome ? 'text-rose-300' : 'text-emerald-300';
   const hasAnyData = orderedCategoryIds.length > 0;
-  const hasVisibleData = visibleTotals.some((total) => total > 0);
+  const hasVisibleData = monthlyTotals.some((total) => total > 0);
 
-  const axisMax = getNiceAxisMax(Math.max(0, ...visibleTotals), AXIS_TICKS);
+  const axisMax = getNiceAxisMax(Math.max(0, ...monthlyTotals), AXIS_TICKS);
   const formatAxisAmount = buildAxisFormatter(axisMax);
   const columnWidth = PLOT_WIDTH / Math.max(1, buckets.length);
   const barWidth = Math.min(20, columnWidth * 0.62);
 
-  const averageTotal = visibleTotals.length > 0
-    ? visibleTotals.reduce((sum, value) => sum + value, 0) / visibleTotals.length
+  const averageTotal = monthlyTotals.length > 0
+    ? monthlyTotals.reduce((sum, value) => sum + value, 0) / monthlyTotals.length
     : 0;
-  const peakIndex = visibleTotals.reduce(
-    (best, value, index) => (value > visibleTotals[best] ? index : best),
+  const peakIndex = monthlyTotals.reduce(
+    (best, value, index) => (value > monthlyTotals[best] ? index : best),
     0
   );
-  const previousTotal = visibleTotals[visibleTotals.length - 2] ?? 0;
-  const latestTotal = visibleTotals[visibleTotals.length - 1] ?? 0;
+  const previousTotal = monthlyTotals[monthlyTotals.length - 2] ?? 0;
+  const latestTotal = monthlyTotals[monthlyTotals.length - 1] ?? 0;
   const monthOverMonth = previousTotal > 0
     ? ((latestTotal - previousTotal) / previousTotal) * 100
     : null;
 
   const safeFocusIndex = Math.min(Math.max(focusIndex, 0), Math.max(0, buckets.length - 1));
   const focusBucket: MonthlyTrendBucket | undefined = buckets[safeFocusIndex];
-  const focusPoints = (focusBucket?.categories || [])
-    .filter((point) => !hiddenSet.has(point.categoryId) && point.total > 0);
-  const focusTotal = visibleTotals[safeFocusIndex] ?? 0;
-  const focusVisibleRows = focusPoints.slice(0, MAX_READOUT_ROWS);
-  const focusRestRows = focusPoints.slice(MAX_READOUT_ROWS);
-  const focusRestTotal = focusRestRows.reduce((sum, point) => sum + point.total, 0);
+  const focusPoints = (focusBucket?.categories || []).filter((point) => point.total > 0);
+  const focusTotal = monthlyTotals[safeFocusIndex] ?? 0;
+  const focusMonthTotalByCategoryId = useMemo(() => {
+    const totals = new Map<string, number>();
+    (focusBucket?.categories || []).forEach((point) => {
+      totals.set(point.categoryId, point.total);
+    });
+    return totals;
+  }, [focusBucket]);
+
+  // The readout doubles as the chart's legend, so the two shapes answer
+  // different questions and sort accordingly. Collapsed lists what the focused
+  // month contains, ordered by that month's amount, so the row the cap folds
+  // away is the least relevant one for the month on screen. Expanded lists
+  // every category in the window in stack order, which is the mapping a reader
+  // needs to decode a colour band.
+  const readoutRows = showAllCategories
+    ? orderedCategoryIds.map((categoryId) => ({
+        categoryId,
+        monthTotal: focusMonthTotalByCategoryId.get(categoryId) || 0,
+      }))
+    : focusPoints.slice(0, MAX_READOUT_ROWS).map((point) => ({
+        categoryId: point.categoryId,
+        monthTotal: point.total,
+      }));
+  // The cap only exists in the collapsed shape; zero rows would otherwise all
+  // land past it and the toggle would show nothing new.
+  const readoutRestRows = showAllCategories ? [] : focusPoints.slice(MAX_READOUT_ROWS);
+  const readoutRestMonthTotal = readoutRestRows.reduce((sum, point) => sum + point.total, 0);
+  const readoutRestWindowTotal = readoutRestRows.reduce(
+    (sum, point) => sum + (categoryTotals.get(point.categoryId) || 0),
+    0
+  );
 
   const formatAmount = (value: number) => formatCurrencyAmount(value, currency, { withSpace: true });
-
-  const toggleCategory = (categoryId: string) => {
-    setHiddenCategoryIds((prev) => (
-      prev.includes(categoryId)
-        ? prev.filter((item) => item !== categoryId)
-        : [...prev, categoryId]
-    ));
-  };
+  // Neither column carries the currency symbol: the card heading and the month
+  // total above already state it, and paying for it twice per row costs the
+  // category name its width at iPhone size.
+  const formatColumnAmount = (value: number) => Math.round(value).toLocaleString();
 
   const peakBucket = hasVisibleData ? buckets[peakIndex] : undefined;
   const previousBucket = buckets[buckets.length - 2];
@@ -196,7 +192,7 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
     },
     {
       label: '最高月',
-      value: peakBucket ? formatCompactAmount(visibleTotals[peakIndex]) : '—',
+      value: peakBucket ? formatCompactAmount(monthlyTotals[peakIndex]) : '—',
       caption: peakBucket ? `${peakBucket.month + 1} 月` : '沒有資料',
       valueClassName: 'text-gray-200',
     },
@@ -212,9 +208,7 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
     },
   ];
 
-  const allCategoriesVisible = visibleCategoryIds.length === orderedCategoryIds.length;
-  const allCategoriesHidden = visibleCategoryIds.length === 0;
-  const bulkSelectButtonClassName = 'shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-black text-gray-300 transition-all hover:text-white active:scale-95';
+  const readoutToggleClassName = 'shrink-0 rounded-full border px-3 py-1 text-[10px] font-black transition-all active:scale-95';
 
   const yForValue = (value: number) => PAD_TOP + PLOT_HEIGHT - (value / axisMax) * PLOT_HEIGHT;
 
@@ -302,7 +296,7 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
 
             return (
               <g key={`bar-${bucket.year}-${bucket.month}`}>
-                {visibleCategoryIds.map((categoryId) => {
+                {orderedCategoryIds.map((categoryId) => {
                   const point = bucket.categories.find((item) => item.categoryId === categoryId);
                   if (!point || point.total <= 0) return null;
 
@@ -375,12 +369,9 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
         </svg>
       ) : (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.025] px-4 py-8 text-center text-xs font-bold text-gray-500">
-          {/* Absence of data has to be ruled out first: with nothing in the window
-              both the ordered and the visible category lists are empty, so an
-              all-hidden test alone would blame the reader for an empty chart. */}
-          {!hasAnyData
-            ? `近 ${monthCount} 個月沒有${trendType}紀錄`
-            : allCategoriesHidden ? '沒有選取任何類別' : '目前選取的類別沒有資料'}
+          {hasAnyData
+            ? `近 ${monthCount} 個月的${trendType}金額都是 0`
+            : `近 ${monthCount} 個月沒有${trendType}紀錄`}
         </div>
       )}
 
@@ -395,31 +386,69 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
             </span>
           </div>
 
-          {focusVisibleRows.length > 0 ? (
-            <ul className="mt-2.5 space-y-1.5">
-              {focusVisibleRows.map((point) => (
-                <li key={point.categoryId} className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-[3px]"
-                    style={{ backgroundColor: getCategoryColor(point.categoryId) }}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{getCategoryName(point.categoryId)}</span>
-                  <span className="shrink-0 text-gray-300">{formatAmount(point.total)}</span>
-                </li>
-              ))}
-              {focusRestRows.length > 0 && (
-                <li className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
-                  <span className="h-2 w-2 shrink-0 rounded-[3px] bg-white/15" />
-                  <span className="min-w-0 flex-1 truncate">{`其他 ${focusRestRows.length} 個類別`}</span>
-                  <span className="shrink-0 text-gray-300">{formatAmount(focusRestTotal)}</span>
-                </li>
-              )}
-            </ul>
+          {readoutRows.length > 0 ? (
+            <>
+              <div className="mt-3 flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-gray-600">
+                <span className="h-2 w-2 shrink-0" />
+                <span className="min-w-0 flex-1" />
+                <span className="w-14 shrink-0 text-right">單月</span>
+                <span className="w-14 shrink-0 text-right">{`近 ${monthCount} 月`}</span>
+              </div>
+              <ul className="mt-1 space-y-1.5">
+                {readoutRows.map((row) => {
+                  const isEmptyMonth = row.monthTotal <= 0;
+
+                  return (
+                    <li key={row.categoryId} className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-[3px] ${isEmptyMonth ? 'opacity-40' : ''}`}
+                        style={{ backgroundColor: getCategoryColor(row.categoryId) }}
+                      />
+                      <span className={`min-w-0 flex-1 truncate ${isEmptyMonth ? 'text-gray-600' : ''}`}>
+                        {getCategoryName(row.categoryId)}
+                      </span>
+                      <span className={`w-14 shrink-0 text-right tabular-nums ${isEmptyMonth ? 'text-gray-600' : 'text-gray-300'}`}>
+                        {formatColumnAmount(row.monthTotal)}
+                      </span>
+                      <span className="w-14 shrink-0 text-right tabular-nums text-gray-500">
+                        {formatColumnAmount(categoryTotals.get(row.categoryId) || 0)}
+                      </span>
+                    </li>
+                  );
+                })}
+                {readoutRestRows.length > 0 && (
+                  <li className="flex items-center gap-2 text-[11px] font-bold text-gray-400">
+                    <span className="h-2 w-2 shrink-0 rounded-[3px] bg-white/15" />
+                    <span className="min-w-0 flex-1 truncate">{`其他 ${readoutRestRows.length} 個類別`}</span>
+                    <span className="w-14 shrink-0 text-right tabular-nums text-gray-300">
+                      {formatColumnAmount(readoutRestMonthTotal)}
+                    </span>
+                    <span className="w-14 shrink-0 text-right tabular-nums text-gray-500">
+                      {formatColumnAmount(readoutRestWindowTotal)}
+                    </span>
+                  </li>
+                )}
+              </ul>
+            </>
           ) : (
             <p className="mt-2 text-[11px] font-bold text-gray-500">這個月沒有符合條件的紀錄</p>
           )}
 
-          <p className="mt-2.5 text-[10px] font-bold text-gray-600">點長條可切換到其他月份</p>
+          <div className="mt-2.5 flex items-center justify-between gap-3">
+            <p className="min-w-0 text-[10px] font-bold text-gray-600">點長條可切換到其他月份</p>
+            <button
+              type="button"
+              onClick={() => setShowAllCategories((prev) => (!prev))}
+              aria-pressed={showAllCategories}
+              className={`${readoutToggleClassName} ${
+                showAllCategories
+                  ? 'border-white/20 bg-white/10 text-gray-100'
+                  : 'border-white/10 bg-white/5 text-gray-300 hover:text-white'
+              }`}
+            >
+              顯示所有類別
+            </button>
+          </div>
         </div>
       )}
 
@@ -435,65 +464,6 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({
           </div>
         ))}
       </div>
-      )}
-
-      {hasAnyData && (
-        <div className="mt-5 border-t border-white/8 pt-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">
-              類別 · 可多選
-            </p>
-            <div className="flex shrink-0 items-center gap-2">
-              {allCategoriesVisible ? null : (
-                <button
-                  type="button"
-                  onClick={() => setHiddenCategoryIds([])}
-                  className={bulkSelectButtonClassName}
-                >
-                  全選
-                </button>
-              )}
-              {allCategoriesHidden ? null : (
-                <button
-                  type="button"
-                  onClick={() => setHiddenCategoryIds(orderedCategoryIds)}
-                  className={bulkSelectButtonClassName}
-                >
-                  取消全選
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {orderedCategoryIds.map((categoryId) => {
-              const isHidden = hiddenSet.has(categoryId);
-
-              return (
-                <button
-                  key={categoryId}
-                  type="button"
-                  onClick={() => toggleCategory(categoryId)}
-                  aria-pressed={!isHidden}
-                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-black transition-all active:scale-95 ${
-                    isHidden
-                      ? 'border-white/10 bg-white/5 text-gray-500 opacity-40'
-                      : 'border-white/20 bg-white/10 text-gray-100'
-                  }`}
-                >
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-                    style={{ backgroundColor: getCategoryColor(categoryId) }}
-                  />
-                  {getCategoryName(categoryId)}
-                  <span className="text-[10px] font-bold text-gray-500">
-                    {formatCompactAmount(categoryTotals.get(categoryId) || 0)}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
       )}
     </div>
   );
