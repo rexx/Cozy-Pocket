@@ -443,7 +443,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                     }}
                     className={`w-full rounded-2xl border p-3 text-left transition-all active:scale-[0.99] ${
                       isExpanded
-                        ? 'border-cyan-300/25 bg-cyan-500/10'
+                        ? 'rounded-b-none border-b-0 border-cyan-300/25 bg-cyan-500/10'
                         : 'border-white/8 bg-white/[0.035] hover:border-white/15 hover:bg-white/[0.055]'
                     }`}
                     aria-expanded={isExpanded}
@@ -492,23 +492,25 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                   </button>
 
                   {isExpanded && (
-                    <div className="mt-2 overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
-                      {sortedItemTransactions.length > 0 ? (
-                        sortedItemTransactions.map((transaction) => (
-                          <TransactionItem
-                            key={transaction.id}
-                            transaction={transaction}
-                            onClick={onTransactionClick}
-                            paymentMethodDisplayMode={paymentMethodDisplayMode}
-                            showDateTime
-                            dateTimeDisplayMode="compact"
-                          />
-                        ))
-                      ) : (
-                        <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
-                          沒有符合條件的交易項目
-                        </div>
-                      )}
+                    <div className="rounded-2xl rounded-t-none border border-t-0 border-cyan-300/25 bg-cyan-500/[0.06] p-2.5">
+                      <div className="overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
+                        {sortedItemTransactions.length > 0 ? (
+                          sortedItemTransactions.map((transaction) => (
+                            <TransactionItem
+                              key={transaction.id}
+                              transaction={transaction}
+                              onClick={onTransactionClick}
+                              paymentMethodDisplayMode={paymentMethodDisplayMode}
+                              showDateTime
+                              dateTimeDisplayMode="compact"
+                            />
+                          ))
+                        ) : (
+                          <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
+                            沒有符合條件的交易項目
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -568,7 +570,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                     }}
                     className={`w-full rounded-2xl border p-3 text-left transition-all active:scale-[0.99] ${
                       isExpanded
-                        ? 'border-cyan-300/25 bg-cyan-500/10'
+                        ? 'rounded-b-none border-b-0 border-cyan-300/25 bg-cyan-500/10'
                         : 'border-white/8 bg-white/[0.035] hover:border-white/15 hover:bg-white/[0.055]'
                     }`}
                     aria-expanded={isExpanded}
@@ -617,9 +619,12 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                   </button>
 
                   {isExpanded && (
-                    <div className="mt-2 space-y-3">
+                    <div className="space-y-3 rounded-2xl rounded-t-none border border-t-0 border-cyan-300/25 bg-cyan-500/[0.06] p-2.5">
                       {item.subcategories.length > 0 && (
                         <div className="space-y-2">
+                          <p className="px-1 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">
+                            {categoryName}的子類別
+                          </p>
                           {item.subcategories.map((subItem) => {
                             const subCategoryDisplayName = getSubCategoryName(item.categoryId, subItem.subCategoryId);
                             const subPercentage = item.total > 0
@@ -670,23 +675,28 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                         </div>
                       )}
 
-                      <div className="overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
-                        {sortedItemTransactions.length > 0 ? (
-                          sortedItemTransactions.map((transaction) => (
-                            <TransactionItem
-                              key={transaction.id}
-                              transaction={transaction}
-                              onClick={onTransactionClick}
-                              paymentMethodDisplayMode={paymentMethodDisplayMode}
-                              showDateTime
-                              dateTimeDisplayMode="compact"
-                            />
-                          ))
-                        ) : (
-                          <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
-                            沒有符合條件的交易項目
-                          </div>
-                        )}
+                      <div className="space-y-2">
+                        <p className="px-1 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">
+                          {categoryName}的交易明細
+                        </p>
+                        <div className="overflow-hidden rounded-[1.2rem] border border-white/8 bg-[#1b1f31]/85">
+                          {sortedItemTransactions.length > 0 ? (
+                            sortedItemTransactions.map((transaction) => (
+                              <TransactionItem
+                                key={transaction.id}
+                                transaction={transaction}
+                                onClick={onTransactionClick}
+                                paymentMethodDisplayMode={paymentMethodDisplayMode}
+                                showDateTime
+                                dateTimeDisplayMode="compact"
+                              />
+                            ))
+                          ) : (
+                            <div className="px-5 py-6 text-center text-sm font-bold text-gray-500">
+                              沒有符合條件的交易項目
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
