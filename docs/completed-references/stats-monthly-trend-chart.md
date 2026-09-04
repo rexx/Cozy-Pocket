@@ -92,5 +92,5 @@ cmux 自驗涵蓋：分頁切換不重置篩選、滾動視窗左右導覽與範
 
 - 資料來源沿用 `App.tsx` 已載入的完整 `transactions` state，趨勢圖不另外查 IndexedDB。
 - 12 個月是固定值，沒有做成偏好設定。
-- 未來交易一併計入。統計頁的「排除未來交易」選項是另一個待辦（[stats-exclude-future-toggle.md](../todo-references/stats-exclude-future-toggle.md)），該選項落地後趨勢圖可直接沿用同一個開關。
+- 未來交易一併計入。統計頁的「排除未來交易」選項是獨立項目（[stats-exclude-future-toggle.md](stats-exclude-future-toggle.md)），該選項落地後趨勢圖可直接沿用同一個開關。
 - 類別以主類別為單位，不下鑽子類別。子類別的排除設定照舊生效。

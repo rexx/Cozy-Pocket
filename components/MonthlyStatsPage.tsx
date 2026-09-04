@@ -7,6 +7,7 @@ import {
   CategoryStatsItem,
   MerchantStatsItem,
   filterTransactionsByTags,
+  filterTransactionsThroughTimestamp,
   getCategoryStats,
   getMerchantStats,
   getMonthTags,
@@ -15,6 +16,7 @@ import {
   getTrendWindowTransactions,
   getYearTransactions,
 } from '../services/statsService';
+import { toEpochSeconds } from '../time';
 import { buildSubCategoryExclusionKey } from '../preferences';
 import PageHeader from './PageHeader';
 import TransactionItem from './TransactionItem';
@@ -119,6 +121,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | ''>('');
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [excludeFutureTransactions, setExcludeFutureTransactions] = useState(true);
   const [sortMode, setSortMode] = useState<StatsSortMode>('latest');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isExcludedPanelOpen, setIsExcludedPanelOpen] = useState(false);
@@ -175,9 +178,23 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     [transactions, selectedDate, periodMode, viewMode]
   );
 
+  // Everything downstream — filter options, totals, breakdowns, expanded
+  // details — reads this list, so a transaction dated later than now cannot
+  // reappear in one section after being dropped from another.
+  const eligiblePeriodTransactions = useMemo(
+    () => (
+      excludeFutureTransactions
+        ? filterTransactionsThroughTimestamp(periodTransactions, toEpochSeconds(Date.now()))
+        : periodTransactions
+    ),
+    [periodTransactions, excludeFutureTransactions]
+  );
+
+  const hiddenFutureCount = periodTransactions.length - eligiblePeriodTransactions.length;
+
   const periodTags = useMemo(
-    () => getMonthTags(periodTransactions),
-    [periodTransactions]
+    () => getMonthTags(eligiblePeriodTransactions),
+    [eligiblePeriodTransactions]
   );
 
   // Drop only the tags the new period no longer offers; the still-valid part of
@@ -192,13 +209,13 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
 
   const periodPaymentMethods = useMemo(() => {
     const methodSet = new Set<PaymentMethod>();
-    periodTransactions.forEach((tx) => {
+    eligiblePeriodTransactions.forEach((tx) => {
       if (tx.paymentMethod) {
         methodSet.add(tx.paymentMethod as PaymentMethod);
       }
     });
     return Array.from(methodSet);
-  }, [periodTransactions]);
+  }, [eligiblePeriodTransactions]);
 
   useEffect(() => {
     if (selectedPaymentMethod && !periodPaymentMethods.includes(selectedPaymentMethod)) {
@@ -210,11 +227,11 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
   // table would fill the row with options that can never match anything.
   const periodCategoryIds = useMemo(() => {
     const categoryIdSet = new Set<string>();
-    periodTransactions.forEach((tx) => {
+    eligiblePeriodTransactions.forEach((tx) => {
       categoryIdSet.add(tx.categoryId || '');
     });
     return Array.from(categoryIdSet).sort(compareCategoryIdsByCatalogOrder);
-  }, [periodTransactions]);
+  }, [eligiblePeriodTransactions]);
 
   // Same survival rule as tags: drop only what the new period stopped offering.
   useEffect(() => {
@@ -233,10 +250,18 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     setExpandedSectionKey(null);
     setExpandedCategoryKey(null);
     setExpandedMerchantKey(null);
-  }, [selectedDate, selectedTags, selectedPaymentMethod, selectedCategoryIds, periodMode, viewMode]);
+  }, [
+    selectedDate,
+    selectedTags,
+    selectedPaymentMethod,
+    selectedCategoryIds,
+    excludeFutureTransactions,
+    periodMode,
+    viewMode,
+  ]);
 
   const filteredTransactions = useMemo(
-    () => filterTransactionsByTags(periodTransactions, selectedTags).filter((tx) => {
+    () => filterTransactionsByTags(eligiblePeriodTransactions, selectedTags).filter((tx) => {
       if (selectedPaymentMethod && tx.paymentMethod !== selectedPaymentMethod) return false;
       if (selectedCategoryIdSet.size > 0 && !selectedCategoryIdSet.has(tx.categoryId || '')) {
         return false;
@@ -250,7 +275,13 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
       }
       return true;
     }),
-    [periodTransactions, selectedTags, selectedPaymentMethod, selectedCategoryIdSet, excludedSubCategorySet]
+    [
+      eligiblePeriodTransactions,
+      selectedTags,
+      selectedPaymentMethod,
+      selectedCategoryIdSet,
+      excludedSubCategorySet,
+    ]
   );
 
   const statsByCurrency = useMemo(
@@ -340,9 +371,13 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     : periodMode === 'month' ? '這個月份' : '這個年份';
   const selectedSortLabel = sortMode === 'latest' ? '日期' : '金額';
   const hasExclusions = excludedSubCategoryKeys.length > 0;
+  // The exclusion counts as an active filter only while it actually withholds
+  // something. It defaults to on, so flagging it unconditionally would leave the
+  // filter button lit for every user who has no future-dated transaction.
   const hasActiveFilters = selectedTags.length > 0
     || Boolean(selectedPaymentMethod)
     || selectedCategoryIds.length > 0
+    || hiddenFutureCount > 0
     || hasExclusions;
   // A single tag is short enough to spell out; more than one would overflow the
   // badge at iPhone width, so it collapses to a count.
@@ -363,6 +398,7 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
         selectedTagsLabel,
         selectedPaymentMethod || null,
         selectedCategoriesLabel,
+        hiddenFutureCount > 0 ? '排除未來' : null,
         hasExclusions ? `排除 ${excludedSubCategoryKeys.length} 個子類別` : null,
       ].filter(Boolean).join(' · ')
     : '全部交易';
@@ -943,6 +979,38 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                       );
                     })}
                   </div>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">時間範圍</p>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={excludeFutureTransactions}
+                    onClick={() => setExcludeFutureTransactions((prev) => !prev)}
+                    className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left transition-all hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 active:scale-[0.99]"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-xs font-black text-gray-300">排除未來交易</span>
+                      <span className="mt-0.5 block text-[10px] font-black text-gray-500">
+                        {excludeFutureTransactions ? '已排除未來交易' : '包含未來交易'}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={`relative h-6 w-11 shrink-0 rounded-full border transition-all ${
+                        excludeFutureTransactions
+                          ? 'border-cyan-400/40 bg-cyan-500/15 shadow-[0_0_16px_rgba(34,211,238,0.12)]'
+                          : 'border-white/10 bg-white/10'
+                      }`}
+                    >
+                      <span
+                        className={`absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full transition-transform ${
+                          excludeFutureTransactions ? 'translate-x-5 bg-cyan-200' : 'translate-x-0 bg-gray-500'
+                        }`}
+                      />
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>

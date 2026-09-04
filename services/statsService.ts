@@ -180,6 +180,14 @@ export const getYearTransactions = (transactions: Transaction[], date: Date) => 
   return transactions.filter((tx) => tx.timestamp >= start && tx.timestamp <= end);
 };
 
+// The caller supplies the cutoff so a single render compares every section
+// against the same instant; a helper-owned Date.now() would drift between the
+// filter options and the totals derived from them.
+export const filterTransactionsThroughTimestamp = (
+  transactions: Transaction[],
+  maxTimestamp: number
+) => transactions.filter((tx) => toEpochSeconds(tx.timestamp) <= maxTimestamp);
+
 export interface MonthlyTrendCategoryPoint {
   categoryId: string;
   total: number;

@@ -61,6 +61,7 @@
 
 ## 統計與分析
 
+- ✅ 統計頁篩選面板新增預設開啟的「排除未來交易」選項，排除 `timestamp` 嚴格晚於當下的交易，套用到篩選選項清單、幣別總額、類別彙整、商家彙整、展開明細與趨勢圖；關閉即可重新納入。選項不持久化，離開統計頁再回來回到預設開啟。（紀錄：[stats-exclude-future-toggle.md](docs/completed-references/stats-exclude-future-toggle.md)）
 - ✅ 統計頁「依類別／依商家彙整」展開中的那一列會與下方展開面板接成一張連續卡片（父列去掉下緣圓角與下邊框、面板去掉上緣圓角並沿用同一組選中色邊框），面板內再以「<類別名>的子類別」與「<類別名>的交易明細」小標分段，讓子類別卡與交易明細讀得出隸屬於被展開的類別而非同層的另一批卡片。（紀錄：[stats-category-expansion-grouping.md](docs/completed-references/stats-category-expansion-grouping.md)）
 - ✅ 趨勢圖的圖例責任移到焦點月分類明細：新增 `單月` / `近 12 月` 兩個數值欄與「顯示所有類別」切換（收合依單月金額排序並保留 5 列上限，展開列出視窗內全部類別、依堆疊順序排序、0 值列降階），底部「類別 · 可多選」chip 列與整個隱藏類別機制一併移除。圖區空狀態因此從三路收成兩路。（紀錄：[stats-trend-legend.md](docs/completed-references/stats-trend-legend.md)）
 - ✅ 統計頁篩選面板新增「類別」多選篩選，與既有的 Tag、支付方式並列，採 OR 規則且只列出目前期間出現過的類別；切換期間時仍有效的選取會保留。一併修正趨勢圖空狀態文案的判斷順序，讓「完全沒有資料」不再誤報成「沒有選取任何類別」。（紀錄：[stats-category-filter.md](docs/completed-references/stats-category-filter.md)）
