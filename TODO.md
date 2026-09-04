@@ -31,7 +31,7 @@
 
 ## 外觀與 App icon
 
-- 🟡 App icon 造型二選一：維持現行「口袋裡有錢幣」，或換成 A（錢幣騎在袋口上）與 C3（字母 `C` 抱著錢幣）其中一案。兩案都已畫好，透明底這個唯一的必要條件也都滿足，但換造型後會不會拿到 Liquid Glass 沒有可先算的判準，只能實機重驗，所以決定要換的話這件事含一次上機驗證。不換也是合理結論。（計劃：[app-icon-redesign-candidates.md](docs/todo-references/app-icon-redesign-candidates.md)）
+- 🟢 App icon 維持現行「口袋裡有錢幣」。「錢幣騎在袋口上」的所有變體實機都拿不到 Liquid Glass（錢幣突出輪廓、袋口斷開、縫線改貼底部弧線各自都足以失效）；字母 `C` 那一案通過但要放棄口袋這個視覺資產。（紀錄：[app-icon-redesign-candidates.md](docs/todo-references/app-icon-redesign-candidates.md)）
 
 ## 資料安全與 Guardrail
 
