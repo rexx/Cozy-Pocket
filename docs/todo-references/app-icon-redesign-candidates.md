@@ -63,7 +63,7 @@
 
 ## 驗收
 
-1. 換掉 `public/icon.svg` 後跑 `npm run icons:generate`，確認透明比例檢查通過（兩案量到的值分別是 87.7% 與 89.6%，都遠高於 76.3% 門檻）
+1. 換掉 `public/icon.svg` 後跑 `npm run icons:generate`。腳本印的是**空腔內周長指紋**（baseline 2.63 ± 0.02），不是門檻——換造型必然偏離 baseline 並印出 WARNING，那代表「結果回到未知、要上機重驗」，不是產出失敗。透明比例**沒有**可用的門檻（`app-icon-ios-liquid-glass.md` §3.2 已用實機樣本推翻，61.3% 透明有效、83.0% 透明失效），兩案量到的 87.7% 與 89.6% 只是紀錄值，不構成通過條件
 2. 產出檔一併 commit —— GitHub Pages 部署不跑產出步驟
 3. 實機驗 Liquid Glass：**先移除主畫面舊圖示再重新加入**，否則會看到快取的舊圖，並比對 Light／Dark／Tinted 三種外觀
 4. 桌面瀏覽器另外看 favicon，尤其是 16×16 下造型還認不認得出來
