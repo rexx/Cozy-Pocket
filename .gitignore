@@ -24,3 +24,7 @@ workdocs/
 *.njsproj
 *.sln
 *.sw?
+
+# Local reference material: the AI Studio exports this repo grew out of.
+# Not part of the build.
+local-reference
