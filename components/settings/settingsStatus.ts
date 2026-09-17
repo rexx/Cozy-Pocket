@@ -1,4 +1,6 @@
-export type SettingsStatusType = 'success' | 'error' | 'idle';
+// Inline feedback tones for settings subpages. `idle` renders nothing; the
+// remaining types map one-to-one onto SettingsFeedbackCard tones.
+export type SettingsStatusType = 'success' | 'error' | 'warning' | 'info' | 'idle';
 
 export interface SettingsStatusAction {
   label: string;

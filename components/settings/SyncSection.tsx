@@ -65,7 +65,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
       const syncResult = await onSaveSyncConfig();
       if (syncResult.skippedOffline) {
         setStatus({
-          type: 'success',
+          type: 'info',
           message: '同步設定已儲存\n目前離線，待恢復連線後再同步',
         });
       } else if (syncResult.failed > 0) {
@@ -87,7 +87,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
     setSyncApiUrl(MOCK_SYNC_API_URL);
     setSyncToken(MOCK_SYNC_TOKEN);
     setStatus({
-      type: 'success',
+      type: 'info',
       message: '已填入 mock API 設定\n按「儲存同步設定」後即可使用本機 mock cloud 測試。',
     });
   };
@@ -104,7 +104,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
 
   const handlePullFromCloud = async () => {
     if (!selectedPullYear) {
-      setStatus({ type: 'error', message: '請先選擇要同步的年份' });
+      setStatus({ type: 'warning', message: '請先選擇要同步的年份' });
       return;
     }
 

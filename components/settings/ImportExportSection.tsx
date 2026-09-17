@@ -17,7 +17,7 @@ import SettingsSection, {
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
 import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
-import { SettingsStatusCard } from './SettingsFeedbackCard';
+import SettingsFeedbackCard, { SettingsStatusCard } from './SettingsFeedbackCard';
 
 export interface ImportPreview {
   transactions: Transaction[];
@@ -142,7 +142,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
 
   const handleRestoreSettings = async () => {
     if (!settingsBackup || !settingsPreview) {
-      setStatus({ type: 'error', message: '請先選擇設定備份檔並完成預覽' });
+      setStatus({ type: 'warning', message: '請先選擇設定備份檔並完成預覽' });
       return;
     }
 
@@ -198,7 +198,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
       const preview = await onParseImportFile(file);
       setImportPreview(preview);
       if (preview.validRows === 0) {
-        setStatus({ type: 'error', message: '預覽完成，但找不到可匯入的有效交易紀錄' });
+        setStatus({ type: 'warning', message: '預覽完成，但找不到可匯入的有效交易紀錄' });
       } else {
         setStatus(idleStatus);
       }
@@ -211,7 +211,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
 
   const handleImportFromPreview = async (mode: 'overwrite' | 'append') => {
     if (!importPreview || importPreview.validRows === 0) {
-      setStatus({ type: 'error', message: '請先選擇可匯入的 CSV 檔案並完成預覽' });
+      setStatus({ type: 'warning', message: '請先選擇可匯入的 CSV 檔案並完成預覽' });
       return;
     }
 
@@ -265,7 +265,7 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
         : `匯入成功 (${importPreview.validRows} 筆)`;
       if (skippedOffline) {
         setStatus({
-          type: 'success',
+          type: 'info',
           message: `${importBaseMessage}\n目前離線，待恢復連線後再同步`,
         });
       } else if (failed > 0) {
@@ -325,18 +325,17 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
           )}
 
           {importPreview && (
-            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-xs text-slate-200">
-              <p className="font-black text-amber-300">匯入預覽</p>
-              <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
+            <SettingsFeedbackCard title="匯入預覽" tone="warning">
+              <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                 <p>資料列：{importPreview.totalRows} 行</p>
-                <p className="text-emerald-300">可匯入：{importPreview.validRows} 筆</p>
+                <p>可匯入：{importPreview.validRows} 筆</p>
                 <p className="text-amber-200">重複 ID（既有資料）：{importPreview.duplicateWithExistingCount} 筆</p>
                 <p className="text-amber-200">重複 ID（檔案內）：{importPreview.duplicateInFileCount} 筆</p>
               </div>
               {importPreview.invalidRows > 0 && (
-                <p className="mt-1 text-red-300">略過無效資料：{importPreview.invalidRows} 筆</p>
+                <p className="text-red-300">略過無效資料：{importPreview.invalidRows} 筆</p>
               )}
-            </div>
+            </SettingsFeedbackCard>
           )}
 
           {importPreview && importPreview.validRows > 0 && (
@@ -438,11 +437,10 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
           )}
 
           {settingsPreview && (
-            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-xs text-slate-200">
-              <p className="font-black text-amber-300">還原預覽</p>
-              <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
+            <SettingsFeedbackCard title="還原預覽" tone="warning">
+              <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                 <p>匯出時間：{formatBackupTimestamp(settingsPreview.exportedAt)}</p>
-                <p className="text-emerald-300">設定項目：{settingsPreview.settingKeys.length} 項</p>
+                <p>設定項目：{settingsPreview.settingKeys.length} 項</p>
                 <p>同步紀錄：{settingsPreview.pullReportCount} 筆</p>
                 <p className={settingsPreview.includesGeminiApiKey ? 'text-amber-200' : ''}>
                   Gemini API key：{settingsPreview.includesGeminiApiKey ? '包含' : '未包含'}
@@ -452,9 +450,9 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
                 </p>
               </div>
               {settingsPreview.skippedEntryCount > 0 && (
-                <p className="mt-1 text-red-300">略過無效項目：{settingsPreview.skippedEntryCount} 項</p>
+                <p className="text-red-300">略過無效項目：{settingsPreview.skippedEntryCount} 項</p>
               )}
-            </div>
+            </SettingsFeedbackCard>
           )}
 
           {settingsPreview && (

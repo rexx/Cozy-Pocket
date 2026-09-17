@@ -6,6 +6,7 @@
 
 ## 通知與互動體驗
 
+- ✅ 設定子頁的頁內 status type 已從 `success | error | idle` 擴充為 `success | error | warning | info | idle`：離線待同步與 mock 設定填入改用 `info`、前置條件提醒改用 `warning`，每個 type 都有對應圖示，預覽卡也不再混用成功綠。（紀錄：[settings-status-types.md](docs/completed-references/settings-status-types.md)）
 - ✅ 偏好設定新增「Error Banner (Debug)」顯示／隱藏開關，控制畫面最上方錯誤訊息紅色區塊，預設隱藏；錯誤仍持續捕捉，開啟後可檢視累積的全域錯誤。（紀錄：[error-banner-toggle.md](docs/completed-references/error-banner-toggle.md)）
 - ✅ 新增／編輯交易頁面的 Tag 建議項目已改依最後出現時間排序，最近使用的 tag 排在最前面；商家與項目名稱建議排序不變。（紀錄：[tag-suggestion-recency-sort.md](docs/completed-references/tag-suggestion-recency-sort.md)）
 - ✅ Tag 建議的 recency 排序已排除未來日期交易：`lastUsedAt` 改為只取「不晚於現在」的交易最大 `timestamp`，只在未來用過的 tag 不再被推到最前。（紀錄：[tag-suggestion-recency-exclude-future.md](docs/completed-references/tag-suggestion-recency-exclude-future.md)）

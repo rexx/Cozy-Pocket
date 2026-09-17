@@ -17,7 +17,7 @@
 | --- | --- | --- | --- |
 | `confirmAction()` swal dialog | `services/dialogService.ts` | 危險操作、不可逆操作、需要繼續 / 取消的明確決策 | 已使用 |
 | 全域 toast | `App.tsx` 的 `SuccessToast` / `showToast()` | 短成功訊息、連線狀態、操作摘要，含交易新增 / 修改 / 刪除成功 | 通常不適合 |
-| 頁內 status | `SettingsPage`（含 `MerchantManagementSection` 的 inline `MerchantFeedbackCard`） | 長訊息、部分成功、同步失敗、預覽提醒、表單流程錯誤 | 通常不適合 |
+| 頁內 status | 各設定子頁自管，共用 `components/settings/SettingsFeedbackCard.tsx` | 長訊息、部分成功、同步失敗、離線待同步、預覽提醒、表單前置條件提醒 | 通常不適合 |
 | inline validation / inline error | `AddTransactionModal` | 可立即修正的表單錯誤、AI 解析錯誤、離線提示 | 不適合 |
 | 同步狀態頁 | `SyncStatusPage`、`TransactionItem` | 可回看、可追蹤的同步狀態與單筆錯誤詳情 | 不適合 |
 | 全域錯誤面板 | `App.tsx` 的 `ErrorDisplay` / `capturedErrors` | DB、sync、runtime error 等偏除錯資訊 | 不適合 |
@@ -83,8 +83,8 @@
 
 | 頁面 | 類型 | 典型情境 | 建議 |
 | --- | --- | --- | --- |
-| `SettingsPage` | `success` / `error` / `idle`（可選 `action`） | 同步設定儲存後離線、同步部分失敗、Tag 更名離線或部分失敗結果、匯出 / 匯入錯誤、CSV 預覽錯誤、重置錯誤；同步設定儲存、Tag 更名、商家更名、CSV 匯入若有 `failed > 0` 會附帶「查看同步狀態」按鈕 | 維持頁內 status |
-| `MerchantManagementSection`（`SettingsPage` 子頁內 inline） | `success` / `error` / `idle` + feedback card tone（可選 `action`） | 商家預覽錯誤、商家更名預覽資訊、合併警告、商家更名離線或同步失敗、讀取商家項目失敗；商家更名部分失敗時 feedback card 會附帶「查看同步狀態」按鈕 | 維持頁內 feedback card |
+| 各設定子頁 | `success` / `error` / `warning` / `info` / `idle`（可選 `action`） | `info`：同步設定儲存後離線、Tag 更名與商家更名與 CSV 匯入的離線待同步、填入 mock API 設定。`warning`：前置條件未滿足（未輸入新 tag 名稱、未先預覽、未選年份、未選檔案、預覽 0 筆）。`error`：同步部分失敗、匯出 / 匯入 / 預覽 / 重置例外。`success`：Tag 拆分或移除完成、設定還原待重新載入、本機重置完成。同步設定儲存、Tag 更名、商家更名、CSV 匯入若有 `failed > 0` 會附帶「查看同步狀態」按鈕 | 維持頁內 status |
+| `MerchantManagementSection`（子頁內 inline 預覽卡） | `SettingsFeedbackCard` tone（可選 `action`） | 商家更名預覽與合併警告使用 warning tone；Tag 的移除預覽使用 error tone、更名與拆分預覽使用 warning tone；`ImportExportSection` 的匯入預覽與還原預覽同樣使用 warning tone | 維持頁內 feedback card |
 | `SyncStatusPage` | persistent list/detail | 待同步 / 同步中 / 失敗 / 已同步統計，單筆 `lastSyncError` 詳情 | 維持頁面呈現 |
 | `AddTransactionModal` | persistent item status | 編輯單筆交易時顯示該筆同步狀態，`pending` / `error` 可點左側圖示單筆上傳，`error` 會顯示 `lastSyncError` 摘要 | 維持 modal 內嵌狀態 |
 

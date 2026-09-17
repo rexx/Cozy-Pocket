@@ -343,10 +343,10 @@ this.version(2).stores({
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
 *   設定 container 仍集中管理 Dexie 讀寫、CSV 解析與匯入匯出、同步觸發等資料流程，並以 callback 提供給各設定子頁；不再保留共用的 status state 或底部統一的訊息渲染。
-*   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自視情況以 `useState` 自管 inline status 訊息：全部成功時只顯示底部輕量 toast（不重複顯示頁內卡片，`PreferencesSection` 因此完全不再持有 inline status state）；離線待同步、部分同步失敗或需要後續行動（例如查看同步狀態）時才顯示頁內 status 卡片；驗證錯誤與例外仍固定顯示頁內錯誤卡片。切換子頁時前一頁訊息隨子頁卸載而消失。
-*   設定子頁的 inline 回饋共用 `components/settings/SettingsFeedbackCard.tsx`（`SettingsFeedbackCard` 卡片 + 包裝 `SettingsStatus` 的 `SettingsStatusCard`），success／error／warning 對應綠／紅／黃樣式；`TagManagementSection` 與 `MerchantManagementSection` 的預覽卡與狀態卡也改用此共用元件。
+*   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自視情況以 `useState` 自管 inline status 訊息：全部成功時只顯示底部輕量 toast（不重複顯示頁內卡片，`PreferencesSection` 因此完全不再持有 inline status state）；離線待同步、部分同步失敗或需要後續行動（例如查看同步狀態）時才顯示頁內 status 卡片；前置條件未滿足的驗證訊息顯示 warning 卡片，例外與同步失敗顯示 error 卡片。切換子頁時前一頁訊息隨子頁卸載而消失。
+*   設定子頁的 inline 回饋共用 `components/settings/SettingsFeedbackCard.tsx`（`SettingsFeedbackCard` 卡片 + 包裝 `SettingsStatus` 的 `SettingsStatusCard`），success／error／warning／info 對應綠／紅／黃／青樣式，`idle` 不渲染；`SettingsStatusCard` 會依 type 加上對應圖示（成功打勾、錯誤驚嘆、警告三角、資訊 i）。`TagManagementSection`、`MerchantManagementSection` 的預覽卡與狀態卡，以及 `ImportExportSection` 的匯入預覽與還原預覽卡都使用此共用元件；預覽卡內的統計數字沿用卡片自身色階，不另外使用成功綠。
 *   `SyncSection` 另外自管年度雲端同步 dialog 的開關、選取年份與送出 state（dialog markup 已移入該子頁）；`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。
-*   年度雲端同步完成後會導航到「同步紀錄」頁（`SyncSection` 隨即卸載），無論成功、部分失敗或失敗都改以底部 toast 呈現結果摘要，詳細報告內容改看同步紀錄頁本身；選擇年份前的驗證錯誤與同步前拋出例外仍在 `SyncSection` 內顯示頁內錯誤卡片。
+*   年度雲端同步完成後會導航到「同步紀錄」頁（`SyncSection` 隨即卸載），無論成功、部分失敗或失敗都改以底部 toast 呈現結果摘要，詳細報告內容改看同步紀錄頁本身；選擇年份前的驗證訊息在 `SyncSection` 內顯示頁內 warning 卡片，同步前拋出例外顯示 error 卡片。
 *   `TagManagementSection` 與 `MerchantManagementSection` 各自以 `useState` 持有選取的 tag／商家、新名稱輸入、預覽結果、送出狀態、相關交易與 inline status；container 只透過 props 傳入資料來源與 preview／replace 或 rename／get-transactions／`onDataChange`／`onOpenSyncProgress` 等 callback，不再保留這兩條流程的 state 或 handler。Tag 的兩個 callback 為 `onPreviewTagReplacement` 與 `onReplaceTag`，兩者都接受 replacement tag 陣列，空陣列即代表移除。
 *   這兩個更名子頁的選取與預覽 state 與「目前開啟的子頁」綁定；切換到其他設定子頁再返回時子頁會重新掛載，選取與預覽會重置為初始狀態（刻意行為）。
 *   匯入與匯出已整併在同一個 section 中，共四張子卡牌：交易 CSV 匯出／匯入，以及設定 JSON 匯出／還原（見 6.13）；危險操作區則集中清除本機資料、以及範例資料的插入與刪除（依 `sample-tx-` id prefix 辨識可刪除範圍）。

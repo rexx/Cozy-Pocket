@@ -165,7 +165,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
       const preview = await onPreviewMerchantRename(selectedMerchantToRename, renamedMerchantInput);
       setMerchantRenamePreview(preview);
       if (preview.affectedCount === 0) {
-        setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行更名' });
+        setStatus({ type: 'warning', message: '預覽結果為 0 筆，無法執行更名' });
       }
     } catch (err: any) {
       setMerchantRenamePreview(null);
@@ -177,7 +177,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
 
   const handleRenameMerchant = async () => {
     if (!merchantRenamePreview || merchantRenamePreview.affectedCount === 0) {
-      setStatus({ type: 'error', message: '請先預覽受影響筆數後再執行更名' });
+      setStatus({ type: 'warning', message: '請先預覽受影響筆數後再執行更名' });
       return;
     }
 
@@ -196,7 +196,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
 
       if (result.skippedOffline) {
         setStatus({
-          type: 'success',
+          type: 'info',
           message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
         });
         return;
@@ -356,7 +356,7 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
               {merchantRenamePreview && (
                 <SettingsFeedbackCard title="更名預覽" tone="warning">
                   <p>{merchantRenamePreview.oldMerchant} → {merchantRenamePreview.newMerchant}</p>
-                  <p className="text-emerald-300">預計影響：{merchantRenamePreview.affectedCount} 筆交易</p>
+                  <p>預計影響：{merchantRenamePreview.affectedCount} 筆交易</p>
                   {merchantRenamePreview.normalizedInput !== renamedMerchantInput.trim() && (
                     <p className="text-slate-300">輸入會整理為：{merchantRenamePreview.normalizedInput}</p>
                   )}

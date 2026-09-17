@@ -225,7 +225,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
       const result = await onPreviewTagReplacement(selectedTag, replacementTags);
       setPreview(result);
       if (result.affectedCount === 0) {
-        setStatus({ type: 'error', message: '預覽結果為 0 筆，無法執行' });
+        setStatus({ type: 'warning', message: '預覽結果為 0 筆，無法執行' });
       }
     } catch (err: any) {
       setPreview(null);
@@ -242,7 +242,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
     const replacementTags = splitTags(replacementInput);
     if (replacementTags.length === 0) {
       setPreview(null);
-      setStatus({ type: 'error', message: '請輸入新的 tag 名稱' });
+      setStatus({ type: 'warning', message: '請輸入新的 tag 名稱' });
       return;
     }
 
@@ -255,7 +255,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
 
   const handleConfirm = async () => {
     if (!preview || preview.affectedCount === 0) {
-      setStatus({ type: 'error', message: '請先預覽受影響筆數後再執行' });
+      setStatus({ type: 'warning', message: '請先預覽受影響筆數後再執行' });
       return;
     }
 
@@ -275,7 +275,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
 
       if (result.skippedOffline) {
         setStatus({
-          type: 'success',
+          type: 'info',
           message: `${summary}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
         });
         return;
@@ -403,9 +403,7 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
                   {preview.operation === 'split' && (
                     <p>拆分後為 {preview.replacementTags.length} 個獨立 tag，可各自查詢與彙整。</p>
                   )}
-                  <p className={isRemovePreview ? undefined : 'text-emerald-300'}>
-                    預計影響：{preview.affectedCount} 筆交易
-                  </p>
+                  <p>預計影響：{preview.affectedCount} 筆交易</p>
                   {isRemovePreview && (
                     <>
                       <p>移除後沒有任何 tag：{preview.willBecomeUntaggedCount} 筆</p>
