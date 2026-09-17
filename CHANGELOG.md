@@ -81,6 +81,7 @@
 
 - ✅ 設定備份與還原（JSON）已完成：先把僅存於 localStorage 的兩個偏好（月曆檢視模式、統計排除子類別）以一次性遷移搬進 Dexie `settings`，讓所有設定集中在單一儲存層；「匯入匯出」再新增設定 JSON 的匯出與還原，與既有交易 CSV 併成兩檔備份模型。整張 `settings` 表 dump 因此日後新增的 key 自動納入備份，`geminiApiKey`／`syncToken`／`pullReports` 為預設不勾的選配項，還原採 merge 語意且先預覽後套用。（紀錄：[settings-backup.md](docs/completed-references/settings-backup.md)）
 - ✅ 年度雲端同步已完成並端到端驗證：前端入口、年份選擇、mock API、本地同步報告與報告 UI 皆可用；新版 GAS `action: "get"` 已部署，並以真實 Google Sheets 驗證 PUSH 與四種 PULL 分類；過程中發現並修正 `readableDateTime` 被 Sheets coerce 導致的假性同步 churn（conflict detection 排除該衍生欄位、pull 一律重算）。（紀錄：[manual-cloud-pull.md](docs/completed-references/manual-cloud-pull.md)）
+- ✅ MOZE 轉檔工具已整理成獨立 private repo `rexx/cozy-migration`，工具程式與個人財務資料分成兩個並列目錄：repo 只追蹤 source（轉檔 script、Swift `realm_exporter`、MOZE 對 Cozy 的類別對照表），realm 匯出、收據照片與各年份 CSV 留在版控外的本機資料目錄。`.gitignore` 採 allow-list（`/*` 全擋再逐路徑放行），不靠列舉排除項，日後新落進來的資料檔預設就不會進版控；`moze_categories.csv` 雖然是類別清單也刻意排除，因為第二欄帶各類別的交易筆數。
 
 ## AI 功能
 

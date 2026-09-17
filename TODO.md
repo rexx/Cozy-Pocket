@@ -25,10 +25,6 @@
 - 🟡 評估是否將商家管理改為進頁後直接查 IndexedDB，而不是依賴 App 全量載入的 `transactions` state。（計劃：[merchant-management-indexeddb-source.md](docs/todo-references/merchant-management-indexeddb-source.md)）
 - 🟡 新增商家詳情頁，從商家管理進入後查看該商家的消費趨勢、常用類別、付款方式分布與最近交易。（計劃：[merchant-detail-page.md](docs/todo-references/merchant-detail-page.md)）
 
-## 匯入與外部資料
-
-- 🟡 整理 repo 外的 `migration-tool` 目錄，區分工具程式與個人資料，排除不應納入版控的內容，再建立獨立 private repo 推送。
-
 ## 外觀與 App icon
 
 - 🟢 App icon 維持現行「口袋裡有錢幣」。「錢幣騎在袋口上」的所有變體實機都拿不到 Liquid Glass（錢幣突出輪廓、袋口斷開、縫線改貼底部弧線各自都足以失效）；字母 `C` 那一案通過但要放棄口袋這個視覺資產。（紀錄：[app-icon-redesign-candidates.md](docs/todo-references/app-icon-redesign-candidates.md)）
