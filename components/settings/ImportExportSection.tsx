@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Download, ShieldAlert, Upload } from 'lucide-react';
 import { format } from 'date-fns';
-import { Transaction } from '../../types';
+import { SyncOutcome, Transaction } from '../../types';
 import { confirmAction } from '../../services/dialogService';
 import {
   exportSettingsBackup,
@@ -16,7 +16,13 @@ import SettingsSection, {
   sectionPanelClassName,
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
-import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
+import {
+  applyOperationMessage,
+  idleStatus,
+  type SettingsStatus,
+  type SettingsStatusAction,
+} from './settingsStatus';
+import { buildSyncedOperationMessage } from '../../services/notificationMessageService';
 import SettingsFeedbackCard, { SettingsStatusCard } from './SettingsFeedbackCard';
 
 export interface ImportPreview {
@@ -28,10 +34,7 @@ export interface ImportPreview {
   duplicateInFileCount: number;
 }
 
-export interface ImportCommitResult {
-  skippedOffline: boolean;
-  failed: number;
-  total: number;
+export interface ImportCommitResult extends SyncOutcome {
   overwrittenCount: number;
 }
 
@@ -259,25 +262,14 @@ const ImportExportSection: React.FC<ImportExportSectionProps> = ({
     if (!finalConfirm) return;
 
     try {
-      const { skippedOffline, failed, total, overwrittenCount } = await onCommitImport(importPreview.transactions, mode);
-      const importBaseMessage = (mode === 'append' && overwrittenCount > 0)
-        ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${overwrittenCount} 筆同 ID 已覆蓋`
+      const importResult = await onCommitImport(importPreview.transactions, mode);
+      const importBaseMessage = (mode === 'append' && importResult.overwrittenCount > 0)
+        ? `匯入成功 (${importPreview.validRows} 筆)，其中 ${importResult.overwrittenCount} 筆同 ID 已覆蓋`
         : `匯入成功 (${importPreview.validRows} 筆)`;
-      if (skippedOffline) {
-        setStatus({
-          type: 'info',
-          message: `${importBaseMessage}\n目前離線，待恢復連線後再同步`,
-        });
-      } else if (failed > 0) {
-        setStatus({
-          type: 'error',
-          message: `${importBaseMessage}\n同步失敗 ${failed}/${total} 筆`,
-          action: openSyncProgressAction,
-        });
-      } else {
-        onNotify(importBaseMessage);
-        setStatus(idleStatus);
-      }
+      applyOperationMessage(
+        buildSyncedOperationMessage(importBaseMessage, importResult),
+        { notify: onNotify, setStatus, syncProgressAction: openSyncProgressAction }
+      );
       setImportPreview(null);
       setSelectedImportFileName('');
       if (fileInputRef.current) fileInputRef.current.value = '';

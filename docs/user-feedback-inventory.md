@@ -17,7 +17,7 @@
 | --- | --- | --- | --- |
 | `confirmAction()` swal dialog | `services/dialogService.ts` | 危險操作、不可逆操作、需要繼續 / 取消的明確決策 | 已使用 |
 | 全域 toast | `App.tsx` 的 `SuccessToast` / `showToast()` | 短成功訊息、連線狀態、操作摘要，含交易新增 / 修改 / 刪除成功 | 通常不適合 |
-| 頁內 status | 各設定子頁自管，共用 `components/settings/SettingsFeedbackCard.tsx` | 長訊息、部分成功、同步失敗、離線待同步、預覽提醒、表單前置條件提醒 | 通常不適合 |
+| 頁內 status | 各設定子頁自管，共用 `components/settings/SettingsFeedbackCard.tsx`；補送同步類流程的文案來自 `services/notificationMessageService.ts` | 長訊息、部分成功、同步失敗、離線待同步、預覽提醒、表單前置條件提醒 | 通常不適合 |
 | inline validation / inline error | `AddTransactionModal` | 可立即修正的表單錯誤、AI 解析錯誤、離線提示 | 不適合 |
 | 同步狀態頁 | `SyncStatusPage`、`TransactionItem` | 可回看、可追蹤的同步狀態與單筆錯誤詳情 | 不適合 |
 | 全域錯誤面板 | `App.tsx` 的 `ErrorDisplay` / `capturedErrors` | DB、sync、runtime error 等偏除錯資訊 | 不適合 |
@@ -142,6 +142,7 @@
 - 長訊息或可回看的操作結果：維持使用頁內 status 或專門頁面，不使用 dialog。
 - 只有需要使用者明確選擇「繼續 / 取消」的流程，才使用 confirmation dialog。
 - 若未來真的需要資訊型 blocking dialog，應新增共用 `showAlert()` helper，不直接呼叫 `Swal.fire()`。
+- 「先寫本機、再補送同步」的操作結果（同步設定儲存、CSV 匯入、Tag 異動、商家更名）一律經 `services/notificationMessageService.ts` 的 `buildSyncedOperationMessage()` 產生文案，再由 `components/settings/settingsStatus.ts` 的 `applyOperationMessage()` 送上 toast 或頁內 status；新增同類流程時接上這兩支，不要在 section 內重寫三段 if/else。離線提示固定為「目前離線，待恢復連線後再同步」，部分失敗固定為「同步失敗 N/M 筆」。
 
 ## 掃描指令
 

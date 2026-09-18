@@ -11,12 +11,13 @@ import SearchPage from './components/SearchPage';
 import HomePage from './components/HomePage';
 import MonthlyStatsPage from './components/MonthlyStatsPage';
 import PullReportsPage from './components/PullReportsPage';
-import { CalendarViewMode, PaymentMethodDisplayMode, PullReport, SuggestionIndex, SuggestionItem, Transaction } from './types';
+import { CalendarViewMode, PaymentMethodDisplayMode, PullReport, SuggestionIndex, SuggestionItem, SyncOutcome, Transaction } from './types';
 import { EXAMPLE_TRANSACTIONS, CATEGORIES, formatCurrencyAmount, getEnabledCurrencies, getPreferredCurrency } from './constants';
 import { db } from './db';
 import { pullTransactionsFromCloud, SyncProgress, syncCreateItems, syncPendingTransactions } from './services/cloudSyncService';
 import { buildMerchantRenamePreview, getMerchantUsageSummaries, getTransactionsByMerchant, renameMerchantInTransactions } from './services/merchantService';
 import { isOffline } from './services/networkService';
+import { buildSyncFailureDetail } from './services/notificationMessageService';
 import { getMonthTransactions, getStatsByCurrency } from './services/statsService';
 import { buildTagReplacementPreview, getTagUsageSummaries, getTransactionsByTag, replaceTagInTransactions, splitTags } from './services/tagService';
 import { formatReadableDateTime, toEpochMillis, toEpochSeconds } from './time';
@@ -109,26 +110,6 @@ const SuccessToast: React.FC<{ message: string }> = ({ message }) => (
     </div>
   </div>
 );
-
-interface TriggerSyncResult {
-  total: number;
-  failed: number;
-  skippedOffline: boolean;
-}
-
-const buildSyncFailureSummary = (results: { id: string; status: string; message?: string }[], fallbackLabel: string) => {
-  const failed = results.filter((result) => result.status === 'error');
-  if (failed.length === 0) return null;
-
-  const details = failed.slice(0, 3).map((result) => {
-    const message = result.message?.trim() || fallbackLabel;
-    return `${result.id}: ${message}`;
-  });
-  const extraCount = failed.length - details.length;
-  return extraCount > 0
-    ? `${details.join(' | ')} | 另外 ${extraCount} 筆失敗`
-    : details.join(' | ');
-};
 
 const normalizeSuggestionValue = (value: string) => value.trim();
 
@@ -325,7 +306,7 @@ const App: React.FC = () => {
           return;
         }
         const results = await runSyncWithProgress('同步範例資料', (onProgress) => syncCreateItems(examples, onProgress));
-        const summary = buildSyncFailureSummary(results, 'Example sync failed');
+        const summary = buildSyncFailureDetail(results, 'Example sync failed');
         if (summary) {
           setCapturedErrors(prev => [...prev, `Sync Error: ${summary}`]);
         }
@@ -525,13 +506,13 @@ const App: React.FC = () => {
   }, [refreshData]);
   const triggerPendingSync = useCallback(async (
     label: string
-  ): Promise<TriggerSyncResult> => {
+  ): Promise<SyncOutcome> => {
     if (isOffline()) {
       return { total: 0, failed: 0, skippedOffline: true };
     }
 
     const results = await runSyncWithProgress(label, (onProgress) => syncPendingTransactions(onProgress));
-    const summary = buildSyncFailureSummary(results, 'Pending sync failed');
+    const summary = buildSyncFailureDetail(results, 'Pending sync failed');
     const failed = results.filter((r) => r.status === 'error');
     if (summary) {
       setCapturedErrors(prev => [...prev, `Sync Pending Error: ${summary}`]);
@@ -817,13 +798,13 @@ const App: React.FC = () => {
       const updatedById = new Map(transactionsToPersist.map((tx) => [tx.id, tx]));
       setTransactions((prev) => prev.map((tx) => updatedById.get(tx.id) || tx));
 
-      if (isOffline()) {
-        return { ...preview, skippedOffline: true };
-      }
-
+      // triggerPendingSync reports the offline skip itself, and a skipped pass
+      // leaves nothing new in Dexie to reload.
       const syncResult = await triggerPendingSync('商家更名後同步');
-      await refreshData();
-      return { ...preview, skippedOffline: false, syncResult };
+      if (!syncResult.skippedOffline) {
+        await refreshData();
+      }
+      return { ...preview, syncResult };
     } catch (err: any) {
       setCapturedErrors((prev) => [...prev, `Merchant Rename Error: ${err.message}`]);
       throw err;
@@ -852,13 +833,13 @@ const App: React.FC = () => {
       const updatedById = new Map(transactionsToPersist.map((tx) => [tx.id, tx]));
       setTransactions((prev) => prev.map((tx) => updatedById.get(tx.id) || tx));
 
-      if (isOffline()) {
-        return { ...preview, skippedOffline: true };
-      }
-
+      // triggerPendingSync reports the offline skip itself, and a skipped pass
+      // leaves nothing new in Dexie to reload.
       const syncResult = await triggerPendingSync('tag 異動後同步');
-      await refreshData();
-      return { ...preview, skippedOffline: false, syncResult };
+      if (!syncResult.skippedOffline) {
+        await refreshData();
+      }
+      return { ...preview, syncResult };
     } catch (err: any) {
       setCapturedErrors((prev) => [...prev, `Tag Replacement Error: ${err.message}`]);
       throw err;

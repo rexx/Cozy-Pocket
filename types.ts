@@ -63,6 +63,15 @@ export type SyncPayloadItem = {
   version: number;
 };
 
+// Result of one push-sync pass, shared by every caller that reports a sync
+// outcome to the user. `skippedOffline` means the pass never ran, so total and
+// failed are both 0 and say nothing about the pending rows.
+export interface SyncOutcome {
+  total: number;
+  failed: number;
+  skippedOffline: boolean;
+}
+
 export type PullReportStatus = 'success' | 'partial' | 'failed';
 export type PullReportEntryAction =
   | 'insertedFromCloud'

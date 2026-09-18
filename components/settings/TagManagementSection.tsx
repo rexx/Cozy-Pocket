@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CheckCircle2, Eye, LoaderCircle, PencilLine, Trash2 } from 'lucide-react';
-import { PaymentMethodDisplayMode, Transaction } from '../../types';
+import { PaymentMethodDisplayMode, SyncOutcome, Transaction } from '../../types';
 import { TagReplacementPreview, TagUsageSummary, normalizeTag, splitTags } from '../../services/tagService';
 import TransactionItem from '../TransactionItem';
 import SettingsSection, {
@@ -11,13 +11,19 @@ import SettingsSection, {
   sectionPanelClassName,
   sectionRedButtonClassName,
 } from './SettingsSection';
-import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
+import {
+  applyOperationMessage,
+  idleStatus,
+  type SettingsStatus,
+  type SettingsStatusAction,
+} from './settingsStatus';
+import {
+  buildSyncedOperationMessage,
+  describeUpdatedCount,
+} from '../../services/notificationMessageService';
 import SettingsFeedbackCard, { SettingsStatusCard } from './SettingsFeedbackCard';
 
-type TagReplacementResult = TagReplacementPreview & {
-  skippedOffline: boolean;
-  syncResult?: { total: number; failed: number; skippedOffline: boolean };
-};
+type TagReplacementResult = TagReplacementPreview & { syncResult: SyncOutcome };
 
 interface TagManagementSectionProps {
   tagSummaries: TagUsageSummary[];
@@ -273,30 +279,17 @@ const TagManagementSection: React.FC<TagManagementSectionProps> = ({
       setScrollResetToken((token) => token + 1);
       const summary = describeReplacement(result);
 
-      if (result.skippedOffline) {
-        setStatus({
-          type: 'info',
-          message: `${summary}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
-        });
-        return;
-      }
-
-      if (result.syncResult && result.syncResult.failed > 0) {
-        setStatus({
-          type: 'error',
-          message: `${summary}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
-          action: openSyncProgressAction,
-        });
-        return;
-      }
-
-      if (isRename) {
-        onNotify(`${summary}，共更新 ${result.affectedCount} 筆`);
-        setStatus(idleStatus);
-        return;
-      }
-
-      setStatus({ type: 'success', message: `${summary}，共更新 ${result.affectedCount} 筆` });
+      applyOperationMessage(
+        buildSyncedOperationMessage(
+          describeUpdatedCount(summary, result.affectedCount),
+          result.syncResult,
+          // A split or a removal leaves the successor tags worth reading, so it
+          // keeps the result in the status card; a rename is short enough for
+          // the toast.
+          { successSurface: isRename ? 'toast' : 'status' }
+        ),
+        { notify: onNotify, setStatus, syncProgressAction: openSyncProgressAction }
+      );
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || 'Tag 更新失敗' });
     } finally {

@@ -34,7 +34,7 @@ Cozy Pocket 是一款基於 **React 19** 開發的極簡風格智慧記帳應用
 *   使用者可從設定頁手動指定年份，執行年度雲端同步，並依 `version` / `updatedAt` 自動雙向 merge。
 *   每次年度雲端同步都會在本地保存完整報告，可回看變更紀錄與手動刪除報告。
 *   交易列表會顯示同步狀態點，且可從「同步狀態頁」查看待同步 / 同步中 / 已同步 / 失敗總覽。
-*   通知分工採用短 toast + 頁內詳細 status 的雙層設計，且兩者互斥：全部成功時只顯示底部輕量 toast；離線待同步、部分同步失敗或需要後續行動（例如「查看同步狀態」按鈕）時，只顯示頁內狀態卡片，不重複跳 toast。
+*   通知分工採用短 toast + 頁內詳細 status 的雙層設計，且兩者互斥：全部成功時只顯示底部輕量 toast；離線待同步、部分同步失敗或需要後續行動（例如「查看同步狀態」按鈕）時，只顯示頁內狀態卡片，不重複跳 toast。這條分工的文案與判斷集中在 `services/notificationMessageService.ts`，同步設定儲存、CSV 匯入、Tag 異動、商家更名四條流程共用同一份措辭（見 6.15）。
 *   需要使用者確認的危險操作使用 `sweetalert2` app 內對話框；交易新增、修改、刪除成功已改用底部輕量 toast，不再使用 `sweetalert2` 置中 auto-dismiss toast（`sweetalert2` 只保留互動確認對話框用途）。
 
 ### 3.1 Mock Sync API
@@ -343,7 +343,7 @@ this.version(2).stores({
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
 *   設定 container 仍集中管理 Dexie 讀寫、CSV 解析與匯入匯出、同步觸發等資料流程，並以 callback 提供給各設定子頁；不再保留共用的 status state 或底部統一的訊息渲染。
-*   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自視情況以 `useState` 自管 inline status 訊息：全部成功時只顯示底部輕量 toast（不重複顯示頁內卡片，`PreferencesSection` 因此完全不再持有 inline status state）；離線待同步、部分同步失敗或需要後續行動（例如查看同步狀態）時才顯示頁內 status 卡片；前置條件未滿足的驗證訊息顯示 warning 卡片，例外與同步失敗顯示 error 卡片。切換子頁時前一頁訊息隨子頁卸載而消失。
+*   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自視情況以 `useState` 自管 inline status 訊息：全部成功時只顯示底部輕量 toast（不重複顯示頁內卡片，`PreferencesSection` 因此完全不再持有 inline status state）；離線待同步、部分同步失敗或需要後續行動（例如查看同步狀態）時才顯示頁內 status 卡片；前置條件未滿足的驗證訊息顯示 warning 卡片，例外與同步失敗顯示 error 卡片。切換子頁時前一頁訊息隨子頁卸載而消失。「本機寫入後補送同步」這類流程的措辭與 toast／status 去向由 `services/notificationMessageService.ts` 決定，區段只負責把結果送上畫面（見 6.15）。
 *   設定子頁的 inline 回饋共用 `components/settings/SettingsFeedbackCard.tsx`（`SettingsFeedbackCard` 卡片 + 包裝 `SettingsStatus` 的 `SettingsStatusCard`），success／error／warning／info 對應綠／紅／黃／青樣式，`idle` 不渲染；`SettingsStatusCard` 會依 type 加上對應圖示（成功打勾、錯誤驚嘆、警告三角、資訊 i）。`TagManagementSection`、`MerchantManagementSection` 的預覽卡與狀態卡，以及 `ImportExportSection` 的匯入預覽與還原預覽卡都使用此共用元件；預覽卡內的統計數字沿用卡片自身色階，不另外使用成功綠。
 *   `SyncSection` 另外自管年度雲端同步 dialog 的開關、選取年份與送出 state（dialog markup 已移入該子頁）；`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。
 *   年度雲端同步完成後會導航到「同步紀錄」頁（`SyncSection` 隨即卸載），無論成功、部分失敗或失敗都改以底部 toast 呈現結果摘要，詳細報告內容改看同步紀錄頁本身；選擇年份前的驗證訊息在 `SyncSection` 內顯示頁內 warning 卡片，同步前拋出例外顯示 error 卡片。
@@ -398,6 +398,18 @@ this.version(2).stores({
 *   圖表沒有自己的類別開關：縮小圖表資料集的唯一入口是篩選面板的類別篩選（§6.6），它改變整頁的資料集，跨分頁保留，也影響總覽的彙整與明細。分類明細與長條會一起收斂到篩選後的類別。
 *   圖區空狀態只有兩種：該幣別在視窗內完全沒有該類型的紀錄時顯示「近 12 個月沒有<類型>紀錄」；有紀錄但金額全為 0 時顯示「近 12 個月的<類型>金額都是 0」。金額為 0 時月份摘要與三格數字卡一併收起，不顯示沒有意義的 0。
 *   圖表為手刻 SVG，以 `viewBox` 自適應寬度，不量測容器尺寸、不引入圖表套件。聚合邏輯在 `services/statsService.ts` 的 `getMonthlyTrend()`，屬唯讀計算；繪製在 `components/stats/MonthlyTrendChart.tsx`。
+
+---
+
+### 6.15 通知文案組裝
+
+*   「先寫本機、再補送同步」的操作共有四條：同步設定儲存、CSV 匯入、Tag 異動（更名／拆分／移除）、商家更名。四條的結果都只有三種形狀（離線未送出、部分同步失敗、全部成功），措辭與呈現介面由 `services/notificationMessageService.ts` 的 `buildSyncedOperationMessage()` 統一決定，各設定子頁不自己拼句子。
+*   回傳的 `OperationMessageResult` 同時帶 `toastMessage` 與 `statusMessage`，但兩者互斥：`toastMessage` 只在「整個結果短到放得進 toast」時為非 null，其餘情況為 null 並由頁內 status 卡片承接。這個互斥性是型別層保證的，不靠各呼叫點自律。
+*   三種形狀對應的呈現：離線為 info 卡（`<摘要>` + 換行 + 「目前離線，待恢復連線後再同步」），部分失敗為 error 卡（`<摘要>` + 換行 + 「同步失敗 N/M 筆」）並帶「查看同步狀態」按鈕，全部成功預設走 toast。離線與部分失敗的判斷優先於成功路徑。
+*   `successSurface` 選項讓個別流程把「全部成功」改留在頁內：Tag 拆分與移除用它保留 success 卡（結果列出後繼 tag，使用者需要回看），Tag 更名與其他三條流程維持 toast。這是四條流程中唯一的分岔。
+*   `services/notificationMessageService.ts` 只決定「說什麼、說在哪」，不碰 UI。把結果送上兩個介面的是 `components/settings/settingsStatus.ts` 的 `applyOperationMessage()`，「查看同步狀態」的 callback 仍由各子頁自己持有。
+*   同一模組另有 `buildSyncFailureDetail()`，服務的是全域錯誤面板而非使用者訊息：它輸出逐筆 `id: message`，最多三筆，其餘收斂成「另外 N 筆失敗」。它與使用者看到的計數訊息是兩條不同用途的文案，不要互相取代。
+*   一次推送同步的結果形狀 `SyncOutcome`（`total` / `failed` / `skippedOffline`）定義在 `types.ts`，是 `App.tsx` 的同步觸發點與四條流程共用的型別。`skippedOffline` 代表該次同步從未執行，此時 `total` 與 `failed` 都是 0，不代表待同步筆數。
 
 ---
 

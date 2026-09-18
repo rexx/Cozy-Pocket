@@ -12,7 +12,7 @@ import {
   Tags,
   type LucideIcon,
 } from 'lucide-react';
-import { PaymentMethodDisplayMode, PullReport, Transaction } from '../types';
+import { PaymentMethodDisplayMode, PullReport, SyncOutcome, Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
 import { formatReadableDateTime, toEpochSeconds } from '../time';
@@ -45,7 +45,7 @@ interface SettingsPageProps {
   onInsertExamples: () => Promise<number>;
   onPreviewDeleteExamples: () => Promise<Transaction[]>;
   onDeleteExamples: (ids: string[]) => Promise<number>;
-  onTriggerSync: (label: string) => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
+  onTriggerSync: (label: string) => Promise<SyncOutcome>;
   onOpenSyncProgress: () => void;
   onOpenPullReports: (reportId?: string) => void;
   onPullFromCloud: (year: string) => Promise<{ report: PullReport }>;
@@ -61,11 +61,11 @@ interface SettingsPageProps {
   tagSummaries: TagUsageSummary[];
   merchantSummaries: MerchantUsageSummary[];
   onPreviewTagReplacement: (oldTag: string, replacementTags: string[]) => Promise<TagReplacementPreview>;
-  onReplaceTag: (oldTag: string, replacementTags: string[]) => Promise<TagReplacementPreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
+  onReplaceTag: (oldTag: string, replacementTags: string[]) => Promise<TagReplacementPreview & { syncResult: SyncOutcome }>;
   onGetTagTransactions: (tag: string) => Promise<Transaction[]>;
   onTagTransactionClick: (transaction: Transaction) => void;
   onPreviewMerchantRename: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview>;
-  onRenameMerchant: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
+  onRenameMerchant: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview & { syncResult: SyncOutcome }>;
   onGetMerchantTransactions: (merchant: string) => Promise<Transaction[]>;
   onMerchantTransactionClick: (transaction: Transaction) => void;
 }
@@ -210,7 +210,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     onDataChange();
   };
 
-  const saveSyncConfig = async (): Promise<{ total: number; failed: number; skippedOffline: boolean }> => {
+  const saveSyncConfig = async (): Promise<SyncOutcome> => {
     await db.settings.bulkPut([
       { key: 'syncApiUrl', value: syncApiUrl.trim() },
       { key: 'syncToken', value: syncToken.trim() }

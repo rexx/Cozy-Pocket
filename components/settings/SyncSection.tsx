@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CloudDownload, CloudUpload, Database, History, Save } from 'lucide-react';
-import { PullReport } from '../../types';
+import { PullReport, SyncOutcome } from '../../types';
 import SettingsSection, {
   sectionCyanButtonClassName,
   sectionInputClassName,
@@ -8,7 +8,16 @@ import SettingsSection, {
   sectionPanelClassName,
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
-import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
+import {
+  applyOperationMessage,
+  idleStatus,
+  type SettingsStatus,
+  type SettingsStatusAction,
+} from './settingsStatus';
+import {
+  buildSyncedOperationMessage,
+  describePullReportOutcome,
+} from '../../services/notificationMessageService';
 import { SettingsStatusCard } from './SettingsFeedbackCard';
 
 const MOCK_SYNC_API_URL = 'mock://cloud-sync';
@@ -19,7 +28,7 @@ interface SyncSectionProps {
   syncToken: string;
   setSyncApiUrl: (value: string) => void;
   setSyncToken: (value: string) => void;
-  onSaveSyncConfig: () => Promise<{ total: number; failed: number; skippedOffline: boolean }>;
+  onSaveSyncConfig: () => Promise<SyncOutcome>;
   onOpenSyncProgress: () => void;
   onOpenPullReports: (reportId?: string) => void;
   onPullFromCloud: (year: string) => Promise<{ report: PullReport }>;
@@ -63,21 +72,10 @@ const SyncSection: React.FC<SyncSectionProps> = ({
   const handleSaveSyncConfig = async () => {
     try {
       const syncResult = await onSaveSyncConfig();
-      if (syncResult.skippedOffline) {
-        setStatus({
-          type: 'info',
-          message: '同步設定已儲存\n目前離線，待恢復連線後再同步',
-        });
-      } else if (syncResult.failed > 0) {
-        setStatus({
-          type: 'error',
-          message: `同步設定已儲存\n同步失敗 ${syncResult.failed}/${syncResult.total} 筆`,
-          action: openSyncProgressAction,
-        });
-      } else {
-        onNotify('同步設定已儲存');
-        setStatus(idleStatus);
-      }
+      applyOperationMessage(
+        buildSyncedOperationMessage('同步設定已儲存', syncResult),
+        { notify: onNotify, setStatus, syncProgressAction: openSyncProgressAction }
+      );
     } catch (err: any) {
       setStatus({ type: 'error', message: `同步設定儲存失敗: ${err.message}` });
     }
@@ -117,13 +115,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
       // is surfaced via toast plus the focused report instead of inline status.
       onOpenPullReports(report.id);
 
-      if (report.status === 'failed') {
-        onNotify(`${report.year} 年年度雲端同步失敗`);
-      } else if (report.status === 'partial') {
-        onNotify(`已完成 ${report.year} 年年度雲端同步，但有部分失敗`);
-      } else {
-        onNotify(`已完成 ${report.year} 年年度雲端同步`);
-      }
+      onNotify(describePullReportOutcome(report.year, report.status));
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || '年度雲端同步失敗' });
     } finally {

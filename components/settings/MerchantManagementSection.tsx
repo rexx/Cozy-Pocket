@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Eye, LoaderCircle, PencilLine, Search, X } from 'lucide-react';
-import { PaymentMethodDisplayMode, Transaction } from '../../types';
+import { PaymentMethodDisplayMode, SyncOutcome, Transaction } from '../../types';
 import { MerchantRenamePreview, MerchantUsageSummary, normalizeMerchantName } from '../../services/merchantService';
 import TransactionItem from '../TransactionItem';
 import SettingsSection, {
@@ -11,7 +11,16 @@ import SettingsSection, {
   sectionPanelClassName,
   sectionSecondaryButtonClassName,
 } from './SettingsSection';
-import { idleStatus, type SettingsStatus, type SettingsStatusAction } from './settingsStatus';
+import {
+  applyOperationMessage,
+  idleStatus,
+  type SettingsStatus,
+  type SettingsStatusAction,
+} from './settingsStatus';
+import {
+  buildSyncedOperationMessage,
+  describeUpdatedCount,
+} from '../../services/notificationMessageService';
 import SettingsFeedbackCard, { SettingsStatusCard } from './SettingsFeedbackCard';
 
 const MERCHANT_PAGE_SIZE = 200;
@@ -20,7 +29,7 @@ interface MerchantManagementSectionProps {
   merchantSummaries: MerchantUsageSummary[];
   paymentMethodDisplayMode: PaymentMethodDisplayMode;
   onPreviewMerchantRename: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview>;
-  onRenameMerchant: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview & { skippedOffline: boolean; syncResult?: { total: number; failed: number; skippedOffline: boolean } }>;
+  onRenameMerchant: (oldMerchant: string, newMerchant: string) => Promise<MerchantRenamePreview & { syncResult: SyncOutcome }>;
   onGetMerchantTransactions: (merchant: string) => Promise<Transaction[]>;
   onMerchantTransactionClick: (transaction: Transaction) => void;
   onDataChange: () => void;
@@ -194,25 +203,13 @@ const MerchantManagementSection: React.FC<MerchantManagementSectionProps> = ({
         ? `已將 ${result.oldMerchant} 合併到 ${result.newMerchant}`
         : `已將 ${result.oldMerchant} 更名為 ${result.newMerchant}`;
 
-      if (result.skippedOffline) {
-        setStatus({
-          type: 'info',
-          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n目前離線，待恢復連線後同步`,
-        });
-        return;
-      }
-
-      if (result.syncResult && result.syncResult.failed > 0) {
-        setStatus({
-          type: 'error',
-          message: `${actionMessage}，共更新 ${result.affectedCount} 筆\n同步失敗 ${result.syncResult.failed}/${result.syncResult.total} 筆`,
-          action: openSyncProgressAction,
-        });
-        return;
-      }
-
-      onNotify(`${actionMessage}，共更新 ${result.affectedCount} 筆`);
-      setStatus(idleStatus);
+      applyOperationMessage(
+        buildSyncedOperationMessage(
+          describeUpdatedCount(actionMessage, result.affectedCount),
+          result.syncResult
+        ),
+        { notify: onNotify, setStatus, syncProgressAction: openSyncProgressAction }
+      );
     } catch (err: any) {
       setStatus({ type: 'error', message: err.message || '商家更名失敗' });
     } finally {
