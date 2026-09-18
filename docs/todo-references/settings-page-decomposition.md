@@ -63,11 +63,13 @@ Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `Setti
 Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmitting` 三個 state、同步 `pullYearOptions` 的 useEffect、dialog markup 與 `handlePullFromCloud` 一併從 `SettingsPage` 移入 `SyncSection` 暫管。Step 4 是把這段再從 `SyncSection` 抽成獨立的 `components/settings/PullYearDialog.tsx`，讓 `SyncSection` 回到「同步設定表單 + 入口按鈕」的單純形狀。與 Step 3 沒有相依，可獨立排程。
 
 實作方向：
-- 新增 `components/settings/PullYearDialog.tsx`，自管 `selectedPullYear` / `isPullSubmitting` 與同步 `pullYearOptions` 的 useEffect（從 `SyncSection` 平移），props 為 `isOpen` / `onClose` / `pullYearOptions` / `onPullFromCloud` / `onOpenPullReports` / `onNotify` / `isOffline`。
+- 新增 `components/settings/PullYearDialog.tsx`，自管 `selectedPullYear` / `isPullSubmitting` 與同步 `pullYearOptions` 的 useEffect（從 `SyncSection` 平移），props 為 `isOpen` / `onClose` / `pullYearOptions` / `onPullFromCloud` / `onOpenPullReports` / `onNotify`。**不傳 `isOffline`**：離線提示卡與入口按鈕都留在 `SyncSection`，dialog markup 沒有任何地方用到它，傳進去就是死參數。將來若要讓 dialog 自己顯示離線狀態再補。
 - `SyncSection` 只保留 `isPullDialogOpen` 與入口按鈕，是否顯示 dialog 由它決定；report 結果回流仍由 `onPullFromCloud`（保留在 `App.tsx`）處理。
 - dialog 自身的成功 / 部分失敗 / 失敗 status 一併歸 `PullYearDialog`（仍用共用 `SettingsStatusCard`）；導頁情境維持現行的 toast ＋ 聚焦報告行為。
 - 預估從 `SyncSection` 移出：~80 行。
 - 驗證：`npm run build` + 年度同步成功 / 部分失敗 / 失敗三種結果、離線時的入口狀態、提交中不可關閉 dialog。
+- 兩條分支在現行 app 用瀏覽器驗不到，靠 diff 的平移等價性擔保即可，不要為了驗它們改動 mock 或 `App.tsx`：`success` 需要 mock pull fixture 提供一個不含 `local-write-fail` / `push-fail` / invalid item 的乾淨模式（另一個決策）；`pullYearOptions` 為空則因 `App.tsx` 的 memo 固定給去年／今年／明年三個年份而不可達。
+- 已知且可接受的副作用：status 從 `SyncSection` 獨有變成 section 與 dialog 各有一張 `SettingsStatusCard`，所以「同步失敗 → 關掉 dialog → 再存一次同步設定」會同時看到兩張卡；這是計劃書把 dialog status 判給 `PullYearDialog` 的必然結果，不是 regression。
 
 ## 與既有程式碼的關係
 
