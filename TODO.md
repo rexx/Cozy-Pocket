@@ -10,7 +10,10 @@
 
 ## 導航與頁面架構
 
-- 🟡 拆解 `SettingsPage`：把 Tag / Merchant 更名 state 移進對應 Section、CSV 邏輯抽到 `services/csvService.ts`、Pull dialog 拉成獨立 component，讓 container 退回 routing/render switch 形狀。（計劃：[settings-page-decomposition.md](docs/todo-references/settings-page-decomposition.md)）
+- 🟡 拆解 `SettingsPage`，讓 container 退回 routing / render switch 形狀。Step 1 / 2（Section 自管更名 state 與 inline status）已完成，剩下三個彼此獨立的小任務。（計劃：[settings-page-decomposition.md](docs/todo-references/settings-page-decomposition.md)）
+  - 🟡 Step 4：把年度雲端同步 Pull dialog 從 `SyncSection` 抽成 `components/settings/PullYearDialog.tsx`（~80 行，與 CSV 無相依，建議先做）。
+  - 🟡 Step 3a：`CSV_HEADERS` / `splitCSVIntoRows` / `parseCSVLine` 搬到 `services/csvService.ts`（~35 行，不碰 db 與 DOM，props 介面不動）。
+  - 🟡 Step 3b：`parseTransactionsFromCSV` / `buildTransactionsCSV` / `downloadCSV` 進 service，`ImportPreview` 型別跟著歸位（~60 行）。
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
 

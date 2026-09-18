@@ -12,7 +12,7 @@ Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `Setti
 
 已不再由 container 持有的部分：Tag / Merchant 更名流程的所有 state 與 handler（→ 各自 Section）、共用 `status` state 與底部 `renderStatusMessage`（→ 各 Section 自管 + `SettingsFeedbackCard`）、年度雲端同步 Pull dialog 的 state 與 markup（→ `SyncSection`），`section !== 'merchant'` 之類的 special-case 渲染也已移除。
 
-剩下尚未拆的兩塊：Step 3（CSV 解析仍夾在 container，~120 行純資料邏輯）與 Step 4（Pull dialog 目前內嵌在 `SyncSection`，尚未拉成獨立 component）。
+剩下尚未拆的兩塊：Step 3（CSV 解析仍夾在 container，~130 行純資料邏輯，已切成 3a 純字串層 / 3b 映射與匯出兩個小任務）與 Step 4（Pull dialog 目前內嵌在 `SyncSection`，尚未拉成獨立 component）。三個任務彼此獨立，各自都能單獨 build、驗證與上線。
 
 ## 收斂目標
 
@@ -36,25 +36,38 @@ Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `Setti
 
 ### 3. 把 CSV 匯入解析搬到 `services/csvService.ts`
 
-`parseCSVLine`、`splitCSVIntoRows`、`parseTransactionsFromCSV` 屬於純資料邏輯，目前夾在 UI component 裡，難以重用且讓檔案吃了 ~120 行。
+`parseCSVLine`、`splitCSVIntoRows`、row → `Transaction` 映射與匯出字串組裝都屬純資料邏輯，目前夾在 UI component 裡，難以重用且讓檔案吃了 ~130 行。這一步切成兩個可獨立進行的小任務，中間狀態本身就是可上線的形狀。
 
-實作方向：
-- 建立 `services/csvService.ts`，匯出 `parseTransactionsFromCSV`、`exportTransactionsToCSV`。
-- `ImportExportSection` 直接呼叫 service，預覽結果與 `importPreview` state 也搬進該 Section。
-- `SettingsPage` 只在 import 完成後觸發 `onTriggerSync`、`onDataChange`，不再需要 `importPreview`、`isParsingImportFile`、`fileInputRef`。
+#### 3a. 純字串層
 
-預估去除：~150 行。
+- 新建 `services/csvService.ts`，搬入 `CSV_HEADERS`、`splitCSVIntoRows`、`parseCSVLine`——三者完全不碰 db 與 DOM。
+- `SettingsPage` 的 `parseImportFile` / `exportToCSV` 只改成 import service 的 helper，對外 props 介面不動。
+- 預估去除：~35 行。
+- 驗證：`npm run build` + 匯入一次 CSV，確認解析結果與現行一致。
+
+#### 3b. 映射、匯出與 `ImportPreview` 型別歸位
+
+- service 新增 `parseTransactionsFromCSV(text)`，回傳 `transactions` 與 `totalRows` / `validRows` / `invalidRows` / `duplicateInFileCount`——檔案內重複由純資料層算，仍不碰 db。
+- service 新增 `buildTransactionsCSV(transactions)` 與 `downloadCSV(csvContent, fileName)`，Blob / anchor 這段輸出動作歸 CSV 概念自己管。
+- `SettingsPage` 的 `parseImportFile` 縮成「呼叫 service → 用 unique id 做一次 `db.transactions.bulkGet` 算 `duplicateWithExistingCount` → 合成 `ImportPreview`」約 10 行；`exportToCSV` 縮成「讀 db → `buildTransactionsCSV` → `downloadCSV`」約 5 行。
+- `ImportPreview` 型別從 `ImportExportSection` 移到 `services/csvService.ts`，Section 與 container 都改 import；`ImportCommitResult` 留在 `ImportExportSection`，它描述的是 commit 結果而非 CSV 結構。
+- 預估去除：~60 行。
+- 驗證：`npm run build` + 匯出開檔（欄位順序與 BOM）、匯入覆寫 / 附加、檔內重複 ID 與既有 ID 兩種重複計數。
+
+#### 3c. db 寫入層刻意留在 container
+
+`commitImport` 與 3b 保留的那一次 `bulkGet` 長期留在 `SettingsPage`：它們是 db 寫入 ＋ `onTriggerSync` 的 orchestration，移進 `ImportExportSection` 會破壞「Section 不直接碰 db」的紀律，移進 service 則讓 service 同時持有解析與資料庫兩種責任。Step 3 的完成判準是「CSV 文字處理離開 UI 層」，不含這兩段。
 
 ### 4. 把年度雲端同步 Pull dialog 從 `SyncSection` 拉成獨立 component
 
-Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmitting` 三個 state、同步 `pullYearOptions` 的 useEffect、dialog markup 與 `handlePullFromCloud` 一併從 `SettingsPage` 移入 `SyncSection` 暫管。Step 4 是把這段再從 `SyncSection` 抽成獨立的 `components/settings/PullYearDialog.tsx`，讓 `SyncSection` 回到「同步設定表單 + 入口按鈕」的單純形狀。
+Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmitting` 三個 state、同步 `pullYearOptions` 的 useEffect、dialog markup 與 `handlePullFromCloud` 一併從 `SettingsPage` 移入 `SyncSection` 暫管。Step 4 是把這段再從 `SyncSection` 抽成獨立的 `components/settings/PullYearDialog.tsx`，讓 `SyncSection` 回到「同步設定表單 + 入口按鈕」的單純形狀。與 Step 3 沒有相依，可獨立排程。
 
 實作方向：
-- 新增 `components/settings/PullYearDialog.tsx`，自己管 open / submitting / 選年份 state（從 `SyncSection` 平移過去）。
-- `SyncSection` 只控制是否顯示 dialog；report 結果回流由 `onPullFromCloud`（保留在 `App.tsx`）處理。
-- dialog 自身的成功 / 部分失敗 / 失敗 status 可一併歸 `PullYearDialog`（仍用共用 `SettingsStatusCard`），或維持由 `SyncSection` 顯示。
-
-預估從 `SyncSection` 移出：~80 行。
+- 新增 `components/settings/PullYearDialog.tsx`，自管 `selectedPullYear` / `isPullSubmitting` 與同步 `pullYearOptions` 的 useEffect（從 `SyncSection` 平移），props 為 `isOpen` / `onClose` / `pullYearOptions` / `onPullFromCloud` / `onOpenPullReports` / `onNotify` / `isOffline`。
+- `SyncSection` 只保留 `isPullDialogOpen` 與入口按鈕，是否顯示 dialog 由它決定；report 結果回流仍由 `onPullFromCloud`（保留在 `App.tsx`）處理。
+- dialog 自身的成功 / 部分失敗 / 失敗 status 一併歸 `PullYearDialog`（仍用共用 `SettingsStatusCard`）；導頁情境維持現行的 toast ＋ 聚焦報告行為。
+- 預估從 `SyncSection` 移出：~80 行。
+- 驗證：`npm run build` + 年度同步成功 / 部分失敗 / 失敗三種結果、離線時的入口狀態、提交中不可關閉 dialog。
 
 ## 與既有程式碼的關係
 
@@ -72,10 +85,10 @@ Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmit
 
 ## 後續建議
 
-- **下一步做 Step 3（CSV → service）**：收益最大（~120–150 行純資料邏輯離開 UI 層、可單元測試），且風險低——`ImportExportSection` 已自管 `importPreview` 與 status，只要把 `parseImportFile` / `commitImport` 內的 CSV 解析與 db 寫入搬到 `services/csvService.ts`，container 端的 `splitCSVIntoRows` / `parseCSVLine` / `parseImportFile` / `exportToCSV` 即可整段移除，`SettingsPage` 再瘦一截。
-- **Step 4（PullYearDialog）可獨立進行**：與 Step 3 無相依、規模較小（~80 行），主要是把已在 `SyncSection` 內的 dialog 平移到獨立 component；可排在 Step 3 之後或穿插。
-- **維持「一個 PR 一個 Section」的節奏**：每個 PR 只動一個 Section 與對應的 `SettingsPage` 配線，沿用 Step 1 / 2 的小步快跑 + `npm run build` + cmux 瀏覽器驗證流程，避免一次大型 review。
-- **完成 Step 3 / 4 後的預期**：`SettingsPage` 落在收斂目標的 ~500 行上下，只剩 routing / overview / render switch 與少量跨子頁資料 state；屆時本計劃整份移到 `docs/completed-references/`。
+- **建議順序：Step 4 → 3a → 3b**：Step 4 最獨立（不碰 CSV、幾乎是把 `SyncSection` 內既有的 dialog 平移出去），適合先做以確認驗證節奏；3a 是 cut-paste 等級的暖身；3b 動到 `ImportPreview` 的型別歸屬，影響面最大，放最後。三者沒有相依，順序可調。
+- **一個 PR 一個任務**：每個 PR 只動一個 Section／service 與對應的 `SettingsPage` 配線，沿用 Step 1 / 2 的小步快跑 + `npm run build` + cmux 瀏覽器驗證流程，避免一次大型 review。
+- **完成 Step 3 / 4 後的預期**：`SettingsPage` 約落在 460–480 行（比收斂目標的 500–600 更瘦），只剩 routing / overview / render switch 與少量跨子頁資料 state；屆時本計劃整份移到 `docs/completed-references/`。
+- **「CSV 抽出後可單元測試」是潛在收益，不是本計劃的交付項**：repo 目前沒有測試框架（`package.json` 無 `test` script），要真的補上 csvService 的測試得先引入 vitest，屬獨立決策。
 - **開工前先 rebase 最新 main**：近期 main 有並行 commit（如 error-banner toggle）直接改過 `SettingsPage` / `PreferencesSection`，後續步驟動工前先對齊最新 main，縮小 container 層的衝突面。
 
 ### 更遠的優化（超出本計劃範圍）
