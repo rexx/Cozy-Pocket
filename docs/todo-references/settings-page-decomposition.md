@@ -69,7 +69,7 @@ Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmit
 - 預估從 `SyncSection` 移出：~80 行。
 - 驗證：`npm run build` + 年度同步成功 / 部分失敗 / 失敗三種結果、離線時的入口狀態、提交中不可關閉 dialog。
 - 兩條分支在現行 app 用瀏覽器驗不到，靠 diff 的平移等價性擔保即可，不要為了驗它們改動 mock 或 `App.tsx`：`success` 需要 mock pull fixture 提供一個不含 `local-write-fail` / `push-fail` / invalid item 的乾淨模式（另一個決策）；`pullYearOptions` 為空則因 `App.tsx` 的 memo 固定給去年／今年／明年三個年份而不可達。
-- 已知且可接受的副作用：status 從 `SyncSection` 獨有變成 section 與 dialog 各有一張 `SettingsStatusCard`，所以「同步失敗 → 關掉 dialog → 再存一次同步設定」會同時看到兩張卡；這是計劃書把 dialog status 判給 `PullYearDialog` 的必然結果，不是 regression。
+- 已知且可接受的副作用：status 從 `SyncSection` 獨有變成 section 與 dialog 各有一張 `SettingsStatusCard`，兩張可能並存。但 dialog 那張在現行 app 幾乎不可達，描述時別寫成「同步失敗就會看到兩張卡」：`pullTransactionsFromCloud` 把年份空白、config missing、離線、HTTP／JSON 錯誤、單筆 invalid item 與 local write 失敗全部轉成 `failed` / `partial` 的 report 回傳，而那條路徑一律關 dialog ＋ toast ＋ 導頁。dialog 的 inline error 只在 `onPullFromCloud` 真的拋例外時出現——Dexie 失效、`refreshData()` 失敗這類基礎設施級故障。warning 分支（`請先選擇要同步的年份`）更是死路，`!selectedPullYear` 時提交鍵本來就 disabled。這是把 dialog status 判給 `PullYearDialog` 的必然結果，不是 regression。
 
 ## 與既有程式碼的關係
 
