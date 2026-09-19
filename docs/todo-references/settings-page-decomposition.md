@@ -88,7 +88,7 @@ Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmit
 ## 後續建議
 
 - **建議順序：Step 4 → 3a → 3b**：Step 4 最獨立（不碰 CSV、幾乎是把 `SyncSection` 內既有的 dialog 平移出去），適合先做以確認驗證節奏；3a 是 cut-paste 等級的暖身；3b 動到 `ImportPreview` 的型別歸屬，影響面最大，放最後。三者沒有相依，順序可調。
-- **一個 PR 一個任務**：每個 PR 只動一個 Section／service 與對應的 `SettingsPage` 配線，沿用 Step 1 / 2 的小步快跑 + `npm run build` + cmux 瀏覽器驗證流程，避免一次大型 review。
+- **一個 PR 一個任務**：每個 PR 只動一個 Section／service 與對應的 `SettingsPage` 配線，沿用 Step 1 / 2 的小步快跑 + `npm run build` + agent 瀏覽器自驗流程，避免一次大型 review。
 - **完成 Step 3 / 4 後的預期**：`SettingsPage` 約落在 460–480 行（比收斂目標的 500–600 更瘦），只剩 routing / overview / render switch 與少量跨子頁資料 state；屆時本計劃整份移到 `docs/completed-references/`。
 - **「CSV 抽出後可單元測試」是潛在收益，不是本計劃的交付項**：repo 目前沒有測試框架（`package.json` 無 `test` script），要真的補上 csvService 的測試得先引入 vitest，屬獨立決策。
 - **開工前先 rebase 最新 main**：近期 main 有並行 commit（如 error-banner toggle）直接改過 `SettingsPage` / `PreferencesSection`，後續步驟動工前先對齊最新 main，縮小 container 層的衝突面。

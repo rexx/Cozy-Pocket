@@ -210,38 +210,59 @@ The standard end-to-end flow for non-trivial changes. Trivial fixes (typo, one-l
   - Git: `git -C worktrees/<slug> <cmd>`.
   - npm: `npm --prefix worktrees/<slug> run <script>`.
 - Run `npm --prefix worktrees/<slug> run build` after each meaningful change. This is the sole automated gate (tsc strict + Vite production build).
-- **Do not commit before the user accepts the result in step 4b.** A green build and a clean cmux pass are both necessary but not sufficient — the user's own browser verification is part of the contract. The whole point of holding the commit is that step 4 is iterative: user finds something, code changes, HMR re-renders, user looks again. Committing after each round produces a churn of fix-up commits that nobody wants in `git log`. Keep the working tree dirty across the entire verify→tweak→re-verify loop; bundle everything into the single commit that step 5 produces.
+- **Do not commit before the user accepts the result in step 4b.** A green build and a clean agent browser pass are both necessary but not sufficient — the user's own browser verification is part of the contract. The whole point of holding the commit is that step 4 is iterative: user finds something, code changes, HMR re-renders, user looks again. Committing after each round produces a churn of fix-up commits that nobody wants in `git log`. Keep the working tree dirty across the entire verify→tweak→re-verify loop; bundle everything into the single commit that step 5 produces.
 
 **4. Browser verification**
 
-Two layers, both required: the agent verifies in cmux on its own initiative, then the user accepts in a real browser. The first catches regressions before the user spends attention on them; the second covers what cmux structurally cannot reach.
+Two layers, both required: the agent verifies in the Claude desktop app's in-app Browser on its own initiative, then the user accepts in a real browser. The first catches regressions before the user spends attention on them; the second covers what the in-app Browser structurally cannot reach.
 
-**4a. Agent self-verification in cmux — automatic, no prompt**
+**4a. Agent self-verification in the in-app Browser — automatic, no prompt**
 
 - Run this yourself once `npm run build` is green. Do not wait for `/start-local-server`; that command is for when the user wants to drive the browser personally.
-- Start the dev server on a port nothing else holds — check with `lsof -nP -iTCP:<port> -sTCP:LISTEN` first, since parallel worktrees routinely occupy 5173: `npm --prefix worktrees/<slug> run dev -- --host --port <port>`. Without `--prefix` the server boots from `main` and you verify stale code.
-- A never-before-used port is also the cheapest safety guard available. IndexedDB is per-origin, so a fresh port means a fresh `CozyPocketDB` with no sync credentials; `getSyncConfig()` returns `null` and fixture data has no path to the real Google Sheet. See "Sync endpoints — testing vs production".
-- Wait for the `Local:` URL with `until grep -q "Local:" <output-file>; do sleep 0.5; done` rather than fixed sleeps, then follow the `cmux-browser-cozy-pocket` skill.
-- Report what cmux settled *and* what it could not, then hand to 4b. Never present a cmux pass as full verification.
+- The `mcp__Claude_Browser__preview_*` tools start the dev server themselves, from a named configuration in **the main repo root's `.claude/launch.json`**. A copy inside the worktree is not read — `preview_start` reports "No .claude/launch.json found" and names the main-root path. A configuration that carries only a `url` (attach to a server you started by hand) is rejected on this machine: it must carry `runtimeExecutable`, so the tool owns the server process.
+- `runtimeArgs` needs `--prefix worktrees/<slug>` for the same reason every other npm call does — without it the server boots from `main` and you verify stale code. Pick a port nothing else holds, checked with `lsof -nP -iTCP:<port> -sTCP:LISTEN`, since parallel worktrees routinely occupy 5173:
 
-**What cmux can and cannot settle**
+```json
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cozy-pocket-verify",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "worktrees/<slug>", "run", "dev", "--", "--port", "5200"],
+      "port": 5200
+    }
+  ]
+}
+```
 
-- Settles: field values and component state, DOM geometry (`getBoundingClientRect`, `scrollWidth` vs `clientWidth`), element presence, rendered text, navigation, and `errors list`.
-- Cannot settle: anything depending on cancelling a pointer or mouse default action. `cmux browser click` dispatches synthetic events, so `preventDefault()` has no default action to cancel — focus still moves and `blur` still fires, which makes a *correct* fix look broken. Touch-specific event ordering and standalone PWA layout are equally out of reach.
+- A never-before-used port is also the cheapest safety guard available. IndexedDB is per-origin, so a fresh port means a fresh `CozyPocketDB` with no sync credentials; `getSyncConfig()` returns `null` and fixture data has no path to the real Google Sheet. See "Sync endpoints — testing vs production". The skill carries a one-line assertion for this, so it can be checked instead of assumed.
+- `preview_start` returns the `serverId` every later `preview_*` call needs, and `preview_logs` prints the whole Vite banner including the `Local:` URL — read it there rather than tailing a log file.
+- The tab opens on an `Awaiting server…` placeholder whose `data:` origin makes relative navigation throw. Navigate with an absolute URL (`preview_eval` → `location.href = 'http://localhost:<port>/Cozy-Pocket/'`), then follow the `claude-browser-cozy-pocket` skill.
+- Report what the browser pass settled *and* what it could not, then hand to 4b. Never present it as full verification.
+
+**What the in-app Browser can and cannot settle**
+
+- Settles: field values and component state, DOM geometry (`getBoundingClientRect`, `scrollWidth` vs `clientWidth`), element presence, rendered text, navigation, `preview_console_logs`, `preview_network`, and screenshots — which render correctly even when the pane is not on screen.
+- Geometry needs `preview_resize` first. When the session is not open in a window the WebView has a 0×0 viewport, so every measurement silently reads zero; `preview_resize` to 390×844 installs a real layout viewport. The desktop app clears it at the end of a turn, so re-apply it in every turn that measures.
+- With that viewport in place, narrow-width behavior belongs in 4a, not 4b: wrapping of long Chinese names, card and paragraph overflow, and `document.documentElement.scrollWidth` vs `window.innerWidth` are all assertable here. What is genuinely left for 4b is what standalone PWA mode owns — safe-area insets, PWA chrome, header continuity — plus touch event ordering.
+- Never read a tool's own success string as evidence. `preview_click` and `preview_fill` report success on work they did not do; confirm every step with an independent `preview_eval` read of the DOM or Dexie.
+- Cannot settle: anything depending on cancelling a pointer or mouse default action. The dependable way to drive this app is `preview_eval` + `element.click()`, which dispatches `click` alone with `isTrusted=false` — `pointerdown` and `mousedown` never happen, so `preventDefault()` has nothing to cancel and focus moves anyway, which makes a *correct* fix look broken. `preview_click` is the only tool that could deliver a real pointer sequence and it cannot be relied on: with the pane off screen it reports success and delivers no events at all. Touch-specific event ordering and standalone PWA layout are equally out of reach.
 - When a result falls in that second category, say so explicitly and route it to 4b. Reporting it as a failure is wrong.
-- Confirm dialogs are SweetAlert2. If one stops responding, check for `swal2-hide` on the popup and `disabled` on `.swal2-confirm` before suspecting `dialogService`: a cmux pane that is not on screen stops running CSS animations, so `animationend` never fires and the popup strands even though the underlying action registered.
+- CSS animations do not run while `document.visibilityState === 'hidden'`, which is the normal state when the session is not open in a window. SweetAlert2 gates its teardown on `animationend`, so a confirm dialog strands: the action itself registers, but the popup stays in the DOM with `.swal2-confirm` disabled, and the container keeps covering whatever you want to click next. Check the popup's class list before suspecting `dialogService`; the skill carries the two ways out.
 
 **4b. User acceptance — still gated on the user**
 
-- Hand back with the cmux findings and whatever remains open. The user verifies in Microsoft Edge (`open -a "Microsoft Edge" <url>`) and, for anything layout- or touch-related, on the iPhone standalone PWA — the primary runtime, where desktop passes do not transfer.
+- Hand back with the browser findings and whatever remains open. The user verifies in Microsoft Edge (`open -a "Microsoft Edge" <url>`) and, for anything layout- or touch-related, on the iPhone standalone PWA — the primary runtime, where desktop passes do not transfer.
+- Pointer-default behavior always lands here. The agent cannot dispatch a trusted pointer sequence, so a fix for focus retention, drag handling, or custom selection is unverified until the user looks at it.
 - When the user reports no visual change after an edit, the cause is almost always service-worker cache from a previous dev run. Tell them to hard-reload (`⌘+Shift+R`) or unregister the SW in DevTools → Application before debugging the code.
-- Iterate on user feedback with HMR; restart the server only when the project root changes (different worktree, dep change).
+- Iterate on user feedback with HMR; restart the server only when the project root changes (different worktree, dep change) — edit the launch configuration, `preview_stop` the old `serverId`, then `preview_start` again.
 
 **5. Cleanup — delegate to `/git-branch-cleanup`**
 
 **Wait for the user to invoke `/git-branch-cleanup` before starting this step.** The user's invocation is the signal that step 4 verification has been accepted and the feature is ready to land — until then, assume they may still iterate on the implementation. Once the skill fires, it owns the finalization sequence:
 
-- Stop the dev server (do this proactively before the skill runs if it's still streaming).
+- Stop the dev server (`preview_stop` with its `serverId`; do this proactively before the skill runs if it's still streaming).
 - Update `README.md` (§6 behavior spec + operations cheat sheet) and any affected `docs/*.md`.
 - Move the item's line from `TODO.md` to `CHANGELOG.md` (under the matching section), with the link target flipped to `docs/completed-references/<slug>.md`.
 - `git mv docs/todo-references/<slug>.md docs/completed-references/<slug>.md`, then rewrite the body from plan language into a completed record: drop the worktree-setup paragraph, replace 測試計劃 → 驗證, use past-tense final-state wording.
