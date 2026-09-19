@@ -2,17 +2,17 @@
 
 ## 現況
 
-Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `SettingsFeedbackCard`）已完成並上線。`components/SettingsPage.tsx` 已從收編商家管理後的約 1168 行降到約 585 行，container 目前只剩：
+Step 1（Tag / Merchant 更名 state）、Step 2（共用 status state + `SettingsFeedbackCard`）、Step 3a（CSV 純字串層進 `services/csvService.ts`）與 Step 4（`PullYearDialog` 獨立成 component）已完成並上線。`components/SettingsPage.tsx` 已從收編商家管理後的約 1168 行降到 555 行，container 目前只剩：
 
 - 設定首頁 / 七個設定子頁的 routing、overview 卡片與 render switch
 - 跨子頁共用的資料 state：`defaultCurrency`、`enabledCurrencies`、`geminiApiKeyInput`／`hasGeminiApiKey`、`syncApiUrl`／`syncToken`，以及啟動時一次性載入這些設定的 `useEffect`
-- CSV 解析（`splitCSVIntoRows` / `parseCSVLine` / `parseImportFile`）、匯出（`exportToCSV`）、覆寫/附加提交（`commitImport`）等資料層 helper，以 callback 提供給 `ImportExportSection`
+- CSV 匯入解析（`parseImportFile`）、匯出（`exportToCSV`）、覆寫/附加提交（`commitImport`）等資料層 helper，以 callback 提供給 `ImportExportSection`；純字串層（`CSV_HEADERS` / `splitCSVIntoRows` / `parseCSVLine`）已移到 `services/csvService.ts`
 - 偏好幣別 / 付款方式 / 首頁箭頭 / error banner / Gemini key / 同步設定的 db 寫入 handler，以 callback 提供給對應子頁
 - 重置本機資料（`resetLocalData`）callback
 
 已不再由 container 持有的部分：Tag / Merchant 更名流程的所有 state 與 handler（→ 各自 Section）、共用 `status` state 與底部 `renderStatusMessage`（→ 各 Section 自管 + `SettingsFeedbackCard`）、年度雲端同步 Pull dialog 的 state 與 markup（→ Step 2 先移入 `SyncSection`，Step 4 再獨立成 `PullYearDialog`），`section !== 'merchant'` 之類的 special-case 渲染也已移除。
 
-剩下尚未拆的是 Step 3：CSV 解析仍夾在 container（~130 行純資料邏輯，已切成 3a 純字串層 / 3b 映射與匯出兩個小任務）。兩個任務彼此獨立，各自都能單獨 build、驗證與上線。
+剩下尚未拆的只有 Step 3b：row → `Transaction` 映射與匯出字串組裝仍在 container（3a 的純字串層已抽到 `services/csvService.ts`，Step 4 的 Pull dialog 已獨立成 component）。這是本計劃的最後一個任務。
 
 ## 收斂目標
 
@@ -36,14 +36,13 @@ Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `Setti
 
 ### 3. 把 CSV 匯入解析搬到 `services/csvService.ts`
 
-`parseCSVLine`、`splitCSVIntoRows`、row → `Transaction` 映射與匯出字串組裝都屬純資料邏輯，目前夾在 UI component 裡，難以重用且讓檔案吃了 ~130 行。這一步切成兩個可獨立進行的小任務，中間狀態本身就是可上線的形狀。
+`parseCSVLine`、`splitCSVIntoRows`、row → `Transaction` 映射與匯出字串組裝都屬純資料邏輯，原本夾在 UI component 裡，難以重用且讓檔案吃了 ~130 行。這一步切成兩個可獨立進行的小任務，中間狀態本身就是可上線的形狀：3a 已完成，3b 尚未開工。
 
-#### 3a. 純字串層
+#### 3a. 純字串層 ✅ 已完成
 
-- 新建 `services/csvService.ts`，搬入 `CSV_HEADERS`、`splitCSVIntoRows`、`parseCSVLine`——三者完全不碰 db 與 DOM。
-- `SettingsPage` 的 `parseImportFile` / `exportToCSV` 只改成 import service 的 helper，對外 props 介面不動。
-- 預估去除：~35 行。
-- 驗證：`npm run build` + 匯入一次 CSV，確認解析結果與現行一致。
+> 完成紀錄：[`csv-service-string-layer.md`](../completed-references/csv-service-string-layer.md)。
+
+`services/csvService.ts` 已建立並持有 `CSV_HEADERS`、`splitCSVIntoRows`、`parseCSVLine`，三者都不碰 db 與 DOM。`SettingsPage` 改成 import service 的 helper，`parseImportFile` / `exportToCSV` / `commitImport` 本體與對外 props 介面未動，檔案從 592 行降到 555 行（去除 37 行）。唯一的實質改動是 `parseCSVLine` 的 `const result = []` 補上 `string[]` 標註以滿足 strict mode。
 
 #### 3b. 映射、匯出與 `ImportPreview` 型別歸位
 
@@ -89,7 +88,7 @@ Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmit
 
 ## 後續建議
 
-- **建議順序：3a → 3b**：Step 4 已完成，先做它確認過驗證節奏（不碰 CSV，幾乎是把 `SyncSection` 內既有的 dialog 平移出去）；3a 是 cut-paste 等級的暖身；3b 動到 `ImportPreview` 的型別歸屬，影響面最大，放最後。兩者沒有相依，順序可調。
+- **只剩 Step 3b**：它動到 `ImportPreview` 的型別歸屬，是這份計劃影響面最大的一步，Step 1 / 2 / 3a / 4 都已落地。
 - **一個 PR 一個任務**：每個 PR 只動一個 Section／service 與對應的 `SettingsPage` 配線，沿用 Step 1 / 2 的小步快跑 + `npm run build` + agent 瀏覽器自驗流程，避免一次大型 review。
 - **完成 Step 3 後的預期**：`SettingsPage` 約落在 460–480 行（比收斂目標的 500–600 更瘦），只剩 routing / overview / render switch 與少量跨子頁資料 state；屆時本計劃整份移到 `docs/completed-references/`。
 - **「CSV 抽出後可單元測試」是潛在收益，不是本計劃的交付項**：repo 目前沒有測試框架（`package.json` 無 `test` script），要真的補上 csvService 的測試得先引入 vitest，屬獨立決策。

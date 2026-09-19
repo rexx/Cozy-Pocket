@@ -9,8 +9,7 @@
 
 ## 導航與頁面架構
 
-- 🟡 拆解 `SettingsPage`，讓 container 退回 routing / render switch 形狀。Step 1 / 2（Section 自管更名 state 與 inline status）與 Step 4（Pull dialog 獨立成 component）已完成，剩下 CSV 的兩個小任務。（計劃：[settings-page-decomposition.md](docs/todo-references/settings-page-decomposition.md)）
-  - 🟡 Step 3a：`CSV_HEADERS` / `splitCSVIntoRows` / `parseCSVLine` 搬到 `services/csvService.ts`（~35 行，不碰 db 與 DOM，props 介面不動）。
+- 🟡 拆解 `SettingsPage`，讓 container 退回 routing / render switch 形狀。Step 1 / 2（Section 自管更名 state 與 inline status）、Step 3a（CSV 純字串層進 service）與 Step 4（Pull dialog 獨立成 component）已完成，只剩最後一個小任務。（計劃：[settings-page-decomposition.md](docs/todo-references/settings-page-decomposition.md)）
   - 🟡 Step 3b：`parseTransactionsFromCSV` / `buildTransactionsCSV` / `downloadCSV` 進 service，`ImportPreview` 型別跟著歸位（~60 行）。
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）

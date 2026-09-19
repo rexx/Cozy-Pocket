@@ -20,6 +20,7 @@ import { SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from
 import PageHeader from './PageHeader';
 import { TagReplacementPreview, TagUsageSummary } from '../services/tagService';
 import { MerchantRenamePreview, MerchantUsageSummary } from '../services/merchantService';
+import { CSV_HEADERS, parseCSVLine, splitCSVIntoRows } from '../services/csvService';
 import PreferencesSection from './settings/PreferencesSection';
 import AiSection from './settings/AiSection';
 import SyncSection from './settings/SyncSection';
@@ -69,8 +70,6 @@ interface SettingsPageProps {
   onGetMerchantTransactions: (merchant: string) => Promise<Transaction[]>;
   onMerchantTransactionClick: (transaction: Transaction) => void;
 }
-
-const CSV_HEADERS = ["id", "type", "amount", "currency", "categoryId", "subCategoryId", "name", "merchant", "note", "timestamp", "readableDateTime", "paymentMethod", "tags", "updatedAt", "version"];
 
 const SECTION_GLOW_COLORS: Record<SettingsSectionPage | 'overview', string> = {
   overview: 'rgba(34,211,238,0.1)',
@@ -251,42 +250,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const splitCSVIntoRows = (text: string) => {
-    const rows: string[] = [];
-    let currentRow = '';
-    let inQuotes = false;
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      const nextChar = text[i + 1];
-      if (char === '"') {
-        if (inQuotes && nextChar === '"') { currentRow += '""'; i++; }
-        else { inQuotes = !inQuotes; currentRow += '"'; }
-      } else if (!inQuotes && (char === '\n' || char === '\r')) {
-        if (currentRow.trim().length > 0) rows.push(currentRow);
-        currentRow = '';
-        if (char === '\r' && nextChar === '\n') i++;
-      } else { currentRow += char; }
-    }
-    if (currentRow.trim().length > 0) rows.push(currentRow);
-    return rows;
-  };
-
-  const parseCSVLine = (line: string) => {
-    const result = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
-        else { inQuotes = !inQuotes; }
-      } else if (char === ',' && !inQuotes) { result.push(cur); cur = ''; }
-      else { cur += char; }
-    }
-    result.push(cur);
-    return result;
   };
 
   const parseImportFile = async (file: File): Promise<ImportPreview> => {

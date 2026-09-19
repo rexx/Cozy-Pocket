@@ -110,7 +110,8 @@ this.version(2).stores({
 ## 6. 核心邏輯說明
 
 ### 6.1 CSV 處理
-*   系統使用自定義的 `splitCSVIntoRows` 與 `parseCSVLine` 邏輯，能正確處理包含換行符號（Newline）或逗號（Comma）且被引號包裹的 CSV 欄位，確保備份完整性。
+*   CSV 的純字串層集中在 `services/csvService.ts`：`CSV_HEADERS`（匯入與匯出共用的欄位順序）、`splitCSVIntoRows` 與 `parseCSVLine`。自定義的切列與切欄邏輯能正確處理包含換行符號（Newline）或逗號（Comma）且被引號包裹的 CSV 欄位，確保備份完整性。
+*   `csvService` 不碰 IndexedDB 也不碰 DOM；row → `Transaction` 映射、匯出字串組裝、Blob 下載與匯入寫入仍由 `SettingsPage` container 處理。
 
 ### 6.2 AI 解析
 *   整合 Gemini API，支援將自然語言輸入（如「午餐 120 現金」）結構化為帳務紀錄。
@@ -342,7 +343,7 @@ this.version(2).stores({
 *   `PreferencesSection` 會分成「Payment Method Display」、「Home Navigation Buttons」、「Error Banner (Debug)」與「Currency Options」四張功能子卡牌；支付方式支援文字／圖示切換，首頁左右導覽按鈕支援顯示／隱藏切換（預設顯示），錯誤訊息紅色區塊支援顯示／隱藏切換（預設隱藏），幣別清單預設直接展開。
 *   `AiSection` 會顯示 Gemini API key 設定狀態；清空欄位後儲存即可移除本機 API key。
 *   `ImportExportSection` 與 `DangerZoneSection` 的子卡牌標題區不放圖示，圖示只放在實際操作按鈕上；其他設定子頁主要操作按鈕也維持 icon + label 呈現。
-*   設定 container 仍集中管理 Dexie 讀寫、CSV 解析與匯入匯出、同步觸發等資料流程，並以 callback 提供給各設定子頁；不再保留共用的 status state 或底部統一的訊息渲染。
+*   設定 container 仍集中管理 Dexie 讀寫、CSV 匯入匯出流程與同步觸發，並以 callback 提供給各設定子頁；不再保留共用的 status state 或底部統一的訊息渲染。CSV 的純字串層（欄位順序與切列／切欄解析）已移到 `services/csvService.ts`，container 只 import 使用（見 6.1）。
 *   各區段元件不直接操作資料庫或同步服務（透過 container callback 觸發），但各自視情況以 `useState` 自管 inline status 訊息：全部成功時只顯示底部輕量 toast（不重複顯示頁內卡片，`PreferencesSection` 因此完全不再持有 inline status state）；離線待同步、部分同步失敗或需要後續行動（例如查看同步狀態）時才顯示頁內 status 卡片；前置條件未滿足的驗證訊息顯示 warning 卡片，例外與同步失敗顯示 error 卡片。切換子頁時前一頁訊息隨子頁卸載而消失。「本機寫入後補送同步」這類流程的措辭與 toast／status 去向由 `services/notificationMessageService.ts` 決定，區段只負責把結果送上畫面（見 6.15）。
 *   設定子頁的 inline 回饋共用 `components/settings/SettingsFeedbackCard.tsx`（`SettingsFeedbackCard` 卡片 + 包裝 `SettingsStatus` 的 `SettingsStatusCard`），success／error／warning／info 對應綠／紅／黃／青樣式，`idle` 不渲染；`SettingsStatusCard` 會依 type 加上對應圖示（成功打勾、錯誤驚嘆、警告三角、資訊 i）。`TagManagementSection`、`MerchantManagementSection` 的預覽卡與狀態卡，以及 `ImportExportSection` 的匯入預覽與還原預覽卡都使用此共用元件；預覽卡內的統計數字沿用卡片自身色階，不另外使用成功綠。
 *   `SyncSection` 只持有年度雲端同步 dialog 的開關與入口按鈕，dialog 本身是 `components/settings/PullYearDialog.tsx`，自管選取年份、送出中狀態與自己的 inline status；dialog 送出中不可關閉，關閉與導頁都透過 props callback 回到 `SyncSection` 與 `App.tsx`。`TagManagementSection` 與 `MerchantManagementSection` 另外自管各自的更名流程 state。

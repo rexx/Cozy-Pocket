@@ -26,6 +26,7 @@
 - ✅ `TagManagementSection` 與 `MerchantManagementSection` 各自持有更名流程 state（選取、新名稱、預覽、送出、相關交易與 inline status），`SettingsPage` 只負責 routing 與 props 透傳；切換設定子頁再返回會重置選取與預覽。（紀錄：[section-owned-rename-state.md](docs/completed-references/section-owned-rename-state.md)）
 - ✅ 年度雲端同步的年份選擇 dialog 已從 `SyncSection` 抽成 `components/settings/PullYearDialog.tsx`，自管選取年份、送出狀態與自己的 inline status；`SyncSection` 只留同步設定表單與入口按鈕。（紀錄：[pull-year-dialog.md](docs/completed-references/pull-year-dialog.md)）
 - ✅ `SettingsPage` 共用的 `status` state 已拆解到各 Section（偏好 / AI / 同步 / 匯入匯出 / 危險操作）自管，並抽出共用 `SettingsFeedbackCard`；container 移除 `status`／`renderStatusMessage` 與 `section !== 'merchant'` special case，年度雲端同步 dialog 也移入 `SyncSection`。（紀錄：[section-owned-status-state.md](docs/completed-references/section-owned-status-state.md)）
+- ✅ CSV 的純字串層（`CSV_HEADERS`、`splitCSVIntoRows`、`parseCSVLine`）已從 `SettingsPage` 搬到 `services/csvService.ts`，container 改為 import 使用；解析行為與匯出位元組完全不變，row → `Transaction` 映射與 db 寫入仍留在 container。（紀錄：[csv-service-string-layer.md](docs/completed-references/csv-service-string-layer.md)）
 - ✅ 交易編輯頁面底部已顯示同步狀態，待同步與同步失敗交易可直接點左側狀態圖示觸發單筆上傳。（紀錄：[transaction-edit-sync-status-retry.md](docs/completed-references/transaction-edit-sync-status-retry.md)）
 - ✅ `SettingsPage` 已升級為設定入口清單，偏好設定、AI 設定、同步設定、Tag 管理、匯入匯出與危險操作已各自進入設定子頁。（紀錄：[settings-section-pages.md](docs/completed-references/settings-section-pages.md)）
 - ✅ 同步狀態頁已支援返回來源感知：從 `SettingsPage` 進入時返回設定頁，從首頁進入時返回首頁。
