@@ -10,9 +10,9 @@ Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `Setti
 - 偏好幣別 / 付款方式 / 首頁箭頭 / error banner / Gemini key / 同步設定的 db 寫入 handler，以 callback 提供給對應子頁
 - 重置本機資料（`resetLocalData`）callback
 
-已不再由 container 持有的部分：Tag / Merchant 更名流程的所有 state 與 handler（→ 各自 Section）、共用 `status` state 與底部 `renderStatusMessage`（→ 各 Section 自管 + `SettingsFeedbackCard`）、年度雲端同步 Pull dialog 的 state 與 markup（→ `SyncSection`），`section !== 'merchant'` 之類的 special-case 渲染也已移除。
+已不再由 container 持有的部分：Tag / Merchant 更名流程的所有 state 與 handler（→ 各自 Section）、共用 `status` state 與底部 `renderStatusMessage`（→ 各 Section 自管 + `SettingsFeedbackCard`）、年度雲端同步 Pull dialog 的 state 與 markup（→ Step 2 先移入 `SyncSection`，Step 4 再獨立成 `PullYearDialog`），`section !== 'merchant'` 之類的 special-case 渲染也已移除。
 
-剩下尚未拆的兩塊：Step 3（CSV 解析仍夾在 container，~130 行純資料邏輯，已切成 3a 純字串層 / 3b 映射與匯出兩個小任務）與 Step 4（Pull dialog 目前內嵌在 `SyncSection`，尚未拉成獨立 component）。三個任務彼此獨立，各自都能單獨 build、驗證與上線。
+剩下尚未拆的是 Step 3：CSV 解析仍夾在 container（~130 行純資料邏輯，已切成 3a 純字串層 / 3b 映射與匯出兩個小任務）。兩個任務彼此獨立，各自都能單獨 build、驗證與上線。
 
 ## 收斂目標
 
@@ -58,7 +58,9 @@ Step 1（Tag / Merchant 更名 state）與 Step 2（共用 status state + `Setti
 
 `commitImport` 與 3b 保留的那一次 `bulkGet` 長期留在 `SettingsPage`：它們是 db 寫入 ＋ `onTriggerSync` 的 orchestration，移進 `ImportExportSection` 會破壞「Section 不直接碰 db」的紀律，移進 service 則讓 service 同時持有解析與資料庫兩種責任。Step 3 的完成判準是「CSV 文字處理離開 UI 層」，不含這兩段。
 
-### 4. 把年度雲端同步 Pull dialog 從 `SyncSection` 拉成獨立 component
+### 4. 把年度雲端同步 Pull dialog 從 `SyncSection` 拉成獨立 component ✅ 已完成
+
+> 完成紀錄：[`pull-year-dialog.md`](../completed-references/pull-year-dialog.md)。
 
 Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmitting` 三個 state、同步 `pullYearOptions` 的 useEffect、dialog markup 與 `handlePullFromCloud` 一併從 `SettingsPage` 移入 `SyncSection` 暫管。Step 4 是把這段再從 `SyncSection` 抽成獨立的 `components/settings/PullYearDialog.tsx`，讓 `SyncSection` 回到「同步設定表單 + 入口按鈕」的單純形狀。與 Step 3 沒有相依，可獨立排程。
 
@@ -87,9 +89,9 @@ Step 2 已把 dialog 的 `isPullDialogOpen` / `selectedPullYear` / `isPullSubmit
 
 ## 後續建議
 
-- **建議順序：Step 4 → 3a → 3b**：Step 4 最獨立（不碰 CSV、幾乎是把 `SyncSection` 內既有的 dialog 平移出去），適合先做以確認驗證節奏；3a 是 cut-paste 等級的暖身；3b 動到 `ImportPreview` 的型別歸屬，影響面最大，放最後。三者沒有相依，順序可調。
+- **建議順序：3a → 3b**：Step 4 已完成，先做它確認過驗證節奏（不碰 CSV，幾乎是把 `SyncSection` 內既有的 dialog 平移出去）；3a 是 cut-paste 等級的暖身；3b 動到 `ImportPreview` 的型別歸屬，影響面最大，放最後。兩者沒有相依，順序可調。
 - **一個 PR 一個任務**：每個 PR 只動一個 Section／service 與對應的 `SettingsPage` 配線，沿用 Step 1 / 2 的小步快跑 + `npm run build` + agent 瀏覽器自驗流程，避免一次大型 review。
-- **完成 Step 3 / 4 後的預期**：`SettingsPage` 約落在 460–480 行（比收斂目標的 500–600 更瘦），只剩 routing / overview / render switch 與少量跨子頁資料 state；屆時本計劃整份移到 `docs/completed-references/`。
+- **完成 Step 3 後的預期**：`SettingsPage` 約落在 460–480 行（比收斂目標的 500–600 更瘦），只剩 routing / overview / render switch 與少量跨子頁資料 state；屆時本計劃整份移到 `docs/completed-references/`。
 - **「CSV 抽出後可單元測試」是潛在收益，不是本計劃的交付項**：repo 目前沒有測試框架（`package.json` 無 `test` script），要真的補上 csvService 的測試得先引入 vitest，屬獨立決策。
 - **開工前先 rebase 最新 main**：近期 main 有並行 commit（如 error-banner toggle）直接改過 `SettingsPage` / `PreferencesSection`，後續步驟動工前先對齊最新 main，縮小 container 層的衝突面。
 

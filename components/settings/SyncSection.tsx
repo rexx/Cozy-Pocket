@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { CloudDownload, CloudUpload, Database, History, Save } from 'lucide-react';
 import { PullReport, SyncOutcome } from '../../types';
 import SettingsSection, {
@@ -14,11 +14,9 @@ import {
   type SettingsStatus,
   type SettingsStatusAction,
 } from './settingsStatus';
-import {
-  buildSyncedOperationMessage,
-  describePullReportOutcome,
-} from '../../services/notificationMessageService';
+import { buildSyncedOperationMessage } from '../../services/notificationMessageService';
 import { SettingsStatusCard } from './SettingsFeedbackCard';
+import PullYearDialog from './PullYearDialog';
 
 const MOCK_SYNC_API_URL = 'mock://cloud-sync';
 const MOCK_SYNC_TOKEN = 'mock-token';
@@ -52,22 +50,7 @@ const SyncSection: React.FC<SyncSectionProps> = ({
 }) => {
   const [status, setStatus] = useState<SettingsStatus>(idleStatus);
   const [isPullDialogOpen, setIsPullDialogOpen] = useState(false);
-  const [selectedPullYear, setSelectedPullYear] = useState('');
-  const [isPullSubmitting, setIsPullSubmitting] = useState(false);
   const openSyncProgressAction: SettingsStatusAction = { label: '查看同步狀態', onClick: onOpenSyncProgress };
-
-  useEffect(() => {
-    if (pullYearOptions.length === 0) {
-      setSelectedPullYear('');
-      return;
-    }
-
-    setSelectedPullYear((current) => (
-      current && pullYearOptions.includes(current)
-        ? current
-        : pullYearOptions[0]
-    ));
-  }, [pullYearOptions]);
 
   const handleSaveSyncConfig = async () => {
     try {
@@ -93,34 +76,6 @@ const SyncSection: React.FC<SyncSectionProps> = ({
   const openPullDialog = () => {
     setStatus(idleStatus);
     setIsPullDialogOpen(true);
-  };
-
-  const closePullDialog = () => {
-    if (isPullSubmitting) return;
-    setIsPullDialogOpen(false);
-  };
-
-  const handlePullFromCloud = async () => {
-    if (!selectedPullYear) {
-      setStatus({ type: 'warning', message: '請先選擇要同步的年份' });
-      return;
-    }
-
-    try {
-      setIsPullSubmitting(true);
-      setStatus(idleStatus);
-      const { report } = await onPullFromCloud(selectedPullYear);
-      setIsPullDialogOpen(false);
-      // Navigating to PullReportsPage unmounts this section, so the outcome
-      // is surfaced via toast plus the focused report instead of inline status.
-      onOpenPullReports(report.id);
-
-      onNotify(describePullReportOutcome(report.year, report.status));
-    } catch (err: any) {
-      setStatus({ type: 'error', message: err.message || '年度雲端同步失敗' });
-    } finally {
-      setIsPullSubmitting(false);
-    }
   };
 
   return (
@@ -179,51 +134,14 @@ const SyncSection: React.FC<SyncSectionProps> = ({
 
       <SettingsStatusCard status={status} />
 
-      {isPullDialogOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 px-4">
-          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#171a29] p-6 shadow-2xl">
-            <h2 className="text-lg font-black text-white">年度雲端同步</h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-300">
-              一次只處理單一年份。系統會先讀取該年份雲端資料，再依 version 與 updatedAt 自動判斷要更新本機或回推雲端，並留下完整同步報告。
-            </p>
-
-            <div className="mt-5 space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                選擇年份
-              </label>
-              <select
-                value={selectedPullYear}
-                onChange={(e) => setSelectedPullYear(e.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-[#0f1321] px-3 py-3 text-sm font-bold text-white outline-none"
-              >
-                {pullYearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={closePullDialog}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black text-slate-100"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={() => void handlePullFromCloud()}
-                disabled={isPullSubmitting || !selectedPullYear}
-                className="rounded-2xl border border-cyan-400/25 bg-cyan-500/15 px-4 py-3 text-sm font-black text-cyan-200 disabled:opacity-40"
-              >
-                {isPullSubmitting ? '處理中...' : '開始同步'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PullYearDialog
+        isOpen={isPullDialogOpen}
+        onClose={() => setIsPullDialogOpen(false)}
+        pullYearOptions={pullYearOptions}
+        onPullFromCloud={onPullFromCloud}
+        onOpenPullReports={onOpenPullReports}
+        onNotify={onNotify}
+      />
     </SettingsSection>
   );
 };
