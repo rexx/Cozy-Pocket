@@ -11,6 +11,9 @@
 
 - 🟡 強化 `SyncStatusPage` 的互動，例如提供只看失敗 / 只看待同步的篩選，以及更清楚的重試導向操作。（計劃：[sync-status-filters-and-retry.md](docs/todo-references/sync-status-filters-and-retry.md)）
 - 🟢 評估為非首頁頁面引入共用 page-shell pattern，讓 layout chrome 維持一致，同時讓 `App.tsx` 持續聚焦於 routing 與 shared state。（計劃：[shared-page-shell.md](docs/todo-references/shared-page-shell.md)）
+- 🟡 把 `SettingsPage` 剩下的設定資料 state（`defaultCurrency`／`enabledCurrencies`／Gemini key／同步設定）與對應的 db 寫入 handler 抽成 `useSettingsData` hook，container 再瘦一截，邏輯也能獨立測試。風險低，是 SettingsPage 拆解「container／hook 管 db、Section 管 UI」的延伸。計劃書待補。（線索：[settings-page-decomposition.md](docs/completed-references/settings-page-decomposition.md)）
+- 🟡 讓 `PreferencesSection` / `AiSection` / `SyncSection` 自管自己的持久化設定，`SettingsPage` 退成近乎純 routing。動工前要先決定「Section 不直接碰 db」的原則怎麼維持：透過 data-access hook 注入（可沿用上一條的 `useSettingsData`），或明確放寬。計劃書待補。（線索：[settings-page-decomposition.md](docs/completed-references/settings-page-decomposition.md)）
+- 🟡 消除 `App.tsx` 與 `SettingsPage` 各自從 `db.settings` 載入 currency / payment-method / home-nav / error-banner 的兩份 source of truth，改由單一 settings service 或 context 提供。會動到 `App.tsx`，規模比前兩條大；若先做，前兩條的 hook 設計要跟著它走。計劃書待補。（線索：[settings-page-decomposition.md](docs/completed-references/settings-page-decomposition.md)）
 
 ## 統計與交易管理
 
