@@ -28,6 +28,7 @@ type StatsSortMode = 'latest' | 'amount-desc';
 type StatsViewMode = 'summary' | 'trend';
 
 const TREND_MONTH_COUNT = 12;
+const ACTIVE_FILTER_COLLAPSE_THRESHOLD = 3;
 
 interface MonthlyStatsPageProps {
   transactions: Transaction[];
@@ -393,15 +394,21 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
     : selectedCategoryIds.length === 1
       ? getCategoryName(selectedCategoryIds[0])
       : `${selectedCategoryIds.length} 個類別`;
-  const activeFilterBadgeLabel = hasActiveFilters
-    ? [
-        selectedTagsLabel,
-        selectedPaymentMethod || null,
-        selectedCategoriesLabel,
-        hiddenFutureCount > 0 ? '排除未來' : null,
-        hasExclusions ? `排除 ${excludedSubCategoryKeys.length} 個子類別` : null,
-      ].filter(Boolean).join(' · ')
+  const activeFilterSegments = [
+    selectedTagsLabel,
+    selectedPaymentMethod || null,
+    selectedCategoriesLabel,
+    hiddenFutureCount > 0 ? '排除未來' : null,
+    hasExclusions ? `排除 ${excludedSubCategoryKeys.length} 個子類別` : null,
+  ].filter((segment): segment is string => Boolean(segment));
+  const activeFilterFullLabel = hasActiveFilters
+    ? activeFilterSegments.join(' · ')
     : '全部交易';
+  // Three or more segments no longer fit beside the currency code at iPhone
+  // width, so the badge shows a count; the full label stays in the tooltip.
+  const activeFilterBadgeLabel = activeFilterSegments.length >= ACTIVE_FILTER_COLLAPSE_THRESHOLD
+    ? `${activeFilterSegments.length} 項篩選`
+    : activeFilterFullLabel;
   const movePeriod = (direction: -1 | 1) => {
     setSelectedDate((prev) => (
       isMonthStep
@@ -1081,7 +1088,11 @@ const MonthlyStatsPage: React.FC<MonthlyStatsPageProps> = ({
                         <p className="text-[10px] font-black uppercase tracking-[0.35em] text-gray-500">幣別</p>
                         <h2 className="mt-1 text-2xl font-black tracking-tight text-white">{currency}</h2>
                       </div>
-                      <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">
+                      <div
+                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black tracking-normal text-gray-400"
+                        title={activeFilterFullLabel}
+                        aria-label={activeFilterFullLabel}
+                      >
                         {activeFilterBadgeLabel}
                       </div>
                     </div>
