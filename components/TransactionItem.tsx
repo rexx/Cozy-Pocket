@@ -131,28 +131,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
         </div>
         
         <div className="flex justify-between items-center">
-          {/* Shrink order on this row: the subtitle gives up width first so tag
-              chips stay fully readable. The chip group is capped at the row width
-              so a single overlong tag truncates instead of overlapping the amount. */}
-          <div className="flex min-w-0 items-center gap-2">
-            {subtitleParts.length > 0 && (
-              <p className="text-gray-500 text-xs truncate font-medium">
-                {subtitleParts.join(' · ')}
-              </p>
-            )}
-            {tags.length > 0 && (
-              <span className="flex min-w-0 max-w-full flex-shrink-0 items-center gap-1">
-                {tags.map((tag, index) => (
-                  <span
-                    key={`${tag}-${index}`}
-                    className="min-w-0 truncate text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-400 font-bold border border-white/5"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </span>
-            )}
-          </div>
+          <p className="min-w-0 text-gray-500 text-xs truncate font-medium">
+            {subtitleParts.join(' · ')}
+          </p>
           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
             {PaymentMethodIcon ? (
               <span
@@ -172,6 +153,22 @@ const TransactionItem: React.FC<TransactionItemProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Tags get a dedicated wrapping row so every chip stays readable even in
+            narrow containers; per-chip truncate only guards a single tag wider
+            than the whole row. */}
+        {tags.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {tags.map((tag, index) => (
+              <span
+                key={`${tag}-${index}`}
+                className="max-w-full truncate text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-gray-400 font-bold border border-white/5"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

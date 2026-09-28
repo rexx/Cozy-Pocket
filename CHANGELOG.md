@@ -39,6 +39,7 @@
 
 ## 首頁與日曆體驗
 
+- ✅ 交易列表項目的 Tag 已移到專屬第三行並允許換行，統計頁明細等窄容器下 tag 也完整顯示；第二行回到次要文字、支付方式與金額，有 tag 的列會比沒有 tag 的列高。（紀錄：[transaction-item-tags-third-row.md](docs/completed-references/transaction-item-tags-third-row.md)）
 - ✅ 交易列表項目的 Tag 已改為顯示在第二行、接在次要文字之後，主要文字取回整行寬度；第二行空間不足時由次要文字先截斷，tag 儘量完整，只有單一 tag 超過整行時才截斷。（紀錄：[transaction-item-tags-second-row.md](docs/completed-references/transaction-item-tags-second-row.md)）
 - ✅ 交易列表項目的 Tag 已改為小型 pill 顯示在交易名稱（主要文字）右邊，不再附加於次要文字尾端；主要文字太長時截斷並保留空間給 tag，沒有 tag 則不保留空間。（紀錄：[transaction-item-inline-tags.md](docs/completed-references/transaction-item-inline-tags.md)）
 - ✅ 偏好設定可一次隱藏首頁的左右導覽按鈕（上半月曆左右、下半日期左右），預設顯示，隱藏後仍可左右滑動切換，週／月切換鈕與新增交易按鈕不受影響。（紀錄：[home-nav-arrow-visibility.md](docs/completed-references/home-nav-arrow-visibility.md)）
