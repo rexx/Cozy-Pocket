@@ -24,15 +24,7 @@ import {
 } from './settingsStatus';
 import { buildSyncedOperationMessage } from '../../services/notificationMessageService';
 import SettingsFeedbackCard, { SettingsStatusCard } from './SettingsFeedbackCard';
-
-export interface ImportPreview {
-  transactions: Transaction[];
-  totalRows: number;
-  validRows: number;
-  invalidRows: number;
-  duplicateWithExistingCount: number;
-  duplicateInFileCount: number;
-}
+import type { ImportPreview } from '../../services/csvService';
 
 export interface ImportCommitResult extends SyncOutcome {
   overwrittenCount: number;

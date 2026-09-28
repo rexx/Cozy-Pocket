@@ -2,7 +2,7 @@
 
 ## 摘要
 
-年度雲端同步的年份選擇 dialog 原本內嵌在 `components/settings/SyncSection.tsx`，讓該子頁同時持有同步設定表單與 dialog 兩套 state。此項目把 dialog 整段搬到 `components/settings/PullYearDialog.tsx`，`SyncSection` 回到「同步設定表單 + 入口按鈕」的形狀。這是 [`settings-page-decomposition.md`](../todo-references/settings-page-decomposition.md) Step 4 的紀錄，接在 [`section-owned-status-state.md`](./section-owned-status-state.md)（Step 2 把 dialog 從 container 移入 `SyncSection` 暫管）之後。行為保持不變，文案、樣式與 status 判斷條件都沒有改動。
+年度雲端同步的年份選擇 dialog 原本內嵌在 `components/settings/SyncSection.tsx`，讓該子頁同時持有同步設定表單與 dialog 兩套 state。此項目把 dialog 整段搬到 `components/settings/PullYearDialog.tsx`，`SyncSection` 回到「同步設定表單 + 入口按鈕」的形狀。這是 [`settings-page-decomposition.md`](./settings-page-decomposition.md) Step 4 的紀錄，接在 [`section-owned-status-state.md`](./section-owned-status-state.md)（Step 2 把 dialog 從 container 移入 `SyncSection` 暫管）之後。行為保持不變，文案、樣式與 status 判斷條件都沒有改動。
 
 ## 最終狀態
 

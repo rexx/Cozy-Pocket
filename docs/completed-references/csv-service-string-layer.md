@@ -2,7 +2,7 @@
 
 ## 摘要
 
-`CSV_HEADERS`、`splitCSVIntoRows` 與 `parseCSVLine` 原本宣告在 `components/SettingsPage.tsx` 內，是三段完全不碰 IndexedDB 與 DOM 的純字串處理，卻夾在 UI container 裡難以重用。此項目把三者原封不動搬到新的 `services/csvService.ts`，container 改成 import 使用。這是 [`settings-page-decomposition.md`](../todo-references/settings-page-decomposition.md) Step 3a 的紀錄，接在 [`section-owned-status-state.md`](./section-owned-status-state.md)（Step 2）之後。
+`CSV_HEADERS`、`splitCSVIntoRows` 與 `parseCSVLine` 原本宣告在 `components/SettingsPage.tsx` 內，是三段完全不碰 IndexedDB 與 DOM 的純字串處理，卻夾在 UI container 裡難以重用。此項目把三者原封不動搬到新的 `services/csvService.ts`，container 改成 import 使用。這是 [`settings-page-decomposition.md`](./settings-page-decomposition.md) Step 3a 的紀錄，接在 [`section-owned-status-state.md`](./section-owned-status-state.md)（Step 2）之後。
 
 行為完全不變，是一次純平移。
 

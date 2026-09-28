@@ -23,6 +23,7 @@
 
 ## 導航與頁面架構
 
+- ✅ `SettingsPage` 已拆解完成，container 退回 routing / overview / render switch 形狀（約 1168 行降到 483 行）：更名 state 與 inline status 歸各 Section、Pull dialog 獨立成 component、CSV 的解析／映射／匯出字串組裝／下載與 `ImportPreview` 型別集中在 `services/csvService.ts`；db 寫入與同步 orchestration 刻意留在 container。（紀錄：[settings-page-decomposition.md](docs/completed-references/settings-page-decomposition.md)）
 - ✅ `TagManagementSection` 與 `MerchantManagementSection` 各自持有更名流程 state（選取、新名稱、預覽、送出、相關交易與 inline status），`SettingsPage` 只負責 routing 與 props 透傳；切換設定子頁再返回會重置選取與預覽。（紀錄：[section-owned-rename-state.md](docs/completed-references/section-owned-rename-state.md)）
 - ✅ 年度雲端同步的年份選擇 dialog 已從 `SyncSection` 抽成 `components/settings/PullYearDialog.tsx`，自管選取年份、送出狀態與自己的 inline status；`SyncSection` 只留同步設定表單與入口按鈕。（紀錄：[pull-year-dialog.md](docs/completed-references/pull-year-dialog.md)）
 - ✅ `SettingsPage` 共用的 `status` state 已拆解到各 Section（偏好 / AI / 同步 / 匯入匯出 / 危險操作）自管，並抽出共用 `SettingsFeedbackCard`；container 移除 `status`／`renderStatusMessage` 與 `section !== 'merchant'` special case，年度雲端同步 dialog 也移入 `SyncSection`。（紀錄：[section-owned-status-state.md](docs/completed-references/section-owned-status-state.md)）

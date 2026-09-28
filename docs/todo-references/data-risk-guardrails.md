@@ -70,9 +70,9 @@
 
 ### Step 5 — 程式層：CSV 匯入驗證對齊 pull
 
-- `parseImportFile`（`SettingsPage.tsx`）目前只驗 `!isNaN(amount) && !isNaN(timestamp)`；比照 `normalizePullItem`（`cloudSyncService.ts`）的驗證強度：type 必須是 支出/收入、categoryId 非空、paymentMethod 非空，並將 `parseInt('')` 產生的 NaN `updatedAt` / `version` 正規化為 undefined 或 0。
+- `parseTransactionsFromCSV`（`services/csvService.ts`）目前只驗 `!isNaN(amount) && !isNaN(timestamp)`；比照 `normalizePullItem`（`cloudSyncService.ts`）的驗證強度：type 必須是 支出/收入、categoryId 非空、paymentMethod 非空，並將 `parseInt('')` 產生的 NaN `updatedAt` / `version` 正規化為 undefined 或 0。
 - 被拒收的列不進 DB，於匯入預覽回報「略過 N 筆格式不符（行號清單）」。
-- 抽驗證邏輯時注意與 `settings-page-decomposition.md` 計劃的 `services/csvService.ts` 方向一致：若該計劃先行，驗證放進 csvService；若本計劃先行，先放 `SettingsPage.tsx` 內的獨立函式，之後隨 decomposition 搬移。
+- 驗證邏輯放進 `services/csvService.ts`：`SettingsPage` 的拆解已完成，CSV 解析與 row → `Transaction` 映射都在該 service 裡，container 只保留 db 讀寫（見 [`settings-page-decomposition.md`](../completed-references/settings-page-decomposition.md)）。
 
 ### Step 6 — 測試層：紅區純函式最小單元測試
 
@@ -146,5 +146,5 @@ const validateImportRows = (rows: Transaction[]): ImportRowValidationResult => {
 
 - 「零測試」原則僅對紅區純函式破例；vitest 只測 pure function，不引入 jsdom / testing-library。
 - GAS 重新部署由使用者手動執行；Step 3 在部署完成前，repo 內檔案與線上 GAS 會短暫不一致（僅重構、行為相同，風險可接受）。
-- Step 5 的驗證邏輯位置以「不與 `settings-page-decomposition.md` 衝突」為原則，兩計劃誰先動誰先搬。
+- Step 5 的驗證邏輯位置已確定為 `services/csvService.ts`；`SettingsPage` 拆解先行完成，不再有位置衝突。
 - 行號會隨程式演進漂移；AGENTS.md 紅區清單只寫檔案與函式名，本計劃書內的行號為 review 當下（2026-07-03, commit `8368c47`）的快照。

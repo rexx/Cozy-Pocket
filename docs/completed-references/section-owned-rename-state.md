@@ -2,7 +2,7 @@
 
 ## 摘要
 
-`TagManagementSection` 與 `MerchantManagementSection` 各自持有自己的更名流程 state，`SettingsPage` 不再為這兩條子頁保留 in-progress 狀態與 handler。對外 API 收斂為「資料來源 callback + app 級副作用 callback」，兩個 Section 成為自包含的設定子頁內容。本項目是 [`settings-page-decomposition.md`](../todo-references/settings-page-decomposition.md) 第 1 步。
+`TagManagementSection` 與 `MerchantManagementSection` 各自持有自己的更名流程 state，`SettingsPage` 不再為這兩條子頁保留 in-progress 狀態與 handler。對外 API 收斂為「資料來源 callback + app 級副作用 callback」，兩個 Section 成為自包含的設定子頁內容。本項目是 [`settings-page-decomposition.md`](./settings-page-decomposition.md) 第 1 步。
 
 ## 最終實作
 

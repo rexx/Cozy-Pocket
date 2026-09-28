@@ -15,18 +15,17 @@ import {
 import { PaymentMethodDisplayMode, PullReport, SyncOutcome, Transaction } from '../types';
 import { db } from '../db';
 import { format } from 'date-fns';
-import { formatReadableDateTime, toEpochSeconds } from '../time';
 import { SUPPORTED_CURRENCIES, getEnabledCurrencies, getPreferredCurrency } from '../constants';
 import PageHeader from './PageHeader';
 import { TagReplacementPreview, TagUsageSummary } from '../services/tagService';
 import { MerchantRenamePreview, MerchantUsageSummary } from '../services/merchantService';
-import { CSV_HEADERS, parseCSVLine, splitCSVIntoRows } from '../services/csvService';
+import { buildTransactionsCSV, downloadCSV, parseTransactionsFromCSV, type ImportPreview } from '../services/csvService';
 import PreferencesSection from './settings/PreferencesSection';
 import AiSection from './settings/AiSection';
 import SyncSection from './settings/SyncSection';
 import TagManagementSection from './settings/TagManagementSection';
 import MerchantManagementSection from './settings/MerchantManagementSection';
-import ImportExportSection, { type ImportCommitResult, type ImportPreview } from './settings/ImportExportSection';
+import ImportExportSection, { type ImportCommitResult } from './settings/ImportExportSection';
 import DangerZoneSection from './settings/DangerZoneSection';
 import { SETTINGS_SECTION_COPY } from './settings/settingsSectionCopy';
 import { GEMINI_API_KEY_SETTING_KEY, PAYMENT_METHOD_DISPLAY_MODE_SETTING_KEY, HOME_NAV_ARROWS_VISIBLE_SETTING_KEY, ERROR_BANNER_VISIBLE_SETTING_KEY, getGeminiApiKey } from '../preferences';
@@ -220,86 +219,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const exportToCSV = async (): Promise<void> => {
     const transactions = await db.transactions.toArray();
-    const csvContent = [
-      CSV_HEADERS.join(','),
-      ...transactions.map(t => [
-        t.id,
-        t.type,
-        t.amount,
-        t.currency || 'TWD',
-        t.categoryId,
-        t.subCategoryId || '',
-        t.name || '',
-        t.merchant || '',
-        t.note || '',
-        t.timestamp,
-        t.readableDateTime || formatReadableDateTime(t.timestamp),
-        t.paymentMethod,
-        t.tags || '',
-        t.updatedAt || '',
-        t.version || ''
-      ].map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `cozy_pocket_backup_${format(new Date(), 'yyyyMMdd')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const fileName = `cozy_pocket_backup_${format(new Date(), 'yyyyMMdd')}.csv`;
+    downloadCSV(buildTransactionsCSV(transactions), fileName);
   };
 
   const parseImportFile = async (file: File): Promise<ImportPreview> => {
     const text = await file.text();
-    if (!text) throw new Error('檔案內容為空');
-    const lines = splitCSVIntoRows(text);
-    if (lines.length < 2) throw new Error('檔案格式不正確或無資料');
-
-    const parsedHeader = parseCSVLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
-    const headers = parsedHeader.length > 0 ? parsedHeader : CSV_HEADERS;
-    const dataRows = lines.slice(1);
-    const parsedTransactions: Transaction[] = dataRows.map(line => {
-      const values = parseCSVLine(line);
-      const obj: any = {};
-      headers.forEach((header, index) => {
-        const val = values[index] || '';
-        if (header === 'amount') obj[header] = parseFloat(val);
-        else if (header === 'timestamp') obj[header] = toEpochSeconds(parseInt(val, 10));
-        else if (header === 'updatedAt' || header === 'version') obj[header] = parseInt(val, 10);
-        else obj[header] = val;
-      });
-      if (Number.isNaN(obj.timestamp) && obj.readableDateTime) {
-        obj.timestamp = toEpochSeconds(new Date(obj.readableDateTime).getTime());
-      }
-      if (!obj.readableDateTime && Number.isFinite(obj.timestamp)) {
-        obj.readableDateTime = formatReadableDateTime(obj.timestamp);
-      }
-      if (!obj.currency) obj.currency = 'TWD';
-      return obj as Transaction;
-    }).filter(t => !isNaN(t.amount) && !isNaN(t.timestamp));
-
-    const idCountMap = new Map<string, number>();
-    for (const tx of parsedTransactions) {
-      const count = idCountMap.get(tx.id) || 0;
-      idCountMap.set(tx.id, count + 1);
-    }
-    const duplicateInFileCount = Array.from(idCountMap.values()).filter((count) => count > 1).length;
-
-    const uniqueIds = Array.from(idCountMap.keys());
+    const { uniqueIds, ...parsed } = parseTransactionsFromCSV(text);
     const existing = await db.transactions.bulkGet(uniqueIds);
-    const duplicateWithExistingCount = existing.filter(Boolean).length;
-
-    return {
-      transactions: parsedTransactions,
-      totalRows: dataRows.length,
-      validRows: parsedTransactions.length,
-      invalidRows: dataRows.length - parsedTransactions.length,
-      duplicateWithExistingCount,
-      duplicateInFileCount,
-    };
+    return { ...parsed, duplicateWithExistingCount: existing.filter(Boolean).length };
   };
 
   const commitImport = async (

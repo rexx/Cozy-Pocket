@@ -2,7 +2,7 @@
 
 ## 摘要
 
-原本 `SettingsPage` 以一份共用的 `status` state（`{ type: 'success' | 'error' | 'idle', message }`）加上底部統一的 `renderStatusMessage()` 承接所有設定子頁的訊息。此項目把該 state 拆解到偏好 / AI / 同步 / 匯入匯出 / 危險操作各 Section 自管，讓「寫入端」與「渲染端」回到同一個元件內，並抽出共用的 `SettingsFeedbackCard`。與 [`section-owned-rename-state.md`](./section-owned-rename-state.md) 互補：前者處理 Tag / Merchant 更名流程的 in-progress state（含其 status），本項目收尾其餘非更名流程的 status。這是 [`settings-page-decomposition.md`](../todo-references/settings-page-decomposition.md) Step 2 的紀錄。
+原本 `SettingsPage` 以一份共用的 `status` state（`{ type: 'success' | 'error' | 'idle', message }`）加上底部統一的 `renderStatusMessage()` 承接所有設定子頁的訊息。此項目把該 state 拆解到偏好 / AI / 同步 / 匯入匯出 / 危險操作各 Section 自管，讓「寫入端」與「渲染端」回到同一個元件內，並抽出共用的 `SettingsFeedbackCard`。與 [`section-owned-rename-state.md`](./section-owned-rename-state.md) 互補：前者處理 Tag / Merchant 更名流程的 in-progress state（含其 status），本項目收尾其餘非更名流程的 status。這是 [`settings-page-decomposition.md`](./settings-page-decomposition.md) Step 2 的紀錄。
 
 ## 最終狀態
 
